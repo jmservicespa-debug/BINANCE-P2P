@@ -26,7 +26,13 @@ pip install -e ".[dev]"
 cp .env.example .env               # Windows: copy .env.example .env
 ```
 
-Edita `.env` y rellena `BINANCE_API_KEY` y `BINANCE_API_SECRET` con la key de **solo lectura**. Deja vacías las variables `BINANCE_TRADE_*`.
+Guarda la key de **solo lectura** con el asistente (pide las claves sin mostrarlas y las escribe en `.env`):
+
+```bash
+python -m jmcambios.tools.set_keys
+```
+
+Las variables `BINANCE_TRADE_*` deben quedar vacías.
 
 ## Verificación de integración (cierre de la Fase 1)
 
