@@ -40,6 +40,12 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 - **Decisión del usuario:** el P2P COP se evalúa como negocio independiente; **no** se combina con su operación de remesas (ya rentable).
 - Relación clave: ganancia diaria = capital × margen neto por ciclo × ciclos/día.
 
+## Hoja de ruta futura (después de la Fase 10, pedida por el usuario 2026-10-18)
+- Más exchanges: **OKX, Bybit** (nuevos adaptadores `MarketSource`; verificar antes qué APIs P2P oficiales ofrecen).
+- Más mercados/países y **alertas de arbitraje entre exchanges** (comprar barato en uno, vender en otro), con costo neto completo: comisiones, retiro/red de USDT, tiempo de transferencia, capital repartido.
+- **Triangulación BRL / COP / CLP** (y otros fiat): cálculo de rutas USDT entre monedas con todos los costos y tipos de cambio; requiere cuentas/medios de pago locales y revisión normativa por país.
+- Diseño: el dominio ya es independiente del exchange y de la moneda (`venue`, `asset`, `fiat` en cada `Ad`/`MarketSnapshot`).
+
 ## Entorno del usuario
 - PC Windows, Python 3.12.10, Git 2.55, proyecto en `C:\Users\Jamer\Documents\BINANCE-P2P`, venv `.venv`.
 - El Bloc de notas / `Read-Host` no guardaron las claves; usar siempre `python -m jmcambios.tools.set_keys`.
