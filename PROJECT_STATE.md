@@ -71,7 +71,9 @@ tests/                     pruebas unitarias (sin red)
 2. ✅ `jmcambios-verify` ejecutado en el PC Windows del usuario (resultados en docs/FASE1_VIABILIDAD.md §11).
 2b. ✅ Aclarado: la key verificada es de una cuenta de prueba.
 2c. ✅ Fase 2 aprobada por el usuario: **solo USDT/COP por ahora**; más mercados y exchanges en el futuro (arquitectura preparada).
-2e. ⏳ Usuario: `git pull` + `pip install -e ".[dev]"` + `jmcambios-monitor --once`; confirmar que el lado ASK/BID es correcto (spread positivo, sin nota de 'lado distinto') y luego dejarlo corriendo 24 h.
+2e. ✅ Primera ejecución real del monitor (2026-10-17 23:37 COT): 194 anuncios ASK / 126 comerciantes; 188 BID / 144 comerciantes; mejor ASK 3.160, mejor BID 3.150, spread +10 COP (0,317 %). **Mapeo de lados confirmado** (spread positivo, sin avisos de lado distinto). Libro completo recorrido.
+2f. ⏳ Usuario: dejar `jmcambios-monitor --interval 60 --brief` corriendo ~24 h para cerrar la Fase 2.
+- Observación para Fase 4: con spread de 10 COP (0,32 %) en la cima del libro, el GMF de 0,4 % (Bancolombia/Nequi) lo vuelve negativo; solo pagando desde Davivienda/Daviplata (exentas) queda margen. Métodos más frecuentes: BreBKeys, Nequi, BancolombiaSA.
 2d. ⏳ Antes de Fase 4: key de solo lectura de la cuenta oficial + `jmcambios-verify`.
 3. ✅ Costos: recibidos (solo 4x1000).
 4. Con el informe: actualizar matriz 🔎 → ✅/⛔ y comenzar Fase 2.
