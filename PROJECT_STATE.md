@@ -27,6 +27,11 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 - Verificado en documentación oficial: ver `docs/FASE1_VIABILIDAD.md` §2.
 - **No verificado en ejecución**: el entorno de desarrollo no tiene salida a binance.com (proxy 403). Ninguna llamada real ejecutada aún.
 
+## Perfil operativo del usuario (2026-10-18)
+- Opera **principalmente en Venezuela (VES)**; en COP tiene poca actividad reciente y ningún anuncio activo ahora.
+- Dice tener >300 órdenes en total; la verificación devolvió 0 órdenes/0 métodos de pago → diagnosticando si la key es de otra cuenta o si el endpoint agent no devuelve su historial (se añadió comparación con el endpoint C2C clásico y ventanas de 6 meses).
+- La arquitectura ya parametriza `JMC_FIAT`; extender a USDT/VES es candidato natural tras la Fase 2 (decisión pendiente del usuario).
+
 ## Entorno del usuario
 - PC Windows, Python 3.12.10, Git 2.55, proyecto en `C:\Users\Jamer\Documents\BINANCE-P2P`, venv `.venv`.
 - El Bloc de notas / `Read-Host` no guardaron las claves; usar siempre `python -m jmcambios.tools.set_keys`.

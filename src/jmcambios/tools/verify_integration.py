@@ -123,7 +123,47 @@ def _reference_price_check(client: BinanceP2PClient, asset: str, fiat: str, trad
     return c
 
 
-def run_checks(settings: Settings, client: BinanceP2PClient, *, skip_auth: bool = False) -> list[Check]:
+DAY_MS = 86_400_000
+
+
+def _count_by_fiat(data: Any) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in _items(data):
+        if isinstance(row, dict):
+            fiat = str(row.get("fiat") or "?")
+            counts[fiat] = counts.get(fiat, 0) + 1
+    return counts
+
+
+def _six_month_history_check(client: BinanceP2PClient, now_ms: int) -> Check:
+    """Totales de órdenes por ventanas de 30 días (solo conteos, sin datos de las órdenes)."""
+    windows: list[dict[str, Any]] = []
+    last: ApiResult | None = None
+    for i in range(6):
+        end = now_ms - i * 30 * DAY_MS
+        start = end - 30 * DAY_MS + 1
+        last = client.call(ep.ORDER_HISTORY, {"startTimestamp": start, "endTimestamp": end, "page": 1, "rows": 100})
+        windows.append({
+            "window": f"-{(i + 1) * 30}d..-{i * 30}d",
+            "outcome": last.outcome.value,
+            "total": last.total,
+            "by_fiat_first_page": _count_by_fiat(last.data) if last.ok else {},
+        })
+        if not last.ok:
+            break
+    c = _to_check("Historial de órdenes (6 meses, por ventanas)", last, True)
+    c.findings["windows"] = windows
+    return c
+
+
+def run_checks(
+    settings: Settings,
+    client: BinanceP2PClient,
+    *,
+    skip_auth: bool = False,
+    now_ms: int | None = None,
+) -> list[Check]:
+    now_ms = now_ms if now_ms is not None else int(datetime.now(UTC).timestamp() * 1000)
     asset, fiat = settings.asset, settings.fiat
     checks: list[Check] = []
 
@@ -187,6 +227,15 @@ def run_checks(settings: Settings, client: BinanceP2PClient, *, skip_auth: bool 
 
     r = client.call(ep.ORDER_HISTORY, {"page": 1, "rows": 5})
     checks.append(_to_check("Historial de órdenes (30 días)", r, True))
+
+    # Diagnóstico: comparar con el endpoint C2C clásico y ampliar a 6 meses.
+    for trade_type in ("BUY", "SELL"):
+        r = client.call(ep.ORDER_HISTORY_LEGACY, {"tradeType": trade_type, "page": 1, "rows": 100})
+        c = _to_check(f"Historial C2C clásico {trade_type} (30 días)", r, True)
+        if r.ok:
+            c.findings["orders_by_fiat"] = _count_by_fiat(r.data)
+        checks.append(c)
+    checks.append(_six_month_history_check(client, now_ms))
 
     r = client.call(ep.LIST_ORDERS, body={"page": 1, "rows": 5})
     checks.append(_to_check("Listado de órdenes", r, True))

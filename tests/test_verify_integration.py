@@ -112,3 +112,28 @@ def test_reference_price_all_variants_fail_reports_first_error():
     ref = next(c for c in checks if c.name == "Precio de referencia SELL")
     assert ref.outcome == "API_ERROR" and ref.code == "-31002"
     assert len(ref.findings["variants_tried"]) == len(vi.reference_price_variants("USDT", "COP", "SELL"))
+
+
+def test_history_diagnostics_count_by_fiat_and_windows():
+    seen = []
+
+    def handler(request: httpx.Request):
+        path = request.url.path
+        if path.endswith("listUserOrderHistory"):
+            seen.append(path)
+            rows = [{"fiat": "VES", "orderNumber": "secret-order"}, {"fiat": "VES"}, {"fiat": "COP"}]
+            return httpx.Response(200, json={"code": "000000", "success": True, "data": rows, "total": 3})
+        return fake_binance(request)
+
+    s = Settings(_env_file=None, BINANCE_API_KEY="readkey123456", BINANCE_API_SECRET="readsecret")
+    with BinanceP2PClient(s, transport=httpx.MockTransport(handler)) as client:
+        checks = vi.run_checks(s, client, now_ms=1_760_000_000_000)
+    by_name = {c.name: c for c in checks}
+
+    legacy = by_name["Historial C2C clásico BUY (30 días)"]
+    assert legacy.findings["orders_by_fiat"] == {"VES": 2, "COP": 1}
+    six = by_name["Historial de órdenes (6 meses, por ventanas)"]
+    assert len(six.findings["windows"]) == 6
+    assert six.findings["windows"][0]["total"] == 3
+    assert any("/c2c/orderMatch/" in p for p in seen) and any("/agent/orderMatch/" in p for p in seen)
+    assert "secret-order" not in json.dumps(vi.build_report(s, checks))

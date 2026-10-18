@@ -39,6 +39,8 @@ PUBLIC_TRADE_METHODS = Endpoint("public.trade_methods", "GET", "/bapi/c2c/v1/pub
 
 # --- SAPI lectura ---
 ORDER_HISTORY = Endpoint("sapi.order_history", "GET", "/sapi/v1/c2c/agent/orderMatch/listUserOrderHistory", Base.SAPI, True)
+# Endpoint C2C clásico (developers.binance.com/docs/c2c): máx. 30 días por consulta, últimos 6 meses.
+ORDER_HISTORY_LEGACY = Endpoint("sapi.order_history_legacy", "GET", "/sapi/v1/c2c/orderMatch/listUserOrderHistory", Base.SAPI, True)
 LIST_ORDERS = Endpoint("sapi.list_orders", "POST", "/sapi/v1/c2c/agent/orderMatch/listOrders", Base.SAPI, True, body=BodyKind.JSON)
 ORDER_DETAIL = Endpoint("sapi.order_detail", "POST", "/sapi/v1/c2c/agent/orderMatch/getUserOrderDetail", Base.SAPI, True, body=BodyKind.JSON)
 QUERY_COMPLAINTS = Endpoint("sapi.query_complaints", "POST", "/sapi/v1/c2c/agent/complaint/query-complaints", Base.SAPI, True, body=BodyKind.JSON)
