@@ -37,6 +37,7 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 ## Objetivo de negocio (2026-10-18)
 - Meta del usuario (aclarada): **~40 USD diarios (≈ 127.000 COP a TRM 3.174,67) con 10–15 millones COP** → 1,27 %/día con 10 M o 0,85 %/día con 15 M (≈ 25–38 % mensual). Considerada por el usuario como "conservadora"; se le advirtió que es exigente frente a spreads observados (0–0,37 % en la cima) y que la viabilidad se medirá con simulación antes de comprometer capital.
 - Sin historial reciente de P2P en COP (opera ventas directas por remesas) → no hay línea base propia; se calibrará con simulación sobre snapshots (Fases 5/7/8).
+- **Decisión del usuario:** el P2P COP se evalúa como negocio independiente; **no** se combina con su operación de remesas (ya rentable).
 - Relación clave: ganancia diaria = capital × margen neto por ciclo × ciclos/día.
 
 ## Entorno del usuario
