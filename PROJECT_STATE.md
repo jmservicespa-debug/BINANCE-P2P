@@ -11,7 +11,7 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 | Fase | Estado |
 |---|---|
 | 1. Viabilidad e integraciones | ✅ Diagnóstico · ✅ Verificación real ejecutada 2026-10-18 (16 OK / 2 error) · ⏳ Pendiente: confirmar cuenta de la key (0 anuncios/órdenes/métodos de pago) y resolver `getReferencePrice` |
-| 2. Monitor de anuncios | ⛔ No iniciada (bloqueada hasta cerrar Fase 1) |
+| 2. Monitor de anuncios | 🟡 Implementada (2026-10-18), 76 pruebas OK · ⏳ Pendiente: ejecución real en el PC del usuario ≥ 24 h sin errores no controlados |
 | 3–10 | ⛔ No iniciadas |
 
 ## Decisiones tomadas
@@ -70,7 +70,8 @@ tests/                     pruebas unitarias (sin red)
 1. ✅ API key de solo lectura creada (IP whitelist) y guardada con `python -m jmcambios.tools.set_keys`.
 2. ✅ `jmcambios-verify` ejecutado en el PC Windows del usuario (resultados en docs/FASE1_VIABILIDAD.md §11).
 2b. ✅ Aclarado: la key verificada es de una cuenta de prueba.
-2c. ⏳ Usuario: aprobar inicio de Fase 2 (monitor de mercado, no depende de la cuenta).
+2c. ✅ Fase 2 aprobada por el usuario: **solo USDT/COP por ahora**; más mercados y exchanges en el futuro (arquitectura preparada).
+2e. ⏳ Usuario: `git pull` + `pip install -e ".[dev]"` + `jmcambios-monitor --once`; confirmar que el lado ASK/BID es correcto (spread positivo, sin nota de 'lado distinto') y luego dejarlo corriendo 24 h.
 2d. ⏳ Antes de Fase 4: key de solo lectura de la cuenta oficial + `jmcambios-verify`.
 3. ✅ Costos: recibidos (solo 4x1000).
 4. Con el informe: actualizar matriz 🔎 → ✅/⛔ y comenzar Fase 2.

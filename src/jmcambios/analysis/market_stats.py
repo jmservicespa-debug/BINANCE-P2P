@@ -13,7 +13,7 @@ from statistics import median
 
 from jmcambios.domain import Ad, Side
 
-DEPTH_BANDS = (Decimal("0.005"), Decimal("0.01"), Decimal("0.02"))
+DEPTH_BANDS = (("0.5%", Decimal("0.005")), ("1%", Decimal("0.01")), ("2%", Decimal("0.02")))
 
 
 @dataclass(frozen=True)
@@ -88,8 +88,7 @@ def summarize(side: Side, ads: list[Ad], top_n: int = 10) -> SideStats:
     if stats.announced_qty > 0:
         stats.vwap = _q(sum((a.price * a.available_qty for a in ads), Decimal(0)) / stats.announced_qty)
 
-    for band in DEPTH_BANDS:
-        label = f"{band * 100:g}%"
+    for label, band in DEPTH_BANDS:
         stats.depth_qty[label] = sum((a.available_qty for a in ads if _within(side, a.price, best, band)), Decimal(0))
 
     per_user: dict[str, list[Ad]] = defaultdict(list)

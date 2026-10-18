@@ -24,6 +24,9 @@
 | 11 | Panel de control | `jmcambios.dashboard` | 6 |
 | 12 | Sistema de alertas | `jmcambios.alerts` | 6 |
 | 13 | Auditoría y registro | `jmcambios.audit` | 2+ |
+| — | Modelos de dominio (independientes del exchange) | `jmcambios.domain` | 2 |
+| — | Estadísticas de snapshot y filtros de relevancia | `jmcambios.analysis.market_stats`, `jmcambios.analysis.filters` | 2 |
+| — | Monitor periódico + registro de snapshots | `jmcambios.monitor` | 2 |
 | — | Configuración y modos | `jmcambios.config` | 1 |
 | — | Herramientas (verificador, etc.) | `jmcambios.tools` | 1 |
 
@@ -54,6 +57,14 @@
      (11) Panel / (12) Alertas      (9) Ejecutor idempotente ──► Binance
                   └──────────── (13) Auditoría ◄──────────┘
 ```
+
+## Convenciones de dominio
+
+- `Side.ASK`: el **anunciante vende** USDT (en Binance se obtiene con `tradeType=BUY`). Compite con mis anuncios de venta.
+- `Side.BID`: el **anunciante compra** USDT (`tradeType=SELL`). Compite con mis anuncios de compra.
+- Mejor precio: ASK = el más bajo; BID = el más alto. Spread = mejor ASK − mejor BID (negativo ⇒ anomalía).
+- Cantidades = **liquidez anunciada**. El volumen ejecutado del mercado no es observable.
+- Nuevo exchange/mercado = nuevo adaptador que implemente `MarketSource.fetch(side) -> MarketSnapshot`; el análisis no cambia.
 
 ## Modos
 

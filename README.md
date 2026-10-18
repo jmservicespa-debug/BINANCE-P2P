@@ -2,7 +2,7 @@
 
 Sistema de observación, análisis y posicionamiento estratégico de anuncios Binance P2P para el mercado USDT/COP.
 
-**Estado actual: FASE 1 (viabilidad).** Ver:
+**Estado actual: FASE 2 (monitor de mercado, solo lectura).** Ver:
 - [`docs/FASE1_VIABILIDAD.md`](docs/FASE1_VIABILIDAD.md) — diagnóstico técnico: qué está confirmado, qué falta verificar y qué no es posible.
 - [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) — módulos y flujo.
 - [`PROJECT_STATE.md`](PROJECT_STATE.md) — estado del proyecto entre sesiones.
@@ -45,6 +45,28 @@ Muestra una tabla con el resultado de cada endpoint y guarda `reports/verificaci
 
 Resultados posibles: `OK`, `AUTH_ERROR` (key/firma/hora), `PERMISSION_DENIED` (p. ej. falta permiso de comerciante), `GEO_OR_IP_BLOCKED` (región o IP no permitida), `RATE_LIMITED`, `API_ERROR`, `NETWORK_ERROR`.
 
+## Monitor del mercado (Fase 2)
+
+Solo lee datos; no modifica anuncios. Con API key recorre el libro completo; sin ella usa la lista pública (20 anuncios por lado).
+
+```bash
+jmcambios-monitor --once                      # un ciclo y salir
+jmcambios-monitor                             # cada 60 s hasta Ctrl+C
+jmcambios-monitor --interval 120 --brief      # cada 2 min, salida resumida
+jmcambios-monitor --pay BancolombiaSA,Nequi --amount 1.000.000 --min-finish-rate 95 --merchants-only
+```
+
+| Opción | Uso |
+|---|---|
+| `--pay` | Métodos de pago compatibles (identificadores de Binance: `BancolombiaSA`, `Nequi`, `DaviviendaSA`, `Daviplata`, `BreBKeys`…) |
+| `--amount` | Monto típico por operación en COP: descarta anuncios cuyos límites no lo admiten |
+| `--min-finish-rate` / `--min-orders` / `--merchants-only` | Calidad mínima del anunciante |
+| `--exclude-user` | Excluir usuarios (p. ej. tu propio `userNo`) |
+| `--no-record` | No guardar snapshots |
+
+Cada ciclo se guarda en `data/snapshots/binance_p2p/usdt_cop/AAAA-MM-DD.jsonl.gz` (base para la Fase 3).
+En pantalla, `[Binance]` = dato observado y `[cálculo]` = cálculo del sistema. La liquidez mostrada es **anunciada**, no volumen ejecutado.
+
 ## Pruebas
 
 ```bash
@@ -63,6 +85,14 @@ src/jmcambios/
   connectors/binance/signing.py   firma HMAC-SHA256 SAPI C2C
   connectors/binance/client.py    cliente HTTP (solo lectura por defecto)
   tools/verify_integration.py     verificador de Fase 1 (CLI jmcambios-verify)
+  tools/set_keys.py               asistente para guardar la API key en .env
+  tools/monitor_cli.py            monitor de mercado (CLI jmcambios-monitor)
+  domain/                         modelos independientes del exchange (Ad, MarketSnapshot, Side)
+  normalizer/binance_p2p.py       validación y normalización de anuncios
+  connectors/binance/market.py    fuente de mercado Binance (paginación, respaldo público)
+  analysis/market_stats.py        estadísticas por lado, profundidad, concentración, spread
+  analysis/filters.py             filtros de relevancia (método, monto, calidad)
+  monitor/                        servicio periódico, registro gzip y salida en consola
 tests/                            pruebas unitarias
 docs/                             diagnóstico y arquitectura
 ```

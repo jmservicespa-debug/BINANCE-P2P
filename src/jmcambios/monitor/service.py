@@ -1,0 +1,117 @@
+"""Monitor periódico del mercado P2P (solo lectura)."""
+
+from __future__ import annotations
+
+import logging
+import time
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from datetime import datetime
+
+from jmcambios.analysis.filters import AdFilter
+from jmcambios.analysis.market_stats import SideStats, Spread, spread, summarize
+from jmcambios.connectors.binance.market import MarketDataError, MarketSource
+from jmcambios.domain import MarketSnapshot, Side
+from jmcambios.monitor.recorder import SnapshotRecorder
+
+log = logging.getLogger(__name__)
+
+
+@dataclass
+class CycleResult:
+    started_at: datetime
+    snapshots: dict[Side, MarketSnapshot] = field(default_factory=dict)
+    stats: dict[Side, SideStats] = field(default_factory=dict)
+    filtered_stats: dict[Side, SideStats] = field(default_factory=dict)
+    excluded: dict[Side, dict[str, int]] = field(default_factory=dict)
+    spread: Spread | None = None
+    filtered_spread: Spread | None = None
+    errors: list[str] = field(default_factory=list)
+    alerts: list[str] = field(default_factory=list)
+
+    @property
+    def ok(self) -> bool:
+        return not self.errors
+
+
+class Monitor:
+    def __init__(
+        self,
+        source: MarketSource,
+        *,
+        ad_filter: AdFilter | None = None,
+        recorder: SnapshotRecorder | None = None,
+        interval_s: float = 60.0,
+        max_backoff_s: float = 900.0,
+        clock: Callable[[], datetime],
+        sleep: Callable[[float], None] = time.sleep,
+        on_cycle: Callable[[CycleResult], None] | None = None,
+    ) -> None:
+        self._source = source
+        self._filter = ad_filter or AdFilter()
+        self._recorder = recorder
+        self._interval = interval_s
+        self._max_backoff = max_backoff_s
+        self._clock = clock
+        self._sleep = sleep
+        self._on_cycle = on_cycle
+        self.consecutive_failures = 0
+
+    def run_cycle(self) -> CycleResult:
+        result = CycleResult(started_at=self._clock())
+        for side in (Side.ASK, Side.BID):
+            try:
+                snap = self._source.fetch(side)
+            except MarketDataError as exc:
+                result.errors.append(str(exc))
+                continue
+            stats = summarize(side, snap.ads)
+            result.snapshots[side] = snap
+            result.stats[side] = stats
+            if self._filter.active:
+                kept, excluded = self._filter.apply(snap.ads)
+                result.filtered_stats[side] = summarize(side, kept)
+                result.excluded[side] = excluded
+            if not snap.complete:
+                result.alerts.append(f"{side.label_es}: snapshot incompleto — " + "; ".join(snap.notes))
+            if snap.rejected:
+                result.alerts.append(f"{side.label_es}: {len(snap.rejected)} anuncios rechazados por datos incoherentes")
+            if self._recorder is not None:
+                try:
+                    self._recorder.write(snap, stats)
+                except OSError as exc:
+                    result.errors.append(f"no se pudo guardar el snapshot: {exc}")
+
+        if Side.ASK in result.stats and Side.BID in result.stats:
+            result.spread = spread(result.stats[Side.ASK], result.stats[Side.BID])
+            if result.spread and result.spread.inverted:
+                result.alerts.append("ANOMALÍA: el mejor precio de venta es menor que el de compra (spread negativo)")
+        if result.filtered_stats.get(Side.ASK) and result.filtered_stats.get(Side.BID):
+            result.filtered_spread = spread(result.filtered_stats[Side.ASK], result.filtered_stats[Side.BID])
+
+        self.consecutive_failures = self.consecutive_failures + 1 if result.errors else 0
+        if self.consecutive_failures >= 3:
+            result.alerts.append(f"{self.consecutive_failures} ciclos seguidos con errores; esperando más entre intentos")
+        return result
+
+    def next_delay(self) -> float:
+        if self.consecutive_failures == 0:
+            return self._interval
+        return min(self._interval * (2 ** min(self.consecutive_failures, 6)), self._max_backoff)
+
+    def run(self, max_cycles: int | None = None) -> None:
+        cycles = 0
+        while max_cycles is None or cycles < max_cycles:
+            started = time.monotonic()
+            try:
+                result = self.run_cycle()
+            except Exception as exc:  # el monitor debe sobrevivir a fallos inesperados
+                log.exception("fallo inesperado en el ciclo")
+                result = CycleResult(started_at=self._clock(), errors=[f"fallo inesperado: {type(exc).__name__}: {exc}"])
+                self.consecutive_failures += 1
+            if self._on_cycle:
+                self._on_cycle(result)
+            cycles += 1
+            if max_cycles is not None and cycles >= max_cycles:
+                break
+            self._sleep(max(0.0, self.next_delay() - (time.monotonic() - started)))
