@@ -23,7 +23,13 @@ EXPECTED_LENGTH = 64
 
 def clean(value: str) -> str:
     # Quita espacios, saltos de línea y comillas que suelen colarse al pegar.
-    return value.strip().strip("\"'").strip()
+    value = value.strip().strip("\"'").strip()
+    # Como la entrada no se ve, es fácil pegar varias veces la misma clave.
+    if len(value) > EXPECTED_LENGTH and len(value) % EXPECTED_LENGTH == 0:
+        chunk = value[:EXPECTED_LENGTH]
+        if chunk * (len(value) // EXPECTED_LENGTH) == value:
+            return chunk
+    return value
 
 
 def problems(value: str) -> list[str]:
@@ -33,7 +39,7 @@ def problems(value: str) -> list[str]:
     if not _VALID.match(value):
         issues.append("contiene caracteres no válidos (espacios u otros símbolos)")
     if len(value) != EXPECTED_LENGTH:
-        issues.append(f"tiene {len(value)} caracteres; las claves HMAC de Binance suelen tener {EXPECTED_LENGTH}")
+        issues.append(f"tiene {len(value)} caracteres y deben ser {EXPECTED_LENGTH}")
     return issues
 
 
@@ -48,15 +54,17 @@ def upsert_env(text: str, values: dict[str, str]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def ask(label: str, prompt: Callable[[str], str], attempts: int = 3) -> str | None:
+def ask(label: str, prompt: Callable[[str], str], *, show_hint: bool, attempts: int = 3) -> str | None:
     for _ in range(attempts):
-        value = clean(prompt(f"Pega tu {label} y presiona Enter (no se verá en pantalla): "))
+        raw = prompt(f"Pega tu {label} UNA sola vez y presiona Enter (no se verá en pantalla): ")
+        value = clean(raw)
         issues = problems(value)
         if not issues:
-            print(f"  ✔ {label} recibida: {mask_key(value)} ({len(value)} caracteres)")
-            return value
-        if value and all("caracteres;" in i for i in issues):
-            print(f"  ⚠ {label}: {issues[0]}. Se guardará igualmente; revisa que esté completa.")
+            if len(raw.strip().strip("\"'").strip()) != len(value):
+                print("  (se detectó la clave pegada varias veces; se guardó una sola copia)")
+            # De la Secret Key no se muestra ni un fragmento.
+            shown = f"{mask_key(value)} " if show_hint else ""
+            print(f"  ✔ {label} recibida: {shown}({len(value)} caracteres)")
             return value
         print(f"  ✘ {label}: " + "; ".join(issues) + ". Inténtalo de nuevo.")
     return None
@@ -68,11 +76,11 @@ def main(argv: list[str] | None = None, prompt: Callable[[str], str] = getpass.g
         example = Path(".env.example")
         env_path.write_text(example.read_text(encoding="utf-8") if example.exists() else "", encoding="utf-8")
 
-    key = ask("API Key", prompt)
+    key = ask("API Key", prompt, show_hint=True)
     if key is None:
         print("\nNo se guardó nada. Copia de nuevo la API Key desde Binance y repite.")
         return 1
-    secret = ask("Secret Key", prompt)
+    secret = ask("Secret Key", prompt, show_hint=False)
     if secret is None:
         print("\nNo se guardó nada. Si ya no ves la Secret Key en Binance, crea una API key nueva.")
         return 1

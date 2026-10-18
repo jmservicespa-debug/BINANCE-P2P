@@ -62,3 +62,26 @@ def test_output_never_prints_full_key(tmp_path, capsys):
     set_keys.main(prompt=feeder(KEY, SECRET), env_path=env)
     out = capsys.readouterr().out
     assert KEY not in out and SECRET not in out
+
+
+def test_key_pasted_three_times_is_deduplicated(tmp_path, capsys):
+    env = tmp_path / ".env"
+    env.write_text("BINANCE_API_KEY=\nBINANCE_API_SECRET=\n")
+    assert set_keys.main(prompt=feeder(KEY * 3, SECRET), env_path=env) == 0
+    assert f"BINANCE_API_KEY={KEY}\n" in env.read_text()
+    assert "varias veces" in capsys.readouterr().out
+
+
+def test_wrong_length_is_rejected_and_retried(tmp_path):
+    env = tmp_path / ".env"
+    env.write_text("")
+    assert set_keys.main(prompt=feeder(KEY[:40], KEY, SECRET), env_path=env) == 0
+    assert f"BINANCE_API_KEY={KEY}\n" in env.read_text()
+
+
+def test_secret_fragment_never_printed(tmp_path, capsys):
+    env = tmp_path / ".env"
+    env.write_text("")
+    set_keys.main(prompt=feeder(KEY, SECRET), env_path=env)
+    out = capsys.readouterr().out
+    assert SECRET[:5] not in out and SECRET[-4:] not in out
