@@ -29,7 +29,9 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 
 ## Perfil operativo del usuario (2026-10-18)
 - Opera **principalmente en Venezuela (VES)**; en COP tiene poca actividad reciente y ningún anuncio activo ahora.
-- Dice tener >300 órdenes en total; la verificación devolvió 0 órdenes/0 métodos de pago → diagnosticando si la key es de otra cuenta o si el endpoint agent no devuelve su historial (se añadió comparación con el endpoint C2C clásico y ventanas de 6 meses).
+- **Aclarado:** la API key verificada es de una **cuenta de prueba** sin actividad; por eso 0 anuncios/órdenes/métodos de pago. No es un fallo. La cuenta oficial (comerciante, con anuncios) aún no se ha verificado.
+- Datos de mercado (público + `ads/search`) no dependen de la cuenta → verificados y suficientes para la Fase 2.
+- Pendiente antes de Fase 4: key de solo lectura de la **cuenta oficial** para verificar mis anuncios, órdenes, comisiones y métodos de pago.
 - La arquitectura ya parametriza `JMC_FIAT`; extender a USDT/VES es candidato natural tras la Fase 2 (decisión pendiente del usuario).
 
 ## Entorno del usuario
@@ -67,6 +69,8 @@ tests/                     pruebas unitarias (sin red)
 ## Próximos pasos
 1. ✅ API key de solo lectura creada (IP whitelist) y guardada con `python -m jmcambios.tools.set_keys`.
 2. ✅ `jmcambios-verify` ejecutado en el PC Windows del usuario (resultados en docs/FASE1_VIABILIDAD.md §11).
-2b. ⏳ Usuario: confirmar si la key es de la cuenta comerciante principal (no subcuenta) y si tiene anuncios/órdenes recientes; reejecutar `git pull` + `jmcambios-verify` para probar variantes de `getReferencePrice`.
+2b. ✅ Aclarado: la key verificada es de una cuenta de prueba.
+2c. ⏳ Usuario: aprobar inicio de Fase 2 (monitor de mercado, no depende de la cuenta).
+2d. ⏳ Antes de Fase 4: key de solo lectura de la cuenta oficial + `jmcambios-verify`.
 3. ✅ Costos: recibidos (solo 4x1000).
 4. Con el informe: actualizar matriz 🔎 → ✅/⛔ y comenzar Fase 2.
