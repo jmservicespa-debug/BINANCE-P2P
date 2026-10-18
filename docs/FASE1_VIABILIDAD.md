@@ -192,3 +192,22 @@ El verificador comprueba, uno por uno, los endpoints públicos y autenticados de
 | Fraude de terceros (pagos falsos, triangulación) | Alto | El sistema nunca libera fondos; alertas por contrapartes y exposición. |
 | Fuga de credenciales | Alto | Permisos mínimos, IP whitelist, sin retiros, redacción en logs, `.env` fuera de git. |
 | Región del servidor bloqueada por Binance | Medio | Elegir VPS fuera de jurisdicciones restringidas y verificar con `jmcambios-verify`. |
+
+---
+
+## 11. Resultados de la verificación real (2026-10-18, PC del usuario en Colombia)
+
+Informe `verificacion_20261018_042123.json` — 16 OK, 2 API_ERROR. Ninguna llamada de escritura.
+
+| Comprobación | Resultado | Conclusión |
+|---|---|---|
+| API pública agent (cotización, métodos de pago COP, lista de anuncios) | ✅ OK | Monitor sin credenciales viable. 22 métodos de pago COP (p. ej. `BancolombiaSA`, `Nequi`, `DaviviendaSA`, `Daviplata`, `BreBKeys`). |
+| Firma HMAC + IP whitelist + región | ✅ OK | La IP del usuario no está bloqueada; la firma sin ordenar parámetros funciona. |
+| `ads/search` autenticado BUY/SELL + paginación | ✅ OK | `total` real: **201** anuncios BUY y **199** SELL → libro completo en ~10 páginas por lado, peso 1 por llamada. |
+| `createTime` de anuncios de terceros | ⛔ No disponible | La antigüedad de un anuncio se estimará como "primera vez visto" en nuestros snapshots (*inferido*). |
+| Datos del anunciante en `search` | ✅ Parcial | `monthOrderCount`, `monthFinishRate`, `userType`, `nickName`, `userNo`. **No** trae `orderCount` total ni `advConfirmTime`. |
+| `getReferencePrice` | ⚠️ `-31002 illegal parameter` | El cuerpo documentado no es aceptado. El verificador ahora prueba variantes. Alternativa ya disponible: `quote-price` público. |
+| Mis anuncios / órdenes 30 días / disputas / mis métodos de pago | ✅ OK pero **0 resultados** | Pendiente de confirmar con el usuario si la key pertenece a la cuenta comerciante principal (ver PROJECT_STATE). |
+| Categorías disponibles | ✅ `["mass"]` | Solo categoría estándar disponible para esta cuenta/key. |
+| TRM oficial | ✅ OK | 3.174,67 COP/USD vigente 2026-10-17 → 2026-10-19. |
+| Consumo de peso | ✅ | `x-sapi-used-ip-weight-1m` ≤ 3 durante toda la verificación. |

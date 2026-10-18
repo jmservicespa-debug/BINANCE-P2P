@@ -75,3 +75,40 @@ def test_trm_network_failure():
         raise httpx.ConnectError("x")
 
     assert vi.check_trm(transport=httpx.MockTransport(handler)).outcome == "NETWORK_ERROR"
+
+
+def test_reference_price_tries_variants_until_one_works():
+    calls = []
+
+    def handler(request: httpx.Request):
+        if request.url.path.endswith("getReferencePrice"):
+            body = json.loads(request.content)
+            calls.append(body)
+            if body.get("tradeType") in ("0", "1"):
+                return httpx.Response(200, json={"code": "000000", "success": True,
+                                                 "data": [{"referencePrice": "3900", "priceScale": 2}]})
+            return httpx.Response(400, json={"code": -31002, "msg": "illegal parameter"})
+        return fake_binance(request)
+
+    s = Settings(_env_file=None, BINANCE_API_KEY="readkey123456", BINANCE_API_SECRET="readsecret")
+    with BinanceP2PClient(s, transport=httpx.MockTransport(handler)) as client:
+        checks = vi.run_checks(s, client)
+    ref = next(c for c in checks if c.name == "Precio de referencia BUY")
+    assert ref.outcome == "OK"
+    assert ref.findings["working_body"]["tradeType"] == "0"
+    assert ref.findings["referencePrice"] == "3900"
+    assert len(ref.findings["variants_tried"]) == 3
+
+
+def test_reference_price_all_variants_fail_reports_first_error():
+    def handler(request: httpx.Request):
+        if request.url.path.endswith("getReferencePrice"):
+            return httpx.Response(400, json={"code": -31002, "msg": "illegal parameter"})
+        return fake_binance(request)
+
+    s = Settings(_env_file=None, BINANCE_API_KEY="readkey123456", BINANCE_API_SECRET="readsecret")
+    with BinanceP2PClient(s, transport=httpx.MockTransport(handler)) as client:
+        checks = vi.run_checks(s, client)
+    ref = next(c for c in checks if c.name == "Precio de referencia SELL")
+    assert ref.outcome == "API_ERROR" and ref.code == "-31002"
+    assert len(ref.findings["variants_tried"]) == len(vi.reference_price_variants("USDT", "COP", "SELL"))

@@ -85,6 +85,44 @@ def _to_check(name: str, result: ApiResult, requires_auth: bool, schema_of: Call
     )
 
 
+def reference_price_variants(asset: str, fiat: str, trade_type: str) -> list[dict[str, Any]]:
+    """Variantes del cuerpo de getReferencePrice.
+
+    La forma documentada devolvió -31002 "illegal parameter" en la primera
+    verificación real (2026-10-18); se prueban variantes para identificar la válida.
+    """
+    numeric = "0" if trade_type == "BUY" else "1"
+    return [
+        {"assets": [asset], "fiatCurrency": fiat, "tradeType": trade_type},
+        {"assets": [asset], "fiatCurrency": fiat, "tradeType": trade_type, "payType": "BANK"},
+        {"assets": [asset], "fiatCurrency": fiat, "tradeType": numeric},
+        {"asset": asset, "fiatCurrency": fiat, "tradeType": trade_type},
+        {"assets": [asset], "fiat": fiat, "tradeType": trade_type},
+    ]
+
+
+def _reference_price_check(client: BinanceP2PClient, asset: str, fiat: str, trade_type: str) -> Check:
+    tried: list[dict[str, Any]] = []
+    first_failure: ApiResult | None = None
+    for body in reference_price_variants(asset, fiat, trade_type):
+        r = client.call(ep.REFERENCE_PRICE, body=body)
+        tried.append({"body_keys": sorted(body), "tradeType": body.get("tradeType"), "outcome": r.outcome.value, "code": r.code})
+        if r.ok:
+            c = _to_check(f"Precio de referencia {trade_type}", r, True)
+            first = (_items(r.data) or [{}])[0]
+            if isinstance(first, dict):
+                c.findings = {k: first.get(k) for k in ("referencePrice", "priceScale", "currencyScale", "assetScale")}
+            c.findings["working_body"] = body
+            c.findings["variants_tried"] = tried
+            return c
+        first_failure = first_failure or r
+        if r.outcome is not Outcome.API_ERROR:
+            break  # error de autenticación/red: no tiene sentido probar más variantes
+    c = _to_check(f"Precio de referencia {trade_type}", first_failure, True)
+    c.findings["variants_tried"] = tried
+    return c
+
+
 def run_checks(settings: Settings, client: BinanceP2PClient, *, skip_auth: bool = False) -> list[Check]:
     asset, fiat = settings.asset, settings.fiat
     checks: list[Check] = []
@@ -110,12 +148,7 @@ def run_checks(settings: Settings, client: BinanceP2PClient, *, skip_auth: bool 
 
     # --- Autenticados (lectura) ---
     for trade_type in ("BUY", "SELL"):
-        r = client.call(ep.REFERENCE_PRICE, body={"assets": [asset], "fiatCurrency": fiat, "tradeType": trade_type})
-        c = _to_check(f"Precio de referencia {trade_type}", r, True)
-        if r.ok:
-            first = (_items(r.data) or [{}])[0]
-            c.findings = {k: first.get(k) for k in ("referencePrice", "priceScale", "currencyScale", "assetScale") if isinstance(first, dict)}
-        checks.append(c)
+        checks.append(_reference_price_check(client, asset, fiat, trade_type))
 
         r = client.call(ep.ADS_SEARCH, body={"fiat": fiat, "asset": asset, "tradeType": trade_type, "page": 1, "rows": 20})
         c = _to_check(f"Búsqueda autenticada de anuncios {trade_type}", r, True, schema_of=lambda s: s.get("adv", s) if isinstance(s, dict) else s)
@@ -236,7 +269,7 @@ def main(argv: list[str] | None = None) -> int:
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"verificacion_{datetime.now(UTC):%Y%m%d_%H%M%S}.json"
-    path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    path.write_text(json.dumps(report, ensure_ascii=True, indent=2), encoding="utf-8")
 
     _print_table(checks)
     s = report["summary"]

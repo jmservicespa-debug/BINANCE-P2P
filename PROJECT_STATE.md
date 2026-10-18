@@ -10,7 +10,7 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 
 | Fase | Estado |
 |---|---|
-| 1. Viabilidad e integraciones | ✅ Diagnóstico entregado · ⏳ **Pendiente: el usuario ejecuta `jmcambios-verify` y comparte el informe** |
+| 1. Viabilidad e integraciones | ✅ Diagnóstico · ✅ Verificación real ejecutada 2026-10-18 (16 OK / 2 error) · ⏳ Pendiente: confirmar cuenta de la key (0 anuncios/órdenes/métodos de pago) y resolver `getReferencePrice` |
 | 2. Monitor de anuncios | ⛔ No iniciada (bloqueada hasta cerrar Fase 1) |
 | 3–10 | ⛔ No iniciadas |
 
@@ -26,6 +26,10 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 ## Hechos verificados vs. pendientes
 - Verificado en documentación oficial: ver `docs/FASE1_VIABILIDAD.md` §2.
 - **No verificado en ejecución**: el entorno de desarrollo no tiene salida a binance.com (proxy 403). Ninguna llamada real ejecutada aún.
+
+## Entorno del usuario
+- PC Windows, Python 3.12.10, Git 2.55, proyecto en `C:\Users\Jamer\Documents\BINANCE-P2P`, venv `.venv`.
+- El Bloc de notas / `Read-Host` no guardaron las claves; usar siempre `python -m jmcambios.tools.set_keys`.
 
 ## Estructura
 ```
@@ -56,7 +60,8 @@ tests/                     pruebas unitarias (sin red)
 - Advertencia comunicada al usuario: la exención del GMF en Colombia suele depender de la cuenta marcada como exenta (una por persona, con tope mensual en UVT) o de los depósitos de bajo monto (Nequi/Daviplata, con tope), no de que origen y destino sean de la misma entidad. Validar la tasa efectiva con los **extractos bancarios** antes de la Fase 4.
 
 ## Próximos pasos
-1. ⏳ Usuario: crear API key de solo lectura con IP whitelist (IP del equipo que ejecuta el programa).
-2. ⏳ Usuario: ejecutar `jmcambios-verify` y compartir `reports/verificacion_*.json`.
+1. ✅ API key de solo lectura creada (IP whitelist) y guardada con `python -m jmcambios.tools.set_keys`.
+2. ✅ `jmcambios-verify` ejecutado en el PC Windows del usuario (resultados en docs/FASE1_VIABILIDAD.md §11).
+2b. ⏳ Usuario: confirmar si la key es de la cuenta comerciante principal (no subcuenta) y si tiene anuncios/órdenes recientes; reejecutar `git pull` + `jmcambios-verify` para probar variantes de `getReferencePrice`.
 3. ✅ Costos: recibidos (solo 4x1000).
 4. Con el informe: actualizar matriz 🔎 → ✅/⛔ y comenzar Fase 2.
