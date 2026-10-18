@@ -47,6 +47,9 @@ tests/                     pruebas unitarias (sin red)
 - No hay comisiones por transferencia en sus métodos de pago.
 - Comisión de Binance (maker): se obtiene de la API (`commissionRate`/`commission` de las órdenes), no se configura a mano.
 - Aplicación prevista en Fase 4: el GMF grava el COP **pagado** al comprar USDT; el COP recibido al vender no paga GMF al entrar.
+- **Exención informada por el usuario:** los pagos entre **Davivienda y Daviplata** (misma entidad) están **exentos** del 4x1000. Pagos hacia otros bancos/billeteras → 0,4 %.
+- Implementación: tasa GMF **configurable por método de pago** (p. ej. Davivienda/Daviplata = 0 %, resto = 0,4 %), no fija. Así el motor de precios puede preferir anuncios con métodos exentos cuando el margen sea ajustado.
+- Pendiente de confirmar con el usuario: desde qué cuenta paga a otros bancos (Bancolombia, Nequi…) y si alguna otra combinación está exenta.
 
 ## Próximos pasos
 1. ⏳ Usuario: crear API key de solo lectura con IP whitelist (IP del equipo que ejecuta el programa).
