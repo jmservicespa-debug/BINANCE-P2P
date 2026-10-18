@@ -42,7 +42,14 @@ src/jmcambios/
 tests/                     pruebas unitarias (sin red)
 ```
 
+## Costos operativos informados por el usuario (2026-10-18)
+- Único costo bancario: **GMF 4x1000 (0,4 %)** sobre los débitos/salidas de COP de las cuentas bancarias.
+- No hay comisiones por transferencia en sus métodos de pago.
+- Comisión de Binance (maker): se obtiene de la API (`commissionRate`/`commission` de las órdenes), no se configura a mano.
+- Aplicación prevista en Fase 4: el GMF grava el COP **pagado** al comprar USDT; el COP recibido al vender no paga GMF al entrar.
+
 ## Próximos pasos
-1. Usuario: crear API key de solo lectura con IP whitelist; ejecutar `jmcambios-verify`; compartir `reports/verificacion_*.json`.
-2. Usuario: enviar tabla de costos bancarios por método de pago.
-3. Con el informe: actualizar matriz 🔎 → ✅/⛔ y comenzar Fase 2.
+1. ⏳ Usuario: crear API key de solo lectura con IP whitelist (IP del equipo que ejecuta el programa).
+2. ⏳ Usuario: ejecutar `jmcambios-verify` y compartir `reports/verificacion_*.json`.
+3. ✅ Costos: recibidos (solo 4x1000).
+4. Con el informe: actualizar matriz 🔎 → ✅/⛔ y comenzar Fase 2.
