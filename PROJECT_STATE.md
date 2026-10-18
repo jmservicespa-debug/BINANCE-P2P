@@ -34,6 +34,11 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 - Pendiente antes de Fase 4: key de solo lectura de la **cuenta oficial** para verificar mis anuncios, órdenes, comisiones y métodos de pago.
 - La arquitectura ya parametriza `JMC_FIAT`; extender a USDT/VES es candidato natural tras la Fase 2 (decisión pendiente del usuario).
 
+## Objetivo de negocio (2026-10-18)
+- Meta del usuario: **~"$50 diarios" con 10.000.000 COP de capital** (pendiente aclarar si son 50 USD ≈ 158.700 COP/día = 1,59 % diario, o 50.000 COP/día = 0,5 % diario).
+- Sin historial reciente de P2P en COP (opera ventas directas por remesas) → no hay línea base propia; se calibrará con simulación sobre snapshots (Fases 5/7/8).
+- Relación clave: ganancia diaria = capital × margen neto por ciclo × ciclos/día.
+
 ## Entorno del usuario
 - PC Windows, Python 3.12.10, Git 2.55, proyecto en `C:\Users\Jamer\Documents\BINANCE-P2P`, venv `.venv`.
 - El Bloc de notas / `Read-Host` no guardaron las claves; usar siempre `python -m jmcambios.tools.set_keys`.
