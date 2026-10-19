@@ -170,7 +170,7 @@ def test_monitor_writes_history_and_renders_cross(tmp_path):
         mon = Monitor(source(handler), store=store, clock=lambda: NOW)
         result = mon.run_cycle()
         assert result.ok and result.cross.crossed and result.cross.executable
-        assert store.counts() == {"snapshots": 2, "cycles": 1, "ad_states": 2}
+        assert store.counts() == {"snapshots": 2, "cycles": 1, "ad_states": 2, "orders": 0}
         row = store.query("SELECT crossed, executable, best_pay_method, best_net_per_unit FROM cycles")[0]
         assert row["crossed"] == 1 and row["executable"] == 1 and row["best_pay_method"] == "DaviviendaSA"
         assert row["best_net_per_unit"] == 4.41

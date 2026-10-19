@@ -17,14 +17,15 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 from jmcambios.analysis.crossing import CrossReport
 from jmcambios.analysis.market_stats import SideStats, Spread
-from jmcambios.domain import Ad, MarketSnapshot, Side
+from jmcambios.domain import MarketSnapshot, Side
+from jmcambios.domain.account import Order, OrderSide
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS snapshots (
@@ -59,6 +60,19 @@ CREATE TABLE IF NOT EXISTS ad_states (
 );
 CREATE INDEX IF NOT EXISTS ix_states_open ON ad_states (venue, market, side, open);
 CREATE INDEX IF NOT EXISTS ix_states_time ON ad_states (venue, market, side, first_ts, last_ts);
+
+-- Órdenes propias (Fase 4). Importes como TEXT: contabilidad exacta con Decimal.
+CREATE TABLE IF NOT EXISTS orders (
+    venue TEXT NOT NULL, order_id TEXT NOT NULL,
+    side TEXT NOT NULL, asset TEXT NOT NULL, fiat TEXT NOT NULL,
+    qty TEXT NOT NULL, unit_price TEXT NOT NULL, total_fiat TEXT NOT NULL,
+    status TEXT NOT NULL, created_ts INTEGER NOT NULL,
+    role TEXT, commission TEXT, commission_rate TEXT,
+    pay_method TEXT, counterparty TEXT, ad_id TEXT,
+    synced_ts INTEGER NOT NULL,
+    PRIMARY KEY (venue, order_id)
+);
+CREATE INDEX IF NOT EXISTS ix_orders_time ON orders (fiat, created_ts);
 """
 
 
@@ -182,6 +196,59 @@ class HistoryStore:
                 ),
             )
 
+    def upsert_orders(self, orders: Iterable[Order], synced_ts: int) -> tuple[int, int]:
+        """Inserta o actualiza órdenes (el estado puede cambiar). Devuelve (nuevas, actualizadas)."""
+        new = updated = 0
+        with self._tx() as c:
+            for o in orders:
+                exists = c.execute(
+                    "SELECT 1 FROM orders WHERE venue=? AND order_id=?", (o.venue, o.order_id)
+                ).fetchone()
+                c.execute(
+                    """INSERT OR REPLACE INTO orders (venue, order_id, side, asset, fiat, qty, unit_price, total_fiat,
+                       status, created_ts, role, commission, commission_rate, pay_method, counterparty, ad_id, synced_ts)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (
+                        o.venue, o.order_id, o.side.value, o.asset, o.fiat, str(o.qty), str(o.unit_price),
+                        str(o.total_fiat), o.status, _ts(o.created_at), o.role,
+                        None if o.commission is None else str(o.commission),
+                        None if o.commission_rate is None else str(o.commission_rate),
+                        o.pay_method, o.counterparty, o.ad_id, synced_ts,
+                    ),
+                )
+                if exists:
+                    updated += 1
+                else:
+                    new += 1
+        return new, updated
+
+    def load_orders(
+        self, *, fiat: str | None = None, asset: str | None = None, since_ts: int = 0, until_ts: int | None = None
+    ) -> list[Order]:
+        sql = "SELECT * FROM orders WHERE created_ts >= ?"
+        params: list[Any] = [since_ts]
+        if until_ts is not None:
+            sql += " AND created_ts < ?"
+            params.append(until_ts)
+        if fiat:
+            sql += " AND fiat = ?"
+            params.append(fiat)
+        if asset:
+            sql += " AND asset = ?"
+            params.append(asset)
+        rows = self.conn.execute(sql + " ORDER BY created_ts, order_id", params).fetchall()
+        return [
+            Order(
+                venue=r["venue"], order_id=r["order_id"], side=OrderSide(r["side"]), asset=r["asset"], fiat=r["fiat"],
+                qty=Decimal(r["qty"]), unit_price=Decimal(r["unit_price"]), total_fiat=Decimal(r["total_fiat"]),
+                status=r["status"], created_at=datetime.fromtimestamp(r["created_ts"], UTC), role=r["role"],
+                commission=None if r["commission"] is None else Decimal(r["commission"]),
+                commission_rate=None if r["commission_rate"] is None else Decimal(r["commission_rate"]),
+                pay_method=r["pay_method"], counterparty=r["counterparty"], ad_id=r["ad_id"],
+            )
+            for r in rows
+        ]
+
     # ------------------------------------------------------------------ lectura
     def snapshot_at(self, venue: str, market: str, side: Side, ts: int) -> sqlite3.Row | None:
         """Último snapshot tomado en o antes de `ts`."""
@@ -209,4 +276,4 @@ class HistoryStore:
         return self.conn.execute(sql, tuple(params)).fetchall()
 
     def counts(self) -> dict[str, int]:
-        return {t: self.conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("snapshots", "cycles", "ad_states")}
+        return {t: self.conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("snapshots", "cycles", "ad_states", "orders")}
