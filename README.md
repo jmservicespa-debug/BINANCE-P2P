@@ -125,6 +125,7 @@ jmcambios-panel                                    # solo el panel (si el monito
 - **Alertas** (Telegram y/o correo): cruce aprovechable, presión fuerte (|puntaje| ≥ 40 y confianza ≥ 60), API key rechazada (IP), 3+ ciclos con errores, recuperación, inicio/parada del monitor y —en modo RECOMMENDATION— tus anuncios en línea que regalan margen, quedan por debajo del margen objetivo o se quedan atrás. Cada asunto se repite como máximo cada 10–60 min. Todas quedan registradas en la base.
 - En la pestaña **Precios** eliges la ganancia libre que buscas (0,5 / 1 / 1,5 / 2 % u otro valor) y los 3 escenarios y los precios sugeridos se recalculan con el último libro guardado. Solo cambia la vista; las alertas usan `JMC_MARGEN_MIN`.
 - También en **Precios**: botones **Solo verificados / Todos** para calcular las estrategias contra comerciantes verificados o contra todos. En comandos: `jmcambios-negocio recomendar --competencia todos` (o `verificados`).
+- Pestaña **Resultados**: tarjeta **Hoy** (ganancia realizada vs. `JMC_META_DIARIA`, compras/ventas, inventario sin vender y desde cuándo) y **Tope exento 4x1000** (pagos P2P del mes desde las cuentas exentas vs. `JMC_TOPE_EXENTO`; alertas al 80 % y 100 %; pasado el tope los escenarios incluyen el 4x1000). El monitor descarga tus órdenes cada 15 ciclos (`--ordenes-cada`).
 - El bot **solo envía**: el sistema no lee ni ejecuta nada que llegue por Telegram.
 
 ## Pruebas

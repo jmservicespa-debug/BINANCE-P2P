@@ -123,12 +123,24 @@ input{font:inherit;font-size:14px;width:96px;min-height:36px;padding:0 10px;bord
 </div>
 
 <div id="tab-resultados" class="hidden">
+  <section class="card" id="today-card"><div class="row"><h2>Hoy</h2><span class="chip calc">Cálculo</span></div>
+    <div class="row"><span class="big" id="t-real">—</span><span class="muted" id="t-goal"></span></div>
+    <div class="bar"><span id="t-bar" style="left:0;width:0;background:var(--up)"></span></div>
+    <div class="kv"><span>Compras / ventas hoy</span><b id="t-ops">—</b></div>
+    <div class="kv"><span>Inventario sin vender</span><b id="t-inv">—</b></div>
+    <div class="muted" id="t-since"></div><div class="muted" id="t-warn"></div>
+  </section>
+  <section class="card" id="cap-card"><div class="row"><h2>Tope exento 4x1000</h2><span class="chip inf">Estimado</span></div>
+    <div class="row"><span class="mid" id="c-used">—</span><span class="muted" id="c-cap"></span></div>
+    <div class="bar"><span id="c-bar" style="left:0;width:0"></span></div>
+    <div class="muted" id="c-note"></div>
+  </section>
   <section class="card"><div class="row"><h2>Rentabilidad COP · 30 días</h2><span class="chip calc">Cálculo</span></div>
     <div class="kv"><span>Beneficio realizado</span><b id="real">—</b></div>
     <div class="kv"><span>Compras / ventas</span><b id="ops">—</b></div>
     <div class="kv"><span>Margen bruto por USDT</span><b id="mpu">—</b></div>
     <div id="days"></div>
-    <span class="muted">Realizado = ciclos cerrados con costo conocido. Se actualiza con <span class="mono">jmcambios-negocio sincronizar</span>.</span>
+    <span class="muted">Realizado = ciclos cerrados con costo conocido. El monitor descarga tus órdenes solo cada ~15 min.</span>
     <div id="rwarn"></div>
   </section>
   <section class="card"><h2>Alertas recientes</h2><div id="alerts" class="muted">—</div></section>
@@ -187,6 +199,7 @@ function renderEstado(s) {
   const k = s.costs || {};
   $('costs').textContent = `Comisión maker compra ${pct(k.maker_buy)} · venta ${pct(k.maker_sell)} · 4x1000 ${pct(k.gmf)} (exenta) / ${pct(k.gmf_worst)} · margen mínimo ${pct(k.min_margin, 2)}`;
   renderPlanFor(s);
+  renderOperation(s);
 }
 
 const compat = (sp) => sp.rank_compatible <= sp.compatible_total
@@ -243,6 +256,35 @@ function setMargin(v) {
   margin = (v === null || Number.isNaN(v) || v < 0 || v > 10) ? null : Math.round(v * 100) / 100;
   try { margin === null ? localStorage.removeItem('jmc_margen') : localStorage.setItem('jmc_margen', margin); } catch (e) {}
   if (lastState) renderPlanFor(lastState);
+}
+
+function renderOperation(s) {
+  const t = s.today;
+  $('today-card').classList.toggle('hidden', !t);
+  if (t) {
+    $('t-real').innerHTML = `<span class="${t.realized < 0 ? 'neg' : 'good'}">${fmt(t.realized, 0)}</span>`;
+    $('t-goal').textContent = `de ${fmt(t.goal, 0)} COP · ${fmt(t.progress * 100, 0)} %`;
+    const tb = $('t-bar'); tb.style.width = Math.max(0, Math.min(100, t.progress * 100)) + '%';
+    tb.style.background = t.progress >= 1 ? 'var(--up)' : 'var(--accent)';
+    $('t-ops').textContent = `${t.buys} / ${t.sells}`;
+    $('t-inv').textContent = t.inventory_qty > 0.5 ? `${fmt(t.inventory_qty)} USDT a ${fmt(t.inventory_avg_cost)}` : 'ninguno';
+    if (t.inventory_qty > 0.5 && t.inventory_since) {
+      const h = (Date.now() / 1000 - t.inventory_since) / 3600;
+      $('t-since').innerHTML = `Comprado hace ${h < 1 ? Math.round(h * 60) + ' min' : fmt(h, 1) + ' h'}`
+        + (h >= 6 ? ' · <span class="neg">capital quieto: revisa tu precio de venta</span>' : '');
+    } else { $('t-since').textContent = ''; }
+    $('t-warn').innerHTML = t.warnings.map(w => '⚠ ' + esc(w)).join('<br>');
+  }
+  const c = s.exempt;
+  $('cap-card').classList.toggle('hidden', !c);
+  if (c) {
+    $('c-used').textContent = `${fmt(c.used, 0)} COP`;
+    $('c-cap').textContent = `de ${fmt(c.cap, 0)} · ${fmt(c.ratio * 100, 0)} %`;
+    const cb = $('c-bar'); cb.style.width = Math.min(100, c.ratio * 100) + '%';
+    cb.style.background = c.ratio >= 1 ? 'var(--down)' : c.ratio >= 0.8 ? 'var(--inf)' : 'var(--up)';
+    $('c-note').innerHTML = (c.exceeded ? '<span class="neg">Tope superado: los escenarios ya incluyen el 4x1000.</span><br>' : `Quedan ${fmt(c.remaining, 0)} COP este mes (${esc(c.month)}).<br>`)
+      + `Pagos P2P por ${c.accounts.map(esc).join(', ')} (${c.orders} órdenes). Otros débitos de esas cuentas no se ven aquí.`;
+  }
 }
 
 function renderSerie(d) {

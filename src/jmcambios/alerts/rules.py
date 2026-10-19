@@ -53,6 +53,36 @@ def pressure_alert(pr: PressureReport | None) -> Alert | None:
     )
 
 
+def exempt_alert(usage) -> Alert | None:
+    """Aviso al 80 % y al 100 % del tope mensual exento de 4x1000 (una vez por mes y nivel)."""
+    if usage is None or usage.cap <= 0:
+        return None
+    month_s = 32 * 86400
+    if usage.exceeded:
+        return Alert(
+            key=f"tope:{usage.month}:100", severity=URGENT, cooldown_s=month_s,
+            title="Llegaste al tope exento de 4x1000",
+            body=(f"Pagos P2P este mes desde {', '.join(usage.accounts)}: {money(usage.used, 0)} de {money(usage.cap, 0)} COP.\n"
+                  "Desde ahora cada pago paga 0,4 %: los escenarios ya lo incluyen. Estimado por el método de pago de cada orden."),
+        )
+    if usage.ratio >= Decimal("0.8"):
+        return Alert(
+            key=f"tope:{usage.month}:80", severity=IMPORTANT, cooldown_s=month_s,
+            title="Vas en el 80 % del tope exento de 4x1000",
+            body=(f"Usado {money(usage.used, 0)} de {money(usage.cap, 0)} COP este mes; quedan {money(usage.remaining, 0)}.\n"
+                  "Estimado por el método de pago de cada orden; otros débitos de esas cuentas también cuentan."),
+        )
+    return None
+
+
+def goal_alert(today) -> Alert | None:
+    if today is None or not today.goal or today.realized < today.goal:
+        return None
+    return Alert(key=f"meta:{today.day.isoformat()}", severity=INFO, cooldown_s=2 * 86400,
+                 title="¡Meta del día cumplida!",
+                 body=f"Ganancia realizada hoy: {money(today.realized, 0)} COP (meta {money(today.goal, 0)}).")
+
+
 def error_alerts(errors: list[str], consecutive_failures: int, recovered: bool) -> list[Alert]:
     out = []
     if any("AUTH_ERROR" in e for e in errors):

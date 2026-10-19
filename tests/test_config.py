@@ -55,3 +55,22 @@ def test_min_margin_setting(monkeypatch):
     assert Settings(_env_file=None).min_margin_pct == Decimal("0.3")
     monkeypatch.setenv("JMC_MARGEN_MIN", "1")
     assert Settings(_env_file=None).min_margin_pct == Decimal("1")
+
+
+def test_colombian_numbers_and_operation_settings(monkeypatch):
+    from datetime import date
+    from decimal import Decimal
+
+    from jmcambios.config import Settings
+
+    monkeypatch.setenv("JMC_TOPE_EXENTO", "18.330.900")
+    monkeypatch.setenv("JMC_META_DIARIA", "127.000")
+    monkeypatch.setenv("JMC_MARGEN_MIN", "1,5")
+    monkeypatch.setenv("JMC_INICIO_COMERCIANTE", "2026-10-20")
+    s = Settings(_env_file=None)
+    assert s.exempt_cap == Decimal("18330900") and s.daily_goal == Decimal("127000")
+    assert s.min_margin_pct == Decimal("1.5") and s.merchant_start == date(2026, 10, 20)
+    monkeypatch.setenv("JMC_TOPE_EXENTO", "")
+    monkeypatch.setenv("JMC_MARGEN_MIN", "0.3")
+    s = Settings(_env_file=None)
+    assert s.exempt_cap is None and s.min_margin_pct == Decimal("0.3")

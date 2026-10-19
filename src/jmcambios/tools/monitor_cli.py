@@ -13,7 +13,7 @@ import argparse
 import logging
 import re
 import sys
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
@@ -29,7 +29,7 @@ from jmcambios.dashboard import server as panel
 from jmcambios.logging_utils import setup_logging
 from jmcambios.monitor.advisor import Advisor
 from jmcambios.monitor.recorder import SnapshotRecorder
-from jmcambios.monitor.report import render
+from jmcambios.monitor.report import BOGOTA, render
 from jmcambios.monitor.service import Monitor
 from jmcambios.storage.history import HistoryStore
 from jmcambios.tools.panel_cli import ensure_token
@@ -87,9 +87,18 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("--estado", default="data/estado.json", help="Archivo de estado que lee el panel")
     p.add_argument("--anuncios-cada", type=int, default=5, help="Leer mis anuncios cada N ciclos (0 = nunca)")
     p.add_argument("--margen-min", help="Margen mínimo del ciclo en %% (por defecto JMC_MARGEN_MIN de .env)")
+    p.add_argument("--ordenes-cada", type=int, default=15, help="Descargar mis órdenes cada N ciclos (0 = nunca)")
     p.add_argument("--cruce-min", default="10.000", help="Ganancia total mínima en COP para alertar un cruce")
     p.add_argument("--sin-alertas", action="store_true", help="No enviar alertas por Telegram/correo")
     return p.parse_args(argv)
+
+
+def _start_dt(settings: Settings):
+    """Inicio como comerciante COP (00:00 hora Colombia) o None."""
+    if settings.merchant_start is None:
+        return None
+    return datetime(settings.merchant_start.year, settings.merchant_start.month, settings.merchant_start.day,
+                    tzinfo=BOGOTA).astimezone(UTC)
 
 
 def _start_panel(settings: Settings, args: argparse.Namespace):
@@ -97,6 +106,7 @@ def _start_panel(settings: Settings, args: argparse.Namespace):
     data = panel.PanelData(
         Path(args.db), Path(args.estado), venue="binance_p2p", market=f"{settings.asset}/{settings.fiat}",
         fiat=settings.fiat, asset=settings.asset, cost_config=panel.cost_config(parse_my_methods(settings.my_pay_methods)),
+        start=_start_dt(settings),
     )
     try:
         server = panel.start(data, token, port=args.panel_port)
@@ -157,12 +167,24 @@ def main(argv: list[str] | None = None) -> int:
     with BinanceP2PClient(settings, allow_write=False) as client:
         if store is not None:
             account = BinanceAccount(client) if settings.has_read_credentials and args.anuncios_cada > 0 else None
+            reader = BinanceAccount(client) if settings.has_read_credentials and args.ordenes_cada > 0 else None
+
+            def sync_orders():
+                fetched = reader.fetch_orders(datetime.now(UTC) - timedelta(days=2))
+                store.upsert_orders(fetched.orders, int(datetime.now(UTC).timestamp()))
+                return store.load_orders()
+
             advisor = Advisor(
                 orders=store.load_orders(), fiat=settings.fiat, gmf_by_account=parse_my_methods(settings.my_pay_methods),
                 min_margin=min_margin, mode=mode, fetch_my_ads=account.fetch_my_ads if account else None,
                 ads_every=args.anuncios_cada or 1, alerts=alerts, state_path=Path(args.estado),
                 cross_min_total=_decimal(args.cruce_min, "--cruce-min") or Decimal("0"),
                 merchants_only=settings.merchants_only,
+                fetch_orders=sync_orders if reader else None, orders_every=args.ordenes_cada or 1,
+                daily_goal=settings.daily_goal, exempt_cap=settings.exempt_cap,
+                exempt_accounts=tuple(a.strip() for a in settings.exempt_accounts.split(",") if a.strip())
+                if settings.exempt_accounts else None,
+                merchant_start=_start_dt(settings),
             )
         if args.panel and store is not None:
             server = _start_panel(settings, args)

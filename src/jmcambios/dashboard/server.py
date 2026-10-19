@@ -76,7 +76,8 @@ def despike(values: list[float | None]) -> list[float | None]:
 
 class PanelData:
     def __init__(self, db_path: Path, state_path: Path, *, venue: str, market: str, fiat: str, asset: str,
-                 cost_config: CostConfig) -> None:
+                 cost_config: CostConfig, start: datetime | None = None) -> None:
+        self.start = start
         self.db_path, self.state_path = db_path, state_path
         self.venue, self.market, self.fiat, self.asset = venue, market, fiat, asset
         self.cost_config = cost_config
@@ -110,7 +111,7 @@ class PanelData:
     def rentabilidad(self, now: datetime) -> dict[str, Any]:
         with self._store() as st:
             orders = st.load_orders(fiat=self.fiat, asset=self.asset)
-        start = now - timedelta(days=30)
+        start = max(self.start, now - timedelta(days=30)) if self.start else now - timedelta(days=30)
         rep = calculate(orders, self.cost_config, fiat=self.fiat, asset=self.asset, start=start, end=now)
         f = lambda v: None if v is None else float(v)  # noqa: E731
         return {

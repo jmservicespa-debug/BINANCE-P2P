@@ -152,6 +152,13 @@ tests/                     pruebas unitarias (sin red)
 - Endpoints ya catalogados: `ads/post`, `ads/update` (exige el anuncio completo, si no -9000), `ads/updateStatus`. Antes de la Fase 9: confirmar con Binance que el uso automatizado está permitido, key aparte solo de anuncios con IP del servidor.
 - Requisitos: límites de riesgo (precio máx. compra / mín. venta, capital, cambios por hora), registro de cada cambio, aviso por Telegram de cada cambio, parada de emergencia, modo automático apagado por defecto y degradación automática a Recomendación.
 
+## Ganancia del día y tope exento (2026-10-19, pedido del usuario)
+- Tope exento informado por el usuario: **18.330.900 COP/mes** (`JMC_TOPE_EXENTO`). Se estima con las compras P2P pagadas por métodos de cuentas exentas (Davivienda/Daviplata); no ve otros débitos de esas cuentas (p. ej. remesas) → el usuario debe tenerlo en cuenta.
+- Alertas: 80 % (importante) y 100 % (urgente), una vez por mes y nivel. Pasado el tope, el motor usa 4x1000 = 0,4 % en los escenarios.
+- Monitor descarga órdenes de los últimos 2 días cada 15 ciclos y alimenta: tarjeta **Hoy** (realizado vs. `JMC_META_DIARIA`, inventario sin vender y desde cuándo; aviso si > 6 h), comisiones observadas y tope.
+- `JMC_INICIO_COMERCIANTE`: fecha desde la que se cuenta la rentabilidad COP (evita mezclar compras COP que salieron como remesas).
+- Siguientes ideas priorizadas: mapa de horas/días (verificados), TRM y premium P2P, vigilancia de competidores, precio por banco y monto, riesgo de contrapartes (triangulación).
+
 ## Ideas registradas
 - Producto por suscripción (pedido del usuario 2026-10-19): multiusuario en servidor con IP fija, keys de terceros cifradas y solo lectura, configuración por usuario (bancos/4x1000, moneda, márgenes), registro y pagos, revisión legal (condiciones de Binance para terceros, Ley 1581 de 2012). Riesgo: suscriptores con la misma estrategia compiten entre sí. Primero validar con resultados reales del usuario. Mantener nada personal fijo en el código.
 

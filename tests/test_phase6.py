@@ -1,7 +1,7 @@
 import json
 import urllib.error
 import urllib.request
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import httpx
@@ -425,3 +425,81 @@ def test_panel_scenarios_with_chosen_margin(tmp_path):
             assert e.value.code == 400
     finally:
         srv.shutdown()
+
+
+# ------------------------------------------------------------------ hoy y tope exento
+from jmcambios.domain.account import Order  # noqa: E402
+from jmcambios.profitability import daily  # noqa: E402
+from jmcambios.profitability.costs import CostConfig  # noqa: E402
+
+NOW = datetime(2026, 10, 20, 18, 0, tzinfo=UTC)  # 13:00 hora Colombia
+
+
+def ordr(i, side, qty, price, hours_ago, method="Davivienda", status="COMPLETED", fiat="COP"):
+    q, p = D(qty), D(price)
+    return Order(venue="binance_p2p", order_id=f"o{i}", side=side, asset="USDT", fiat=fiat, qty=q, unit_price=p,
+                 total_fiat=q * p, status=status, created_at=NOW - timedelta(hours=hours_ago), role="MAKER",
+                 commission=D("0"), pay_method=method)
+
+
+def test_today_summary_goal_and_idle_inventory():
+    cfg = CostConfig(gmf_by_account=METHODS)
+    orders = [ordr(1, OrderSide.BUY, "1000", "3135", 20),   # ayer
+              ordr(2, OrderSide.SELL, "1000", "3175", 3),   # hoy: +40.000
+              ordr(3, OrderSide.BUY, "500", "3130", 2)]     # hoy, aún sin vender
+    t = daily.today_summary(orders, cfg, fiat="COP", asset="USDT", now=NOW, start=None, goal=D("127000"))
+    assert t.day.isoformat() == "2026-10-20" and t.realized == D("40000") and (t.buys, t.sells) == (1, 1)
+    assert t.inventory_qty == D("500") and t.inventory_since == NOW - timedelta(hours=2)
+    assert t.progress == D("40000") / D("127000")
+    # Con fecha de inicio posterior a la compra de ayer, la venta queda sin costo conocido.
+    t2 = daily.today_summary(orders, cfg, fiat="COP", asset="USDT", now=NOW, start=NOW - timedelta(hours=5), goal=D("1"))
+    assert t2.realized == 0 and t2.warnings
+
+
+def test_exempt_usage_month_and_accounts():
+    orders = [ordr(1, OrderSide.BUY, "1000", "3100", 2, method="Davivienda"),
+              ordr(2, OrderSide.BUY, "1000", "3100", 3, method="Daviplata"),
+              ordr(3, OrderSide.BUY, "1000", "3100", 4, method="Nequi"),              # no exenta
+              ordr(4, OrderSide.SELL, "1000", "3100", 5, method="Davivienda"),        # venta: no debita
+              ordr(5, OrderSide.BUY, "1000", "3100", 6, method="Davivienda", status="CANCELLED"),
+              ordr(6, OrderSide.BUY, "1000", "3100", 24 * 25, method="Davivienda")]  # mes anterior
+    accounts = daily.exempt_accounts(CostConfig(gmf_by_account={"DaviviendaSA": D("0"), "Daviplata": D("0"), "Nequi": D("0.004")}), None)
+    assert accounts == ("DaviviendaSA", "Daviplata")
+    u = daily.exempt_usage(orders, fiat="COP", now=NOW, cap=D("18330900"), accounts=accounts)
+    assert u.month == "2026-10" and u.used == D("6200000") and u.orders == 2 and not u.exceeded
+    assert u.remaining == D("12130900")
+    assert daily.exempt_accounts(CostConfig(), "DaviviendaSA") == ("DaviviendaSA",)
+
+
+def test_exempt_and_goal_alerts():
+    mk = lambda used: daily.ExemptUsage(month="2026-10", cap=D("1000"), used=D(used), orders=1, accounts=("DaviviendaSA",))  # noqa: E731
+    assert rules.exempt_alert(mk("500")) is None
+    assert rules.exempt_alert(mk("800")).key == "tope:2026-10:80"
+    a = rules.exempt_alert(mk("1000"))
+    assert a.key == "tope:2026-10:100" and a.severity == "urgente"
+    t = daily.TodaySummary(day=NOW.date(), goal=D("127000"), realized=D("130000"))
+    assert rules.goal_alert(t).key == "meta:2026-10-20"
+    assert rules.goal_alert(daily.TodaySummary(day=NOW.date(), goal=D("127000"), realized=D("1"))) is None
+
+
+def test_advisor_operation_state_and_cap_switches_gmf(tmp_path):
+    big = [ordr(i, OrderSide.BUY, "6000", "3100", 1 + i, method="Davivienda") for i in range(1, 2)]  # 18,6 M
+    calls = []
+
+    def fetch():
+        calls.append(1)
+        return big
+
+    adv = Advisor(orders=[], fiat="COP", gmf_by_account=METHODS, mode=Mode.RECOMMENDATION, state_path=tmp_path / "e.json",
+                  fetch_orders=fetch, orders_every=10, daily_goal=D("127000"), exempt_cap=D("18330900"),
+                  exempt_accounts=("DaviviendaSA",))
+    asks, bids, _ = _setup_ads()
+    assert adv.costs.gmf == 0
+    out = adv.process(cycle(asks, bids), 0, int(NOW.timestamp()))
+    assert calls == [1] and out.exempt.exceeded and adv.costs.gmf == D("0.004")
+    s = json.loads((tmp_path / "e.json").read_text(encoding="utf-8"))
+    assert s["exempt"]["exceeded"] and s["exempt"]["used"] == 18600000.0
+    assert s["today"]["goal"] == 127000.0 and s["today"]["inventory_qty"] == 6000.0
+    for i in range(9):
+        adv.process(cycle(asks, bids), 0, int(NOW.timestamp()) + 60 * (i + 1))
+    assert calls == [1]  # siguiente descarga en el ciclo 11

@@ -10,7 +10,8 @@ import json
 import logging
 import os
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,8 @@ from jmcambios.connectors.binance.market import MarketDataError
 from jmcambios.domain import Side
 from jmcambios.domain.account import MyAd, Order, OrderSide
 from jmcambios.monitor.service import CycleResult
+from jmcambios.profitability import daily
+from jmcambios.profitability.costs import CostConfig
 from jmcambios.pricing.engine import DEFAULT_LIMITS, AdProfile, Costs, PricePlan, build_costs, plan, profile_for
 
 log = logging.getLogger(__name__)
@@ -35,6 +38,8 @@ class AdvisorOutput:
     positions: list[AdPosition] = field(default_factory=list)
     deliveries: list[Delivery] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    today: daily.TodaySummary | None = None
+    exempt: daily.ExemptUsage | None = None
 
 
 def _f(v: Decimal | None) -> float | None:
@@ -57,8 +62,22 @@ class Advisor:
         state_path: Path | None = None,
         cross_min_total: Decimal = rules.CROSS_MIN_TOTAL,
         merchants_only: bool = True,
+        fetch_orders: Callable[[], list[Order]] | None = None,
+        orders_every: int = 15,
+        daily_goal: Decimal | None = None,
+        exempt_cap: Decimal | None = None,
+        exempt_accounts: tuple[str, ...] | None = None,
+        merchant_start: datetime | None = None,
     ) -> None:
         self._merchants_only = merchants_only
+        self._fetch_orders = fetch_orders
+        self._orders_every = max(1, orders_every)
+        self._goal = daily_goal
+        self._cap = exempt_cap
+        self._cost_cfg = CostConfig(gmf_by_account=gmf_by_account)
+        self._exempt_accounts = exempt_accounts or daily.exempt_accounts(self._cost_cfg, None)
+        self._start = merchant_start
+        self._cap_exceeded = False
         self._cross_min = cross_min_total
         self._orders = orders
         self._fiat = fiat
@@ -78,7 +97,30 @@ class Advisor:
         self._my_users: set[str] = set()
 
     def _build_costs(self) -> Costs:
-        return build_costs(self._orders, self.my_ads, self._fiat, self._gmf, self._default_gmf, self._min_margin)
+        costs = build_costs(self._orders, self.my_ads, self._fiat, self._gmf, self._default_gmf, self._min_margin)
+        # Pasado el tope exento, cada peso pagado vuelve a pagar 4x1000.
+        return replace(costs, gmf=costs.gmf_worst) if self._cap_exceeded else costs
+
+    def _refresh_orders(self, out: AdvisorOutput) -> None:
+        if self._fetch_orders is None or (self._cycle - 1) % self._orders_every:
+            return
+        try:
+            self._orders = self._fetch_orders()
+            self.costs = self._build_costs()
+        except MarketDataError as exc:
+            out.notes.append(f"no se pudieron actualizar tus órdenes: {exc}")
+
+    def _operation(self, out: AdvisorOutput, now_ts: int) -> None:
+        now = datetime.fromtimestamp(now_ts, UTC)
+        if self._cap is not None:
+            out.exempt = daily.exempt_usage(self._orders, fiat=self._fiat, now=now, cap=self._cap,
+                                            accounts=self._exempt_accounts)
+            if out.exempt.exceeded != self._cap_exceeded:
+                self._cap_exceeded = out.exempt.exceeded
+                self.costs = self._build_costs()
+        if self._goal is not None:
+            out.today = daily.today_summary(self._orders, self._cost_cfg, fiat=self._fiat, asset="USDT", now=now,
+                                            start=self._start, goal=self._goal)
 
     def _refresh_my_ads(self, out: AdvisorOutput) -> None:
         if self._fetch_my_ads is None or (self._cycle - 1) % self._ads_every:  # ciclo 1 y luego cada N
@@ -93,6 +135,8 @@ class Advisor:
         self._cycle += 1
         out = AdvisorOutput()
         self._refresh_my_ads(out)
+        self._refresh_orders(out)
+        self._operation(out, now_ts)
         snaps = result.snapshots
         if Side.ASK in snaps and Side.BID in snaps:
             my_ids = {a.ad_id for a in self.my_ads}
@@ -120,6 +164,7 @@ class Advisor:
         alerts += rules.error_alerts(result.errors, consecutive_failures, recovered=self._was_failing and not failing)
         if self.mode is not Mode.OBSERVATION:
             alerts += rules.my_ad_alerts(out.positions, out.plan)
+        alerts += [a for a in (rules.exempt_alert(out.exempt), rules.goal_alert(out.today)) if a]
         if consecutive_failures >= rules.FAILURES_ALERT or any("AUTH_ERROR" in e for e in result.errors):
             self._was_failing = True
         elif not failing:
@@ -208,6 +253,19 @@ class Advisor:
             "costs": {"maker_buy": _f(self.costs.maker_buy), "maker_sell": _f(self.costs.maker_sell),
                       "gmf": _f(self.costs.gmf), "gmf_worst": _f(self.costs.gmf_worst), "min_margin": _f(self.costs.min_margin)},
             "my_ads": my_ads, "errors": result.errors, "alerts": result.alerts + out.notes,
+            "today": None if out.today is None else {
+                "day": out.today.day.isoformat(), "goal": _f(out.today.goal), "realized": _f(out.today.realized),
+                "progress": _f(out.today.progress), "buys": out.today.buys, "sells": out.today.sells,
+                "bought_fiat": _f(out.today.bought_fiat), "sold_fiat": _f(out.today.sold_fiat),
+                "inventory_qty": _f(out.today.inventory_qty), "inventory_avg_cost": _f(out.today.inventory_avg_cost),
+                "inventory_since": int(out.today.inventory_since.timestamp()) if out.today.inventory_since else None,
+                "warnings": out.today.warnings,
+            },
+            "exempt": None if out.exempt is None else {
+                "month": out.exempt.month, "cap": _f(out.exempt.cap), "used": _f(out.exempt.used),
+                "remaining": _f(out.exempt.remaining), "ratio": _f(out.exempt.ratio), "orders": out.exempt.orders,
+                "accounts": list(out.exempt.accounts), "exceeded": out.exempt.exceeded,
+            },
         }
 
     def write_state(self, result: CycleResult, out: AdvisorOutput, now_ts: int) -> None:

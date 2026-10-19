@@ -6,10 +6,11 @@ degrada si falta cualquiera de las condiciones de seguridad.
 
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 from enum import Enum
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -38,6 +39,12 @@ class Settings(BaseSettings):
     # Margen neto mínimo del ciclo compra→venta, en % (después de comisiones y 4x1000).
     min_margin_pct: Decimal = Field(default=Decimal("0.3"), alias="JMC_MARGEN_MIN", ge=0, lt=20)
 
+    # Meta y control de la operación (montos en COP; acepta 18.330.900 o 18330900).
+    daily_goal: Decimal = Field(default=Decimal("127000"), alias="JMC_META_DIARIA", ge=0)
+    exempt_cap: Decimal | None = Field(default=None, alias="JMC_TOPE_EXENTO", ge=0)
+    exempt_accounts: str | None = Field(default=None, alias="JMC_CUENTAS_EXENTAS")
+    merchant_start: date | None = Field(default=None, alias="JMC_INICIO_COMERCIANTE")
+
     # Competencia = solo comerciantes verificados (los no verificados no compiten por los mismos clientes).
     merchants_only: bool = Field(default=True, alias="JMC_SOLO_VERIFICADOS")
 
@@ -57,6 +64,21 @@ class Settings(BaseSettings):
 
     sapi_base_url: str = "https://api.binance.com"
     public_base_url: str = "https://www.binance.com"
+
+    @field_validator("daily_goal", "exempt_cap", "min_margin_pct", mode="before")
+    @classmethod
+    def _co_number(cls, v):
+        """Números escritos a la colombiana: 18.330.900 · 1,5 · vacío = sin valor."""
+        if isinstance(v, str):
+            t = v.strip().replace(" ", "")
+            if not t:
+                return None
+            if "," in t:
+                t = t.replace(".", "").replace(",", ".")
+            elif t.count(".") > 1 or (t.count(".") == 1 and len(t.split(".")[1]) == 3 and len(t) > 4):
+                t = t.replace(".", "")
+            return t
+        return v
 
     @property
     def has_read_credentials(self) -> bool:
