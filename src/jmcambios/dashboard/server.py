@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from jmcambios.dashboard.icon import ICON_PNG
 from jmcambios.dashboard.page import PAGE
 from jmcambios.profitability.calculator import calculate
 from jmcambios.profitability.costs import CostConfig
@@ -145,6 +146,9 @@ def make_handler(data: PanelData, token: str) -> type[BaseHTTPRequestHandler]:
 
         def do_GET(self) -> None:  # noqa: N802
             url = urlparse(self.path)
+            if url.path in ("/icon.png", "/favicon.ico"):  # el ícono no es información privada
+                self._send(200, ICON_PNG, "image/png")
+                return
             q = parse_qs(url.query)
             given = (q.get("t") or [""])[0]
             if not hmac.compare_digest(given.encode(), token.encode()):

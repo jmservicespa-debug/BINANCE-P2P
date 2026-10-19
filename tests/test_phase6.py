@@ -273,6 +273,13 @@ def test_panel_requires_token(running_panel):
         assert e.value.code == 403
 
 
+def test_panel_icon_is_public(running_panel):
+    with urllib.request.urlopen(running_panel + "/icon.png", timeout=5) as r:
+        assert r.status == 200 and r.headers.get("Content-Type") == "image/png" and r.read()[:8] == b"PNG
+
+"
+
+
 def test_panel_pages_and_api(running_panel):
     code, ctype, body = _get(running_panel + "/?t=clave")
     assert code == 200 and ctype.startswith("text/html") and "JM CAMBIOS" in body
