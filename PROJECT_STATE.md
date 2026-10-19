@@ -53,6 +53,13 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 - Objetivo del proyecto: **empezar a operar como comerciante USDT/COP** (anuncios propios de compra y venta), reduciendo la dependencia de las remesas.
 - Consecuencia: la rentabilidad de la Fase 4 no tiene ciclos COP que medir todavía. Se valida con: comisiones reales (`costos`, rol MAKER en VES como referencia), `competencia` (precios límite sin anuncios COP) y, después, con simulación (Fases 7–8) usando la misma calculadora. Opción a decidir por el usuario: arrancar en pequeño en Modo Recomendación para generar datos reales.
 
+## Primer análisis de competencia real (2026-10-19 10:07 COT)
+- Mercado: mejor venta 3.155 · mejor compra 3.160 (cruzado).
+- Anuncio COMPRA propio (fuera de línea): 3.150, 550 USDT, 200k–3M COP, Daviplata/Davivienda → puesto estimado #7 de 355, 10 COP detrás del mejor.
+- Anuncio VENTA propio (fuera de línea): 3.130, 1.100 USDT → 25 COP POR DEBAJO del mejor (regalaría 0,79 %). Se añadió aviso "regalando margen".
+- Comisión maker según `commissionRate` de los anuncios: 0,2 % por lado → ciclo ≈ 0,4 % + 4x1000 (0–0,4 %). Para 0,3 % neto hace falta ≈ 0,7–1,1 % entre compra y venta; con venta a 3.155, comprar máx. 3.133 (cuenta exenta) / 3.121 (con 4x1000).
+- Pendiente: confirmar la comisión real con `jmcambios-negocio costos`.
+
 ## Verificación con la CUENTA OFICIAL (2026-10-19 14:41 UTC, key `NpSMV...1Pze`, solo lectura, IP 181.42.23.142)
 - 19 OK / 2 error (solo `getReferencePrice`). Categoría de anuncios: `profession` (comerciante). 4 anuncios propios, 30 métodos de pago.
 - Órdenes: ~780 por ventana de 30 días, estable 6 meses (716–822); 23.098 órdenes históricas. Compras 30 d: 29 (COP 27, EUR 2). Ventas: mayoría VES (47/50 en la muestra).
