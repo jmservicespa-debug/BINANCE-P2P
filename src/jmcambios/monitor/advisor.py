@@ -24,7 +24,7 @@ from jmcambios.connectors.binance.market import MarketDataError
 from jmcambios.domain import Side
 from jmcambios.domain.account import MyAd, Order, OrderSide
 from jmcambios.monitor.service import CycleResult
-from jmcambios.pricing.engine import DEFAULT_LIMITS, Costs, PricePlan, build_costs, plan, profile_for
+from jmcambios.pricing.engine import DEFAULT_LIMITS, AdProfile, Costs, PricePlan, build_costs, plan, profile_for
 
 log = logging.getLogger(__name__)
 
@@ -72,6 +72,8 @@ class Advisor:
         self.my_ads: list[MyAd] = []
         self.costs: Costs = self._build_costs()
         self._was_failing = False
+        self._profiles: dict[str, AdProfile] = {}
+        self._my_users: set[str] = set()
 
     def _build_costs(self) -> Costs:
         return build_costs(self._orders, self.my_ads, self._fiat, self._gmf, self._default_gmf, self._min_margin)
@@ -101,6 +103,11 @@ class Advisor:
                 sell_profile=profile_for(sell_ad, self._gmf, DEFAULT_LIMITS),
                 costs=self.costs, pressure=result.pressure, exclude_users=my_users,
             )
+            self._profiles = {
+                "buy": profile_for(buy_ad, self._gmf, DEFAULT_LIMITS),
+                "sell": profile_for(sell_ad, self._gmf, DEFAULT_LIMITS),
+            }
+            self._my_users = my_users
             out.positions = [
                 position(a, snaps[Side.BID if a.side is OrderSide.BUY else Side.ASK].ads, my_users) for a in self.my_ads
             ]
@@ -185,6 +192,10 @@ class Advisor:
             "generated_ts": now_ts, "cycle_ts": int(result.started_at.timestamp()), "mode": self.mode.value,
             "market": market, "cross": cross, "pressure": pressure,
             "plan": {"priority": out.plan.priority, "warnings": out.plan.warnings, "scenarios": scenarios} if out.plan else None,
+            # Para que el panel recalcule escenarios con otro margen sin tocar Binance.
+            "profiles": {k: {"methods": list(p.methods), "min_fiat": _f(p.min_fiat), "max_fiat": _f(p.max_fiat)}
+                         for k, p in self._profiles.items()},
+            "my_users": sorted(self._my_users),
             "costs": {"maker_buy": _f(self.costs.maker_buy), "maker_sell": _f(self.costs.maker_sell),
                       "gmf": _f(self.costs.gmf), "gmf_worst": _f(self.costs.gmf_worst), "min_margin": _f(self.costs.min_margin)},
             "my_ads": my_ads, "errors": result.errors, "alerts": result.alerts + out.notes,

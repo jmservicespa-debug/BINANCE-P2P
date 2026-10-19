@@ -62,6 +62,7 @@ nav{position:fixed;left:0;right:0;bottom:0;background:#0B1218;border-top:1px sol
 nav div{display:flex;gap:6px;max-width:520px;width:100%}
 nav button{flex:1;min-height:44px;font-size:13px}
 .hidden{display:none}
+input{font:inherit;font-size:14px;width:96px;min-height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text)}
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){--bg:#F4F6F8;--card:#FFFFFF;--line:#E3E8ED;--border:#D5DCE3;--text:#14202B;--muted:#5D6B78;--soft:#3B4955;
   --accent:#0F7A66;--accent-bg:#DDF3EE;--real:#2558A8;--real-bg:#E3ECFA;--calc-bg:#ECEFF2;--inf:#9A5B0C;--inf-bg:#FBEBD5;--up:#0F7A66;--down:#B3261E;--down-bg:#FBE4E2;--ask:#C77A12;--bid:#2F6FD0}
@@ -109,6 +110,10 @@ nav button{flex:1;min-height:44px;font-size:13px}
 <div id="tab-precios" class="hidden">
   <section class="card"><div class="row"><h2>Escenarios de precio</h2><span class="chip calc">Cálculo</span></div>
     <span class="muted" id="costs"></span><div id="prio"></div></section>
+  <section class="card"><div class="row"><h2>Ganancia libre que buscas</h2><span class="chip calc">Tú eliges</span></div>
+    <div class="btns" id="mbtns"><button data-m="0.5">0,5 %</button><button data-m="1">1 %</button><button data-m="1.5">1,5 %</button><button data-m="2">2 %</button></div>
+    <div class="row"><label class="muted" for="mcustom">Otro valor en %</label><input id="mcustom" type="number" inputmode="decimal" min="0" max="10" step="0.1" placeholder="p. ej. 1,2"></div>
+    <span class="muted" id="mhint"></span></section>
   <div id="scen"></div>
   <section class="card"><div class="row"><h2>Mis anuncios</h2><span class="chip real">Binance</span></div><div id="myads" class="muted">—</div></section>
   <div id="pwarn"></div>
@@ -140,6 +145,9 @@ const api = (p) => fetch(p + (p.includes('?') ? '&' : '?') + 't=' + encodeURICom
 const hhmm = (ts) => new Date(ts * 1000).toLocaleTimeString('es-CO', {timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit'});
 const dmy = (ts) => new Date(ts * 1000).toLocaleString('es-CO', {timeZone: 'America/Bogota', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'});
 let hours = 6;
+let margin = null;  // % elegido en el panel (null = el de la configuración)
+try { const v = localStorage.getItem('jmc_margen'); if (v !== null && v !== '') margin = +v; } catch (e) {}
+let lastState = null;
 const MODES = {OBSERVATION: 'Modo: Observación', RECOMMENDATION: 'Modo: Recomendación', AUTOMATIC: 'Modo: Automático'};
 const NAMES = {conservador: 'Conservador', equilibrado: 'Equilibrado', agresivo: 'Agresivo'};
 const HINT = {conservador: 'más margen, menos órdenes', equilibrado: 'recomendado por defecto', agresivo: 'primer puesto, menos margen'};
@@ -172,7 +180,10 @@ function renderEstado(s) {
 
   const k = s.costs || {};
   $('costs').textContent = `Comisión maker compra ${pct(k.maker_buy)} · venta ${pct(k.maker_sell)} · 4x1000 ${pct(k.gmf)} (exenta) / ${pct(k.gmf_worst)} · margen mínimo ${pct(k.min_margin, 2)}`;
-  const pl = s.plan;
+  renderPlanFor(s);
+}
+
+function renderPlan(pl) {
   const PRIO = {comprar: 'Presión alcista: prioriza COMPRAR', vender: 'Presión bajista: prioriza VENDER', equilibrado: 'Sin señal clara: margen repartido'};
   $('prio').innerHTML = pl ? `<span class="muted">${PRIO[pl.priority] || ''}</span>` : '';
   $('scen').innerHTML = (pl?.scenarios || []).map(sc => `
@@ -185,10 +196,31 @@ function renderEstado(s) {
       <div class="kv"><span>Margen del ciclo</span><b class="${sc.margin_worst < 0 ? '' : 'good'}">${pct(sc.margin)} <span class="muted">(${pct(sc.margin_worst)} con 4x1000)</span></b></div>
       <div class="kv"><span>Ganancia por USDT</span><b>${fmt(sc.net_per_unit)} COP</b></div>
     </section>`).join('');
+  const s = lastState || {my_ads: []};
+  const bal = (pl?.scenarios || []).find(x => x.name === 'equilibrado');
   $('myads').innerHTML = !s.my_ads.length ? 'Sin anuncios leídos (necesita la API key y el monitor corriendo).' : s.my_ads.map(a => `
     <div class="kv"><span>${a.side === 'BUY' ? 'COMPRA' : 'VENTA'} ${esc(a.id)} · ${a.online ? '<span class="good">en línea</span>' : 'fuera de línea'}</span><b>${fmt(a.price)}</b></div>
-    <div class="muted">puesto #${a.rank} de ${a.total}${a.suggested !== null ? ` · sugerido <b class="mono">${fmt(a.suggested)}</b>` : ''}${a.gap !== null && a.gap < 0 ? ` · <span class="neg">regalando ${fmt(-a.gap)} COP</span>` : ''}</div>`).join('');
+    <div class="muted">puesto #${a.rank} de ${a.total}${a.suggested !== null && bal ? ` · sugerido <b class="mono">${fmt(a.side === 'BUY' ? bal.buy.price : bal.sell.price)}</b>` : ''}${a.gap !== null && a.gap < 0 ? ` · <span class="neg">regalando ${fmt(-a.gap)} COP</span>` : ''}</div>`).join('');
   $('pwarn').innerHTML = (pl?.warnings || []).map(w => `<div class="warn" style="margin-top:10px">${esc(w)}</div>`).join('');
+}
+
+async function renderPlanFor(s) {
+  lastState = s;
+  const cfg = (s.costs?.min_margin ?? 0.003) * 100;
+  const m = margin === null ? cfg : margin;
+  document.querySelectorAll('#mbtns button').forEach(b => b.classList.toggle('on', Math.abs(+b.dataset.m - m) < 1e-9));
+  const ref = s.market?.ask?.best || s.market?.bid?.best;
+  $('mhint').innerHTML = `Agresivo ≥ ${fmt(m, 2)} % · equilibrado ≥ ${fmt(m + 0.15, 2)} % · conservador ≥ ${fmt(m + 0.3, 2)} % libre`
+    + (ref ? ` (≈ ${fmt(ref * m / 100, 0)}–${fmt(ref * (m + 0.3) / 100, 0)} COP por USDT)` : '')
+    + `<br>Solo cambia lo que ves aquí. Las alertas usan el margen de la configuración (${fmt(cfg, 2)} %).`;
+  if (Math.abs(m - cfg) < 1e-9) { renderPlan(s.plan); return; }
+  try { const r = await api('/api/escenarios?margen=' + m); if (r.available) renderPlan(r); } catch (e) { renderPlan(s.plan); }
+}
+
+function setMargin(v) {
+  margin = (v === null || Number.isNaN(v) || v < 0 || v > 10) ? null : Math.round(v * 100) / 100;
+  try { margin === null ? localStorage.removeItem('jmc_margen') : localStorage.setItem('jmc_margen', margin); } catch (e) {}
+  if (lastState) renderPlanFor(lastState);
 }
 
 function renderSerie(d) {
@@ -239,6 +271,8 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
 document.querySelectorAll('#hbtns button').forEach(b => b.onclick = () => {
   hours = +b.dataset.h; document.querySelectorAll('#hbtns button').forEach(o => o.classList.toggle('on', o === b)); refresh();
 });
+document.querySelectorAll('#mbtns button').forEach(b => b.onclick = () => { $('mcustom').value = ''; setMargin(+b.dataset.m); });
+$('mcustom').onchange = () => { const v = $('mcustom').value.replace(',', '.'); setMargin(v === '' ? null : +v); };
 refresh(); setInterval(refresh, 30000);
 </script>
 </body>

@@ -14,13 +14,16 @@ import secrets
 import socket
 import threading
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from jmcambios.analysis.pressure import PressureReport
 from jmcambios.dashboard.icon import ICON_PNG
+from jmcambios.domain import Ad, Advertiser, Side
+from jmcambios.pricing.engine import DEFAULT_LIMITS, AdProfile, Costs, plan
 from jmcambios.dashboard.page import PAGE
 from jmcambios.profitability.calculator import calculate
 from jmcambios.profitability.costs import CostConfig
@@ -29,6 +32,7 @@ from jmcambios.storage.history import HistoryStore
 log = logging.getLogger(__name__)
 
 MAX_POINTS = 360
+MAX_MARGIN_PCT = Decimal("10")
 
 
 def new_token() -> str:
@@ -118,6 +122,55 @@ class PanelData:
             "warnings": rep.warnings,
         }
 
+    def _book(self, st: HistoryStore, side: Side) -> list[Ad]:
+        ts = st.latest_ts(self.venue, self.market)
+        snap = st.snapshot_at(self.venue, self.market, side, ts) if ts else None
+        if snap is None:
+            return []
+        rows = st.ads_at(self.venue, self.market, side, snap["taken_ts"]).values()
+        D = lambda v: Decimal(str(v))  # noqa: E731
+        return [
+            Ad(venue=self.venue, ad_id=r["ad_id"], side=side, asset=self.asset, fiat=self.fiat, price=D(r["price"]),
+               available_qty=D(r["qty"]), min_fiat=D(r["min_fiat"]), max_fiat=D(r["max_fiat"]),
+               payment_methods=tuple(m for m in (r["methods"] or "").split(",") if m),
+               advertiser=Advertiser(user_id=r["user_id"] or "", nickname=r["nickname"] or "", user_type=r["user_type"],
+                                     month_orders=r["month_orders"],
+                                     month_finish_rate=None if r["finish_rate"] is None else D(r["finish_rate"])))
+            for r in rows
+        ]
+
+    def escenarios(self, margin_pct: Decimal, now_ts: int) -> dict[str, Any]:
+        """Recalcula los 3 escenarios con otro margen mínimo, usando el último libro guardado. Solo lectura."""
+        state = self.estado(now_ts)
+        if not state.get("available") or not state.get("costs"):
+            return {"available": False}
+        c = state["costs"]
+        D = lambda v: Decimal(str(v))  # noqa: E731
+        costs = Costs(maker_buy=D(c["maker_buy"]), maker_sell=D(c["maker_sell"]), gmf=D(c["gmf"]),
+                      gmf_worst=D(c["gmf_worst"]), min_margin=margin_pct / 100)
+        profiles = {}
+        for k in ("buy", "sell"):
+            p = (state.get("profiles") or {}).get(k)
+            profiles[k] = (AdProfile(tuple(p["methods"]), D(p["min_fiat"]), D(p["max_fiat"])) if p
+                           else AdProfile(tuple(self.cost_config.gmf_by_account), *DEFAULT_LIMITS))
+        pr = state.get("pressure") or {}
+        pressure = PressureReport(score=pr.get("score", 0.0), confidence=pr.get("confidence", 0), label="")
+        with self._store() as st:
+            asks, bids = self._book(st, Side.ASK), self._book(st, Side.BID)
+        pp = plan(asks, bids, buy_profile=profiles["buy"], sell_profile=profiles["sell"], costs=costs,
+                  pressure=pressure, exclude_users=set(state.get("my_users") or []))
+        f = lambda v: None if v is None else float(v)  # noqa: E731
+        return {
+            "available": True, "min_margin": float(margin_pct) / 100, "priority": pp.priority, "warnings": pp.warnings,
+            "scenarios": [{
+                "name": sc.name, "target_margin": f(sc.target_margin), "margin": f(sc.margin),
+                "margin_worst": f(sc.margin_worst), "net_per_unit": f(sc.net_per_unit),
+                **{k: {"price": f(sp.price), "rank": sp.rank, "rank_compatible": sp.rank_compatible,
+                       "compatible_total": sp.compatible_total, "adjusted": sp.adjusted}
+                   for k, sp in (("buy", sc.buy), ("sell", sc.sell))},
+            } for sc in pp.scenarios],
+        }
+
     def alertas(self) -> list[dict[str, Any]]:
         with self._store() as st:
             return [{"ts": r["ts"], "severity": r["severity"], "title": r["title"], "body": r["body"]}
@@ -164,6 +217,15 @@ def make_handler(data: PanelData, token: str) -> type[BaseHTTPRequestHandler]:
                     self._json(data.estado(ts))
                 elif url.path == "/api/serie":
                     self._json(data.serie(int((q.get("horas") or ["6"])[0] or 6), ts))
+                elif url.path == "/api/escenarios":
+                    try:
+                        m = Decimal((q.get("margen") or [""])[0].replace(",", "."))
+                    except InvalidOperation:
+                        m = Decimal("-1")
+                    if not (Decimal("0") <= m <= MAX_MARGIN_PCT):
+                        self._send(400, "margen inválido".encode(), "text/plain; charset=utf-8")
+                    else:
+                        self._json(data.escenarios(m, ts))
                 elif url.path == "/api/rentabilidad":
                     self._json(data.rentabilidad(now))
                 elif url.path == "/api/alertas":

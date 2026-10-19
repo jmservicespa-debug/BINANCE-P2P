@@ -388,3 +388,37 @@ def test_small_cross_is_not_alerted():
     assert small.cross.executable and small.cross.best.net_total_max < rules.CROSS_MIN_TOTAL
     assert rules.cross_alert(small.cross) is None
     assert rules.cross_alert(small.cross, D("0")) is not None
+
+
+def test_panel_scenarios_with_chosen_margin(tmp_path):
+    from jmcambios.analysis.market_stats import summarize as summ
+
+    db, state = tmp_path / "h.db", tmp_path / "estado.json"
+    asks = [ask(i, str(3160 + i * 2)) for i in range(10)]
+    bids = [bid(i, str(3155 - i * 2)) for i in range(10)]
+    with HistoryStore(db) as st:
+        for side, ads in ((Side.ASK, asks), (Side.BID, bids)):
+            snap = MarketSnapshot(venue="binance_p2p", asset="USDT", fiat="COP", side=side, taken_at=T0, ads=ads,
+                                  source="t", reported_total=len(ads), complete=True)
+            st.record_snapshot(snap, summ(side, ads), int(T0.timestamp()))
+    adv = Advisor(orders=[], fiat="COP", gmf_by_account=METHODS, mode=Mode.RECOMMENDATION, state_path=state)
+    adv.process(cycle(asks, bids), 0, int(datetime.now(UTC).timestamp()))
+    data = panel.PanelData(db, state, venue="binance_p2p", market="USDT/COP", fiat="COP", asset="USDT",
+                           cost_config=panel.cost_config(METHODS))
+    now = int(datetime.now(UTC).timestamp())
+    r = data.escenarios(D("1"), now)
+    assert r["available"] and [s["name"] for s in r["scenarios"]] == ["conservador", "equilibrado", "agresivo"]
+    margins = {s["name"]: s["margin"] for s in r["scenarios"]}
+    assert margins["agresivo"] >= 0.01 - 1e-9 and margins["equilibrado"] >= 0.0115 - 1e-9 and margins["conservador"] >= 0.013 - 1e-9
+    low = data.escenarios(D("0.3"), now)
+    assert low["scenarios"][2]["buy"]["price"] > r["scenarios"][2]["buy"]["price"]  # más margen ⇒ comprar más barato
+    srv = panel.start(data, "clave", host="127.0.0.1", port=0)
+    try:
+        base = f"http://127.0.0.1:{srv.server_address[1]}"
+        assert json.loads(_get(base + "/api/escenarios?margen=1,5&t=clave")[2])["min_margin"] == pytest.approx(0.015)
+        for bad in ("abc", "-1", "50"):
+            with pytest.raises(urllib.error.HTTPError) as e:
+                _get(base + f"/api/escenarios?margen={bad}&t=clave")
+            assert e.value.code == 400
+    finally:
+        srv.shutdown()

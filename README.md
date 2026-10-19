@@ -123,6 +123,7 @@ jmcambios-panel                                    # solo el panel (si el monito
 
 - **Panel**: página de solo lectura para el celular (misma red Wi-Fi) con tres pestañas: Mercado (precios, gráfico, presión), Precios (3 escenarios y tus anuncios) y Resultados (rentabilidad y alertas). El enlace lleva una clave (`JMC_DASHBOARD_TOKEN`, se crea sola). No abras el puerto a internet.
 - **Alertas** (Telegram y/o correo): cruce aprovechable, presión fuerte (|puntaje| ≥ 40 y confianza ≥ 60), API key rechazada (IP), 3+ ciclos con errores, recuperación, inicio/parada del monitor y —en modo RECOMMENDATION— tus anuncios en línea que regalan margen, quedan por debajo del margen objetivo o se quedan atrás. Cada asunto se repite como máximo cada 10–60 min. Todas quedan registradas en la base.
+- En la pestaña **Precios** eliges la ganancia libre que buscas (0,5 / 1 / 1,5 / 2 % u otro valor) y los 3 escenarios y los precios sugeridos se recalculan con el último libro guardado. Solo cambia la vista; las alertas usan `JMC_MARGEN_MIN`.
 - El bot **solo envía**: el sistema no lee ni ejecuta nada que llegue por Telegram.
 
 ## Pruebas
