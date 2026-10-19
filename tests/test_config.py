@@ -44,3 +44,14 @@ def test_secrets_not_in_repr():
     s = make(BINANCE_API_KEY="AAAAAsupersecretZZZZ", BINANCE_API_SECRET="topsecret")
     assert "supersecret" not in repr(s)
     assert "topsecret" not in repr(s)
+
+
+def test_min_margin_setting(monkeypatch):
+    from decimal import Decimal
+
+    from jmcambios.config import Settings
+
+    monkeypatch.delenv("JMC_MARGEN_MIN", raising=False)
+    assert Settings(_env_file=None).min_margin_pct == Decimal("0.3")
+    monkeypatch.setenv("JMC_MARGEN_MIN", "1")
+    assert Settings(_env_file=None).min_margin_pct == Decimal("1")

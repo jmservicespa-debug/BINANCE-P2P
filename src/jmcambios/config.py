@@ -6,6 +6,7 @@ degrada si falta cualquiera de las condiciones de seguridad.
 
 from __future__ import annotations
 
+from decimal import Decimal
 from enum import Enum
 
 from pydantic import Field, SecretStr
@@ -33,6 +34,9 @@ class Settings(BaseSettings):
 
     # Métodos con los que pago/recibo y su 4x1000: "DaviviendaSA:0,Daviplata:0,BancolombiaSA:0.004,Nequi:0.004"
     my_pay_methods: str | None = Field(default=None, alias="JMC_MY_PAY_METHODS")
+
+    # Margen neto mínimo del ciclo compra→venta, en % (después de comisiones y 4x1000).
+    min_margin_pct: Decimal = Field(default=Decimal("0.3"), alias="JMC_MARGEN_MIN", ge=0, lt=20)
 
     # Alertas (Fase 6). Solo envían avisos: no reciben órdenes ni comandos.
     telegram_bot_token: SecretStr | None = Field(default=None, alias="JMC_TELEGRAM_BOT_TOKEN")

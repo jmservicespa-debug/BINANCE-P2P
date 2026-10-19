@@ -242,7 +242,7 @@ def _maker_fees(store: HistoryStore, my_ads: list[MyAd], settings: Settings) -> 
 
 
 def cmd_competencia(store: HistoryStore, args: argparse.Namespace, settings: Settings) -> int:
-    min_margin = (_dec(args.margen_min, "--margen-min") or Decimal("0.3")) / 100
+    min_margin = (_dec(args.margen_min, "--margen-min") or settings.min_margin_pct) / 100
     cfg = _cfg(settings, args)
     with _client(settings) as client:
         try:
@@ -367,7 +367,7 @@ def _side_line(sp: SidePrice, asset: str) -> str:
 
 def cmd_recomendar(store: HistoryStore, args: argparse.Namespace, settings: Settings) -> int:
     mode, _ = effective_mode(settings)
-    min_margin = (_dec(args.margen_min, "--margen-min") or Decimal("0.3")) / 100
+    min_margin = (_dec(args.margen_min, "--margen-min") or settings.min_margin_pct) / 100
     cfg = _cfg(settings, args)
     goal = _dec(args.meta, "--meta") or DEFAULT_GOAL
     market = f"{settings.asset}/{settings.fiat}"
@@ -481,7 +481,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--capital", help="Capital operativo, p. ej. 10.000.000")
     p.add_argument("--costo-orden", help="Costo operativo atribuible por orden completada")
     p.add_argument("--tasa-oportunidad", help="Costo de oportunidad anual en %%, p. ej. 10")
-    p.add_argument("--margen-min", help="competencia/recomendar: margen mínimo en %%, p. ej. 0,3")
+    p.add_argument("--margen-min", help="competencia/recomendar: margen mínimo en %%, p. ej. 1 (por defecto JMC_MARGEN_MIN)")
     p.add_argument("--meta", help="recomendar: meta de ganancia diaria en COP (por defecto 127.000)")
     args = p.parse_args(argv)
     if args.comando == "sincronizar" and args.dias == 30:

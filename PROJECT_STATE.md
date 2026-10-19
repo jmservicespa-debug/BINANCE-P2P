@@ -132,6 +132,12 @@ tests/                     pruebas unitarias (sin red)
 - Panel: `http.server` de la biblioteca estándar (sin dependencias nuevas), GET solamente (POST → 405), clave en `?t=` comparada con `hmac.compare_digest`, sin registrar URLs (llevan la clave). Acceso fuera de casa = VPS (pendiente).
 - Telegram: token y chat_id en `.env` (redactados en registros vía `Settings.secret_values()`); los errores de red no propagan la URL con el token.
 
+## Meta de margen del usuario (2026-10-19)
+- Busca **≥ 1 % libre por ciclo** (≈ 31,5 COP/USDT). Referencia del mercado colombiano: 2 % bruto − 4x1000 ≈ 1,6 % (≈ 1,4 % tras comisión Binance).
+- Para 1 % libre la diferencia compra→venta debe ser ≈ 1,2 % (≈ 38 COP) pagando desde cuenta exenta, ≈ 1,6 % (≈ 50 COP) con 4x1000.
+- Con 1 % y 10 M COP, la meta de 127.000 COP/día exige ≈ 1,3 vueltas/día. La Fase 7 debe medir con qué frecuencia el mercado da esas diferencias (incluida la estrategia temporal: comprar en baja y vender en alza) y comparar 20–60 COP por USDT.
+- Configurable con `JMC_MARGEN_MIN` (en %, por defecto 0,3; el usuario usará 1).
+
 ## Ideas registradas
 - Producto por suscripción (pedido del usuario 2026-10-19): multiusuario en servidor con IP fija, keys de terceros cifradas y solo lectura, configuración por usuario (bancos/4x1000, moneda, márgenes), registro y pagos, revisión legal (condiciones de Binance para terceros, Ley 1581 de 2012). Riesgo: suscriptores con la misma estrategia compiten entre sí. Primero validar con resultados reales del usuario. Mantener nada personal fijo en el código.
 

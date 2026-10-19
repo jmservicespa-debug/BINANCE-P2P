@@ -86,7 +86,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("--panel-port", type=int, default=8765, help="Puerto del panel")
     p.add_argument("--estado", default="data/estado.json", help="Archivo de estado que lee el panel")
     p.add_argument("--anuncios-cada", type=int, default=5, help="Leer mis anuncios cada N ciclos (0 = nunca)")
-    p.add_argument("--margen-min", default="0,3", help="Margen mínimo del ciclo en %% para los escenarios")
+    p.add_argument("--margen-min", help="Margen mínimo del ciclo en %% (por defecto JMC_MARGEN_MIN de .env)")
     p.add_argument("--cruce-min", default="10.000", help="Ganancia total mínima en COP para alertar un cruce")
     p.add_argument("--sin-alertas", action="store_true", help="No enviar alertas por Telegram/correo")
     return p.parse_args(argv)
@@ -125,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
     if not settings.has_read_credentials:
         print("Aviso: sin API key → solo 20 anuncios por lado (lista pública). Ejecuta set_keys para ver el libro completo.\n")
 
-    min_margin = (_decimal(args.margen_min, "--margen-min") or Decimal("0.3")) / 100
+    min_margin = (_decimal(args.margen_min, "--margen-min") or settings.min_margin_pct) / 100
     channels = [] if args.sin_alertas else channels_from_settings(settings)
     alerts = AlertManager(channels, store) if store is not None else None
     mode, _ = effective_mode(settings)
