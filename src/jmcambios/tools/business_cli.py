@@ -214,6 +214,10 @@ def _print_position(p: AdPosition) -> None:
     print(f"    mejor precio del lado: {money(p.best_price)} · distancia: {money(p.gap_to_best)} ({money(p.gap_to_best_pct, 3)}%)"
           f" · mediana: {money(p.median_price)}")
     print(f"    competidores a ±0,5% de tu precio: {p.near_count} ({money(p.near_qty, 0)} {a.asset})")
+    if p.gap_to_best is not None and p.gap_to_best < 0:
+        what = "vendes más barato" if a.side is OrderSide.SELL else "pagas más caro"
+        print(f"    ⚠ {what} que el mejor anuncio del mercado por {money(-p.gap_to_best)} {a.fiat}/{a.asset}: "
+              f"estarías regalando margen. Para quedar de primero basta igualar o mejorar por poco el {money(p.best_price)}.")
     if p.ahead:
         print("    Justo por delante de ti:")
         for c in p.ahead:
@@ -262,13 +266,18 @@ def cmd_competencia(store: HistoryStore, args: argparse.Namespace, settings: Set
             print(f"    Comprar como máximo a {money(p)} si vendes a {money(sell_ref)} ({label}, 4x1000 {pct3(g)})")
     orders = store.load_orders(fiat=settings.fiat, asset=settings.asset)
     rep = calculate(orders, cfg, fiat=settings.fiat, asset=settings.asset, start=datetime.now(UTC) - timedelta(days=30))
-    cost = rep.inventory_avg_cost
-    basis = "costo promedio de tu inventario (30 días)"
-    if cost is None and best_bid is not None:
-        cost, basis = best_bid * (1 + gmf_high), "costo de reponer hoy al mejor precio de compra + 4x1000"
-    if cost is not None:
+    bases = []
+    if rep.inventory_avg_cost is not None:
+        bases.append(("costo promedio de tus USDT comprados en COP (30 días)", rep.inventory_avg_cost))
+    if best_bid is not None:
+        for label, g in (("cuenta exenta", gmf_low), ("con 4x1000", gmf_high)):
+            # Reponer comprando con mi anuncio al mejor precio de compra actual.
+            bases.append((f"reponer hoy al mejor precio de compra, {label}", best_bid * (1 + g) / (1 - maker)))
+    for basis, cost in bases:
         p = min_profitable_sell_price(cost, sell_commission=maker, min_margin=min_margin)
-        print(f"    Vender como mínimo a {money(p)} ({basis}: {money(cost)})")
+        print(f"    Vender como mínimo a {money(p)} ({basis}: costo {money(cost)})")
+    print(f"    Costos de un ciclo compra+venta: comisión ≈ {pct3(2 * maker)} + 4x1000 {pct3(gmf_low)}–{pct3(gmf_high)}"
+          f" → diferencia mínima entre compra y venta ≈ {pct3(2 * maker + min_margin + gmf_low)}–{pct3(2 * maker + min_margin + gmf_high)}")
     print("\n  Posición = estimación por precio; Binance también ordena por otros criterios.")
     return 0
 
