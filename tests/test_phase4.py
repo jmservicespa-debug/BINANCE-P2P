@@ -260,3 +260,18 @@ def test_fetch_orders_when_binance_caps_page_size_at_50():
     with BinanceP2PClient(s, transport=httpx.MockTransport(handler)) as client:
         fetched = BinanceAccount(client, clock=lambda: T0 + timedelta(seconds=1)).fetch_orders(T0 - timedelta(days=10))
     assert len(fetched.orders) == 120 and fetched.requests == 3
+
+
+def test_observed_fee_prefers_fiat_then_falls_back():
+    from jmcambios.analysis.crossing import taker_fees_from_orders
+    from jmcambios.profitability.costs import observed_fee
+
+    ves = [order(f"v{i}", OrderSide.SELL, "100", "40", fiat="VES", commission="0.142", role="TAKER") for i in range(5)]
+    cop = [order(f"c{i}", OrderSide.SELL, "100", "3800", commission="0.2", role="TAKER") for i in range(5)]
+    # Con datos COP suficientes usa COP; si no, todas las monedas.
+    fee = observed_fee(ves + cop, role="TAKER", side=OrderSide.SELL, fiat="COP")
+    assert fee.rate == Decimal("0.002") and fee.scope == "COP" and fee.orders == 5
+    fee = observed_fee(ves + cop[:2], role="TAKER", side=OrderSide.SELL, fiat="COP")
+    assert fee.scope == "todas las monedas" and fee.orders == 7
+    assert observed_fee(ves, role="TAKER", side=OrderSide.BUY, fiat="COP") is None
+    assert taker_fees_from_orders(ves, "COP") == {"taker_fee_sell": Decimal("0.00142")}

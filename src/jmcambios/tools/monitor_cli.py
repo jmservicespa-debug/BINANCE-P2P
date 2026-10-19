@@ -16,7 +16,7 @@ from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
-from jmcambios.analysis.crossing import parse_my_methods
+from jmcambios.analysis.crossing import parse_my_methods, taker_fees_from_orders
 from jmcambios.analysis.filters import AdFilter
 from jmcambios.config import Settings
 from jmcambios.connectors.binance.client import BinanceP2PClient
@@ -90,6 +90,7 @@ def main(argv: list[str] | None = None) -> int:
     ad_filter = build_filter(args)
     recorder = None if args.no_record else SnapshotRecorder(Path(args.data_dir))
     store = None if args.no_record else HistoryStore(args.db)
+    fees = taker_fees_from_orders(store.load_orders(), settings.fiat) if store else {}
 
     if not settings.has_read_credentials:
         print("Aviso: sin API key → solo 20 anuncios por lado (lista pública). Ejecuta set_keys para ver el libro completo.\n")
@@ -106,6 +107,7 @@ def main(argv: list[str] | None = None) -> int:
             recorder=recorder,
             store=store,
             my_methods=parse_my_methods(settings.my_pay_methods),
+            fees=fees,
             interval_s=args.interval,
             clock=lambda: datetime.now(UTC),
             on_cycle=show,

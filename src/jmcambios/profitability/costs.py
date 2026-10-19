@@ -78,3 +78,30 @@ class CostConfig:
             return max([*self.gmf_by_account.values(), self.default_gmf])
         ident = method_identifier(order.pay_method)
         return self.gmf_by_account.get(ident or "", self.default_gmf)
+
+
+@dataclass(frozen=True)
+class ObservedFee:
+    rate: Decimal  # comisión ÷ cantidad
+    orders: int
+    scope: str  # p. ej. "COP" o "todas las monedas"
+
+
+def observed_fee(
+    orders: list[Order], *, role: str, side: OrderSide, fiat: str | None = None, min_orders: int = 5
+) -> ObservedFee | None:
+    """Comisión realmente cobrada (OBSERVADA) para un rol y lado; primero en la moneda pedida, si no en todas."""
+    for scope_fiat in ([fiat, None] if fiat else [None]):
+        sel = [
+            o for o in orders
+            if o.completed and o.role == role and o.side is side and o.commission is not None
+            and (scope_fiat is None or o.fiat == scope_fiat)
+        ]
+        qty = sum((o.qty for o in sel), Decimal(0))
+        if len(sel) >= min_orders and qty > 0:
+            return ObservedFee(
+                rate=sum((o.commission for o in sel), Decimal(0)) / qty,
+                orders=len(sel),
+                scope=scope_fiat or "todas las monedas",
+            )
+    return None

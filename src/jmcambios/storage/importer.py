@@ -74,8 +74,10 @@ def import_directory(
     directory: Path,
     my_methods: dict[str, Decimal] | None = None,
     progress: Callable[[str], None] | None = None,
+    fees: dict[str, Decimal] | None = None,
 ) -> ImportResult:
     result = ImportResult()
+    fees = fees or {}
     paths = sorted(directory.rglob("*.jsonl.gz"))
     for n, path in enumerate(paths, 1):
         result.files += 1
@@ -110,7 +112,7 @@ def import_directory(
             if snap.side is Side.BID and pending_ask and cycle_ts == pending_ask[0]:
                 ask_snap = pending_ask[1]
                 ask_stats = summarize(Side.ASK, ask_snap.ads)
-                cross = crossing.analyze(ask_snap.ads, snap.ads, my_methods)
+                cross = crossing.analyze(ask_snap.ads, snap.ads, my_methods, **fees)
                 store.record_cycle(
                     snap.venue, f"{snap.asset}/{snap.fiat}", cycle_ts, spread(ask_stats, stats),
                     ask_stats.best_price, stats.best_price, cross,

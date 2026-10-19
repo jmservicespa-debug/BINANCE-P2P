@@ -5,8 +5,8 @@ tengo (al menor 4x1000 posible), recibir del comprador en un método que tengo, 
 mover una cantidad que encaje en los límites de ambos anuncios.
 
 La comisión de tomador (taker) es un parámetro por lado. Valores por defecto
-observados en las órdenes reales del usuario (2026-10-19): ~0,047 % al comprar y
-~0,162 % al vender, cobrada en USDT.
+observados en 4.597 órdenes reales del usuario (2026-10-19): 0,025 % al comprar y
+0,142 % al vender, cobrada en USDT. Si la base tiene órdenes, se usan las observadas.
 """
 
 from __future__ import annotations
@@ -80,8 +80,8 @@ def analyze(
     bids: list[Ad],
     my_methods: dict[str, Decimal] | None = None,
     *,
-    taker_fee_buy: Decimal = Decimal("0.00047"),
-    taker_fee_sell: Decimal = Decimal("0.00162"),
+    taker_fee_buy: Decimal = Decimal("0.00025"),
+    taker_fee_sell: Decimal = Decimal("0.00142"),
     max_pairs: int = 400,
 ) -> CrossReport:
     methods = my_methods if my_methods is not None else DEFAULT_MY_METHODS
@@ -132,3 +132,18 @@ def analyze(
             break
     report.rejected = dict(rejected)
     return report
+
+
+def taker_fees_from_orders(orders, fiat: str | None) -> dict[str, Decimal]:
+    """Comisiones taker observadas para usar en `analyze` (vacío si no hay datos suficientes)."""
+    from jmcambios.domain.account import OrderSide
+    from jmcambios.profitability.costs import observed_fee
+
+    out: dict[str, Decimal] = {}
+    buy = observed_fee(orders, role="TAKER", side=OrderSide.BUY, fiat=fiat)
+    sell = observed_fee(orders, role="TAKER", side=OrderSide.SELL, fiat=fiat)
+    if buy:
+        out["taker_fee_buy"] = buy.rate
+    if sell:
+        out["taker_fee_sell"] = sell.rate
+    return out

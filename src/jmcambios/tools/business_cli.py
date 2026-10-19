@@ -33,7 +33,7 @@ from jmcambios.domain.account import OrderSide
 from jmcambios.logging_utils import setup_logging
 from jmcambios.monitor.report import BOGOTA, money, pct
 from jmcambios.profitability.calculator import ProfitReport, calculate
-from jmcambios.profitability.costs import CostConfig, fraction
+from jmcambios.profitability.costs import CostConfig, fraction, observed_fee
 from jmcambios.storage.history import HistoryStore
 
 COT_DAY = timedelta(days=1)
@@ -252,17 +252,25 @@ def cmd_competencia(store: HistoryStore, args: argparse.Namespace, settings: Set
     for ad in my_ads:
         _print_position(position(ad, books[Side.BID if ad.side is OrderSide.BUY else Side.ASK].ads, my_users))
 
-    # Precios límite [cálculo]
+    # Precios límite [cálculo]: comisión maker OBSERVADA por lado; si no hay, la tasa de tus anuncios.
+    all_orders = store.load_orders()
     maker_rates = [fraction(a.commission_rate) for a in my_ads if a.commission_rate is not None]
-    maker = max(maker_rates) if maker_rates else Decimal("0")
+    ad_rate = max(maker_rates) if maker_rates else Decimal("0")
+    fee_src = {}
+    for side in (OrderSide.BUY, OrderSide.SELL):
+        obs = observed_fee(all_orders, role="MAKER", side=side, fiat=settings.fiat)
+        fee_src[side] = (obs.rate, f"observada en {obs.orders} órdenes ({obs.scope})") if obs else (ad_rate, "tasa de tus anuncios")
+    maker_buy, maker_sell = fee_src[OrderSide.BUY][0], fee_src[OrderSide.SELL][0]
+    maker = max(maker_buy, maker_sell)
     sell_ref = next((a.price for a in my_ads if a.side is OrderSide.SELL and a.online), best_ask)
     gmf_low = min(cfg.gmf_by_account.values(), default=Decimal("0"))
     gmf_high = max([*cfg.gmf_by_account.values(), cfg.default_gmf])
-    print(f"\n  PRECIOS LÍMITE [cálculo] · margen mínimo {money(min_margin * 100, 2)}% · comisión maker {pct3(maker)}"
-          + ("" if maker_rates else " (sin dato: se usa 0)"))
+    print(f"\n  PRECIOS LÍMITE [cálculo] · margen mínimo {money(min_margin * 100, 2)}%")
+    print(f"    comisión maker al comprar {pct3(maker_buy)} ({fee_src[OrderSide.BUY][1]})"
+          f" · al vender {pct3(maker_sell)} ({fee_src[OrderSide.SELL][1]})")
     if sell_ref is not None:
         for label, g in (("pagando desde cuenta exenta", gmf_low), ("pagando con 4x1000", gmf_high)):
-            p = max_profitable_buy_price(sell_ref, gmf=g, buy_commission=maker, sell_commission=maker, min_margin=min_margin)
+            p = max_profitable_buy_price(sell_ref, gmf=g, buy_commission=maker_buy, sell_commission=maker_sell, min_margin=min_margin)
             print(f"    Comprar como máximo a {money(p)} si vendes a {money(sell_ref)} ({label}, 4x1000 {pct3(g)})")
     orders = store.load_orders(fiat=settings.fiat, asset=settings.asset)
     rep = calculate(orders, cfg, fiat=settings.fiat, asset=settings.asset, start=datetime.now(UTC) - timedelta(days=30))
@@ -272,12 +280,13 @@ def cmd_competencia(store: HistoryStore, args: argparse.Namespace, settings: Set
     if best_bid is not None:
         for label, g in (("cuenta exenta", gmf_low), ("con 4x1000", gmf_high)):
             # Reponer comprando con mi anuncio al mejor precio de compra actual.
-            bases.append((f"reponer hoy al mejor precio de compra, {label}", best_bid * (1 + g) / (1 - maker)))
+            bases.append((f"reponer hoy al mejor precio de compra, {label}", best_bid * (1 + g) / (1 - maker_buy)))
     for basis, cost in bases:
-        p = min_profitable_sell_price(cost, sell_commission=maker, min_margin=min_margin)
+        p = min_profitable_sell_price(cost, sell_commission=maker_sell, min_margin=min_margin)
         print(f"    Vender como mínimo a {money(p)} ({basis}: costo {money(cost)})")
-    print(f"    Costos de un ciclo compra+venta: comisión ≈ {pct3(2 * maker)} + 4x1000 {pct3(gmf_low)}–{pct3(gmf_high)}"
-          f" → diferencia mínima entre compra y venta ≈ {pct3(2 * maker + min_margin + gmf_low)}–{pct3(2 * maker + min_margin + gmf_high)}")
+    fees_cycle = maker_buy + maker_sell
+    print(f"    Costos de un ciclo compra+venta: comisión ≈ {pct3(fees_cycle)} + 4x1000 {pct3(gmf_low)}–{pct3(gmf_high)}"
+          f" → diferencia mínima entre compra y venta ≈ {pct3(fees_cycle + min_margin + gmf_low)}–{pct3(fees_cycle + min_margin + gmf_high)}")
     print("\n  Posición = estimación por precio; Binance también ordena por otros criterios.")
     return 0
 

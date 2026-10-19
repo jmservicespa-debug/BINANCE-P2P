@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 
-from jmcambios.analysis.crossing import parse_my_methods
+from jmcambios.analysis.crossing import parse_my_methods, taker_fees_from_orders
 from jmcambios.analysis.liquidity import cross_episodes, hourly_profile, window_changes
 from jmcambios.config import Settings
 from jmcambios.domain import Side
@@ -43,8 +43,13 @@ def cmd_importar(store: HistoryStore, args: argparse.Namespace, settings: Settin
         print(f"No existe {directory.resolve()}: ejecuta primero jmcambios-monitor.")
         return 1
     print("Importando… puede tardar unos minutos (no cierres la ventana).", flush=True)
+    fees = taker_fees_from_orders(store.load_orders(), settings.fiat)
+    if fees:
+        print("Comisión taker observada en tus órdenes: "
+              + " · ".join(f"{k.split('_')[-1]} {money(v * 100, 3)}%" for k, v in fees.items()), flush=True)
     r = import_directory(
-        store, directory, parse_my_methods(settings.my_pay_methods), progress=lambda m: print("  " + m, flush=True)
+        store, directory, parse_my_methods(settings.my_pay_methods),
+        progress=lambda m: print("  " + m, flush=True), fees=fees,
     )
     print(f"Archivos: {r.files} · registros leídos: {r.records} · nuevos: {r.inserted} · ya existían: {r.skipped}")
     print(f"Ciclos con análisis de cruce: {r.cycles} · líneas dañadas ignoradas: {r.bad_lines}")
@@ -131,7 +136,7 @@ def cmd_cruces(store: HistoryStore, args: argparse.Namespace, settings: Settings
             f"  {_when(e.start_ts):<18}{e.minutes:>8.0f} m{e.cycles:>8}{e.executable_cycles:>8}"
             f"{_num(e.best_net_per_unit):>15}{_num(e.best_net_pct, 3):>9}{_num(e.best_max_qty, 0):>12}"
         )
-    print("\nNeto = después del 4x1000 del método con que pagarías; comisión taker observada ≈0,05% compra / 0,16% venta.")
+    print("\nNeto = después del 4x1000 del método con que pagarías; comisión taker observada en tus órdenes.")
     print("Un cruce visto en un ciclo pudo desaparecer en segundos: duración mínima real = intervalo del monitor.")
     return 0
 

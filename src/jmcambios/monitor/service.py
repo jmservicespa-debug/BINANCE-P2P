@@ -48,6 +48,7 @@ class Monitor:
         recorder: SnapshotRecorder | None = None,
         store: HistoryStore | None = None,
         my_methods: dict[str, Decimal] | None = None,
+        fees: dict[str, Decimal] | None = None,
         interval_s: float = 60.0,
         max_backoff_s: float = 900.0,
         clock: Callable[[], datetime],
@@ -59,6 +60,7 @@ class Monitor:
         self._recorder = recorder
         self._store = store
         self._my_methods = my_methods
+        self._fees = fees or {}
         self._interval = interval_s
         self._max_backoff = max_backoff_s
         self._clock = clock
@@ -94,7 +96,7 @@ class Monitor:
         if Side.ASK in result.stats and Side.BID in result.stats:
             result.spread = spread(result.stats[Side.ASK], result.stats[Side.BID])
             result.cross = crossing.analyze(
-                result.snapshots[Side.ASK].ads, result.snapshots[Side.BID].ads, self._my_methods
+                result.snapshots[Side.ASK].ads, result.snapshots[Side.BID].ads, self._my_methods, **self._fees
             )
         self._store_cycle(result)
         if result.filtered_stats.get(Side.ASK) and result.filtered_stats.get(Side.BID):

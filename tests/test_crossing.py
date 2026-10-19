@@ -81,6 +81,6 @@ def test_picks_best_total_among_pairs():
 def test_default_taker_fees_observed():
     # Con las comisiones taker reales, un cruce de 4,41 COP deja de ser rentable.
     r = analyze([ask(1, "3155.59", ("DaviviendaSA",))], [bid(1, "3160", ("Nequi",))])
-    fees = Decimal("3155.59") * Decimal("0.00047") + Decimal("3160") * Decimal("0.00162")
+    fees = Decimal("3155.59") * Decimal("0.00025") + Decimal("3160") * Decimal("0.00142")
     assert r.best.net_per_unit == Decimal("4.41") - fees
     assert not r.executable

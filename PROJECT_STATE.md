@@ -13,7 +13,7 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 | 1. Viabilidad e integraciones | ✅ Diagnóstico · ✅ Verificación real ejecutada 2026-10-18 (16 OK / 2 error) · ⏳ Pendiente: confirmar cuenta de la key (0 anuncios/órdenes/métodos de pago) y resolver `getReferencePrice` |
 | 2. Monitor de anuncios | ✅ Cerrada 2026-10-19: ejecución real continua ~33 h (2026-10-17 23:37 → 2026-10-19 08:59 COT) sin errores ni caídas, snapshots guardados |
 | 3. Historial y liquidez | ✅ 2026-10-19: datos reales importados (1.958 ciclos, ~33 h) y consultas funcionando en el PC del usuario. Seguir acumulando días hábiles. |
-| 4. Competencia y rentabilidad | 🟡 Implementada 2026-10-19 (116 pruebas OK): `jmcambios-negocio sincronizar/costos/rentabilidad/competencia` · ⏳ Pendiente: ejecutar con la cuenta oficial y validar cifras contra el extracto de Binance (unidad de la comisión, comisión maker en el historial) |
+| 4. Competencia y rentabilidad | ✅ Implementada y ejecutada con la cuenta oficial 2026-10-19 (119 pruebas OK): `jmcambios-negocio sincronizar/costos/rentabilidad/competencia`; 4.597 órdenes, comisiones reales observadas integradas. Rentabilidad COP sin ciclos todavía (sin historial de comerciante COP) · ⏳ Aprobación del usuario para Fase 5 |
 | 5–10 | ⛔ No iniciadas |
 
 ## Decisiones tomadas
@@ -61,6 +61,12 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 - `costos` (300 órdenes, antes del arreglo de paginación): TODAS como TAKER. Comisión real cobrada (comisión ÷ cantidad): compras 0,047 %, ventas 0,162 % (el campo de tasa viene en 0). Ya se usan por defecto en el análisis de cruces (antes se suponía 0 %).
 - Con comisiones reales, el cruce de −4,41 COP visto el domingo NO era rentable. Hay que reimportar (`jmcambios-history importar`) para recalcular los cruces históricos.
 - Bug corregido: el historial agent entrega máx. 50 filas/página; la sincronización cortaba en la primera página (300 de ~4.700 órdenes). Ahora pagina por total con 50 filas.
+
+## Comisiones reales y cruces recalculados (2026-10-19, 4.597 órdenes de la cuenta oficial)
+- `costos` (todas las monedas; comisión ÷ cantidad, OBSERVADO): MAKER compra 0,181 % · MAKER venta 0,008 % · TAKER compra 0,025 % · TAKER venta 0,142 %.
+- Ciclo de comerciante (maker en ambos lados) ≈ 0,19 % + 4x1000 (0–0,4 %), no el 0,4 % que sugería el `commissionRate` de los anuncios (0,2 %).
+- El sistema ahora usa las comisiones observadas en todas partes: `observed_fee` (primero COP, si no hay ≥5 órdenes, todas las monedas). Cruces: `taker_fees_from_orders` desde la base (`monitor`, `history importar`); por defecto 0,025 % / 0,142 %. `competencia`: comisión maker observada por lado, y si no hay datos, `commissionRate` del anuncio.
+- `history cruces` tras reimportar: 226 ciclos cruzados, 36 episodios, **8 aprovechables** (p. ej. 12,97 COP/USDT = 0,416 % domingo 21:18; 15,88 COP = 0,507 % lunes 07:55). Conclusión: los cruces son esporádicos y pequeños → complemento con alerta; el núcleo de la estrategia son anuncios maker (Fase 5).
 
 ## Verificación con la CUENTA OFICIAL (2026-10-19 14:41 UTC, key `NpSMV...1Pze`, solo lectura, IP 181.42.23.142)
 - 19 OK / 2 error (solo `getReferencePrice`). Categoría de anuncios: `profession` (comerciante). 4 anuncios propios, 30 métodos de pago.

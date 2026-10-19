@@ -119,7 +119,7 @@ def test_cross_episodes(store):
     record(store, 30, [ask("A1", "3155", "100", methods=("Efecty",))], [bid("B1", "3160", "200")])
     eps = cross_episodes(store, VENUE, MARKET)
     assert len(eps) == 2
-    fees = 3150 * 0.00047 + 3160 * 0.00162  # comisiones taker observadas
+    fees = 3150 * 0.00025 + 3160 * 0.00142  # comisiones taker observadas
     assert eps[0].cycles == 2 and eps[0].executable_cycles == 2 and eps[0].best_net_per_unit == pytest.approx(10 - fees)
     assert eps[0].minutes == pytest.approx(1)
     assert eps[1].executable_cycles == 0
