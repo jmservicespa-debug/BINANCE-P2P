@@ -153,3 +153,43 @@ def test_cli_amount_parsing():
 
 def test_cli_rejects_too_short_interval(capsys):
     assert monitor_cli.main(["--interval", "5"]) == 2
+
+
+def test_monitor_writes_history_and_renders_cross(tmp_path):
+    from jmcambios.storage.history import HistoryStore
+
+    def handler(request):
+        body = json.loads(request.content)
+        if body["tradeType"] == "BUY":  # anuncios de venta: uno barato que cruza
+            items = [search_item("A1", "3155.59", "500", methods=("DaviviendaSA",), trade_type="SELL")]
+        else:
+            items = [search_item("B1", "3160", "500", user="b1", methods=("Nequi",), trade_type="BUY")]
+        return httpx.Response(200, json={"code": "000000", "success": True, "data": items, "total": 1})
+
+    with HistoryStore(tmp_path / "h.db") as store:
+        mon = Monitor(source(handler), store=store, clock=lambda: NOW)
+        result = mon.run_cycle()
+        assert result.ok and result.cross.crossed and result.cross.executable
+        assert store.counts() == {"snapshots": 2, "cycles": 1, "ad_states": 2}
+        row = store.query("SELECT crossed, executable, best_pay_method, best_net_per_unit FROM cycles")[0]
+        assert row["crossed"] == 1 and row["executable"] == 1 and row["best_pay_method"] == "DaviviendaSA"
+        assert row["best_net_per_unit"] == 4.41
+
+    text = render(result, AdFilter())
+    assert "CRUCE DE PRECIOS" in text and "Aprovechable" in text and "DaviviendaSA" in text
+    assert "ANOMALÍA" not in text
+
+
+def test_history_cli_end_to_end(tmp_path, capsys, monkeypatch):
+    from jmcambios.tools import history_cli
+
+    monkeypatch.chdir(tmp_path)
+    rec = SnapshotRecorder(tmp_path / "data" / "snapshots")
+    mon = Monitor(source(fake_exchange(total=30)), recorder=rec, clock=lambda: NOW)
+    mon.run_cycle()
+    assert history_cli.main(["importar"]) == 0
+    assert history_cli.main(["estado"]) == 0
+    assert history_cli.main(["perfil"]) == 0
+    assert history_cli.main(["cruces"]) == 0
+    out = capsys.readouterr().out
+    assert "nuevos: 2" in out and "Snapshots: 2" in out and "Sin cruces" in out

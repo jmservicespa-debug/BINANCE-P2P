@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import timedelta, timezone
 from decimal import Decimal
 
+from jmcambios.analysis.crossing import CrossReport
 from jmcambios.analysis.filters import AdFilter
 from jmcambios.analysis.market_stats import SideStats, Spread
 from jmcambios.domain import Side
@@ -58,6 +59,31 @@ def _spread_line(label: str, sp: Spread | None) -> str:
     return f"  {label}: {money(sp.absolute)} COP ({money(sp.pct, 3)}%) · punto medio {money(sp.mid)}"
 
 
+def _cross_lines(cross: CrossReport | None) -> list[str]:
+    if cross is None or not cross.crossed:
+        return []
+    head = (
+        f"  ◆ CRUCE DE PRECIOS [cálculo]: el mejor anuncio de venta está {money(cross.gross_spread)} COP "
+        f"por debajo del mejor de compra"
+    )
+    lines = [head]
+    best = cross.best
+    if cross.executable and best is not None:
+        lines.append(
+            f"    ✔ Aprovechable con tus métodos: comprar a {money(best.buy_ad.price)} pagando por {best.pay_method} "
+            f"(4x1000 {money(best.gmf_rate * 100, 1)}%) y vender a {money(best.sell_ad.price)} cobrando por {best.receive_method}"
+        )
+        lines.append(
+            f"      neto ≈ {money(best.net_per_unit)} COP/USDT ({money(best.net_pct, 3)}%) · cantidad posible "
+            f"{money(best.min_qty)}–{money(best.max_qty)} USDT · hasta ≈ {money(best.net_total_max, 0)} COP "
+            f"(comisión taker asumida 0%, por verificar; el anuncio puede desaparecer antes de completar)"
+        )
+    else:
+        reasons = ", ".join(f"{k} ({v})" for k, v in sorted(cross.rejected.items(), key=lambda kv: -kv[1])) or "sin pares"
+        lines.append(f"    ✘ No aprovechable con tus métodos de pago: {reasons}")
+    return lines
+
+
 TITLES = {
     Side.ASK: "COMPRAR USDT — anuncios de venta (compiten con MIS anuncios de venta)",
     Side.BID: "VENDER USDT — anuncios de compra (compiten con MIS anuncios de compra)",
@@ -75,6 +101,7 @@ def render(result: CycleResult, ad_filter: AdFilter, *, detail: bool = True) -> 
         if side in result.stats:
             lines += _side_block(TITLES[side], result.stats[side], detail=detail)
     lines.append(_spread_line("Diferencial entre mejores precios [cálculo]", result.spread))
+    lines += _cross_lines(result.cross)
 
     if ad_filter.active:
         lines.append(f"  --- Con mis filtros ({ad_filter.describe()}) ---")

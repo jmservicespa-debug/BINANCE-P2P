@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     trade_api_key: SecretStr | None = Field(default=None, alias="BINANCE_TRADE_API_KEY")
     trade_api_secret: SecretStr | None = Field(default=None, alias="BINANCE_TRADE_API_SECRET")
 
+    # Métodos con los que pago/recibo y su 4x1000: "DaviviendaSA:0,Daviplata:0,BancolombiaSA:0.004,Nequi:0.004"
+    my_pay_methods: str | None = Field(default=None, alias="JMC_MY_PAY_METHODS")
+
     recv_window_ms: int = Field(default=10_000, alias="BINANCE_RECV_WINDOW", ge=1000, le=60_000)
     http_timeout_s: float = Field(default=15.0, alias="BINANCE_HTTP_TIMEOUT", gt=0)
 

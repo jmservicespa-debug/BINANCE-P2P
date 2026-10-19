@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
+from jmcambios.analysis.crossing import parse_my_methods
 from jmcambios.analysis.filters import AdFilter
 from jmcambios.config import Settings
 from jmcambios.connectors.binance.client import BinanceP2PClient
@@ -24,6 +25,7 @@ from jmcambios.logging_utils import setup_logging
 from jmcambios.monitor.recorder import SnapshotRecorder
 from jmcambios.monitor.report import render
 from jmcambios.monitor.service import Monitor
+from jmcambios.storage.history import HistoryStore
 
 MIN_INTERVAL_S = 20
 
@@ -70,7 +72,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("--merchants-only", action="store_true", help="Solo comerciantes verificados")
     p.add_argument("--exclude-user", help="userNo a excluir (p. ej. el mío), separados por coma")
     p.add_argument("--data-dir", default="data/snapshots", help="Carpeta de snapshots")
-    p.add_argument("--no-record", action="store_true", help="No guardar snapshots")
+    p.add_argument("--no-record", action="store_true", help="No guardar snapshots ni base histórica")
+    p.add_argument("--db", default="data/history.db", help="Base histórica SQLite (Fase 3)")
     p.add_argument("--brief", action="store_true", help="Salida resumida")
     return p.parse_args(argv)
 
@@ -86,6 +89,7 @@ def main(argv: list[str] | None = None) -> int:
     setup_logging(logging.WARNING, secrets)
     ad_filter = build_filter(args)
     recorder = None if args.no_record else SnapshotRecorder(Path(args.data_dir))
+    store = None if args.no_record else HistoryStore(args.db)
 
     if not settings.has_read_credentials:
         print("Aviso: sin API key → solo 20 anuncios por lado (lista pública). Ejecuta set_keys para ver el libro completo.\n")
@@ -100,6 +104,8 @@ def main(argv: list[str] | None = None) -> int:
             BinanceMarketSource(client, settings),
             ad_filter=ad_filter,
             recorder=recorder,
+            store=store,
+            my_methods=parse_my_methods(settings.my_pay_methods),
             interval_s=args.interval,
             clock=lambda: datetime.now(UTC),
             on_cycle=show,
@@ -108,8 +114,11 @@ def main(argv: list[str] | None = None) -> int:
             monitor.run(max_cycles=cycles)
         except KeyboardInterrupt:
             print("\nMonitor detenido por el usuario.")
+    if store is not None:
+        store.close()
     if recorder is not None:
         print(f"Snapshots guardados en: {Path(args.data_dir).resolve()}")
+        print(f"Base histórica: {Path(args.db).resolve()}")
     return 0
 
 

@@ -13,9 +13,9 @@
 |---|---|---|---|
 | 1 | Conector de datos Binance P2P | `jmcambios.connectors.binance` | 1 (base), 2 |
 | 2 | Validador y normalizador | `jmcambios.normalizer` | 2 |
-| 3 | Base de datos histórica | `jmcambios.storage` | 3 |
+| 3 | Base de datos histórica | `jmcambios.storage.history` (SQLite: `snapshots`, `cycles`, `ad_states` solo-cambios) | 3 |
 | 4 | Analizador de competencia | `jmcambios.analysis.competition` | 4 |
-| 5 | Detector de cambios de liquidez | `jmcambios.analysis.liquidity` | 3, 5 |
+| 5 | Detector de cambios de liquidez | `jmcambios.analysis.liquidity` (ventanas 5/15/30/60, perfil horario, episodios de cruce) | 3, 5 |
 | 6 | Motor de precios | `jmcambios.pricing` | 5 |
 | 7 | Calculadora de rentabilidad | `jmcambios.profitability` | 4 |
 | 8 | Motor de decisión | `jmcambios.decision` | 5, 8 |
@@ -27,6 +27,8 @@
 | — | Modelos de dominio (independientes del exchange) | `jmcambios.domain` | 2 |
 | — | Estadísticas de snapshot y filtros de relevancia | `jmcambios.analysis.market_stats`, `jmcambios.analysis.filters` | 2 |
 | — | Monitor periódico + registro de snapshots | `jmcambios.monitor` | 2 |
+| — | Cruces de precio (aprovechables con mis métodos) | `jmcambios.analysis.crossing` | 3 |
+| — | Importación de snapshots a la base | `jmcambios.storage.importer` | 3 |
 | — | Configuración y modos | `jmcambios.config` | 1 |
 | — | Herramientas (verificador, etc.) | `jmcambios.tools` | 1 |
 

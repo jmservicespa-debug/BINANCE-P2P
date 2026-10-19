@@ -2,7 +2,7 @@
 
 Sistema de observación, análisis y posicionamiento estratégico de anuncios Binance P2P para el mercado USDT/COP.
 
-**Estado actual: FASE 2 (monitor de mercado, solo lectura).** Ver:
+**Estado actual: FASE 3 (base histórica y estadísticas de liquidez).** Ver:
 - [`docs/FASE1_VIABILIDAD.md`](docs/FASE1_VIABILIDAD.md) — diagnóstico técnico: qué está confirmado, qué falta verificar y qué no es posible.
 - [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) — módulos y flujo.
 - [`PROJECT_STATE.md`](PROJECT_STATE.md) — estado del proyecto entre sesiones.
@@ -67,6 +67,22 @@ jmcambios-monitor --pay BancolombiaSA,Nequi --amount 1.000.000 --min-finish-rate
 Cada ciclo se guarda en `data/snapshots/binance_p2p/usdt_cop/AAAA-MM-DD.jsonl.gz` (base para la Fase 3).
 En pantalla, `[Binance]` = dato observado y `[cálculo]` = cálculo del sistema. La liquidez mostrada es **anunciada**, no volumen ejecutado.
 
+## Base histórica (Fase 3)
+
+El monitor guarda cada ciclo también en `data/history.db` (SQLite). Los anuncios se guardan solo cuando cambian, para que semanas de datos quepan en el PC.
+
+```bash
+jmcambios-history importar   # carga los snapshots .jsonl.gz anteriores (repetible, no duplica)
+jmcambios-history estado     # cuántos datos hay y desde cuándo
+jmcambios-history cambios    # cambios de precio y liquidez en 5/15/30/60 min
+jmcambios-history perfil     # promedios por hora del día: días hábiles vs fin de semana
+jmcambios-history cruces     # episodios de cruce de precios y si eran aprovechables
+```
+
+Importa los datos viejos **antes** de volver a arrancar el monitor, para que el historial de anuncios quede en orden.
+
+**Cruces de precio:** cuando el mejor anuncio de venta está por debajo del mejor de compra, el monitor indica si es aprovechable con tus métodos de pago (`JMC_MY_PAY_METHODS` en `.env`, con el 4x1000 de cada cuenta), qué cantidad encaja en los límites de ambos anuncios y el margen neto. La comisión del tomador se asume 0 % hasta verificarla con órdenes reales.
+
 ## Pruebas
 
 ```bash
@@ -93,6 +109,11 @@ src/jmcambios/
   analysis/market_stats.py        estadísticas por lado, profundidad, concentración, spread
   analysis/filters.py             filtros de relevancia (método, monto, calidad)
   monitor/                        servicio periódico, registro gzip y salida en consola
+  analysis/crossing.py            cruces de precio: ¿aprovechables con mis métodos y montos?
+  analysis/liquidity.py           cambios 5/15/30/60 min, perfil horario, episodios de cruce
+  storage/history.py              base histórica SQLite (anuncios solo cuando cambian)
+  storage/importer.py             importación de snapshots .jsonl.gz
+  tools/history_cli.py            consultas del historial (CLI jmcambios-history)
 tests/                            pruebas unitarias
 docs/                             diagnóstico y arquitectura
 ```

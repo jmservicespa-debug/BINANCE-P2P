@@ -7,12 +7,16 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
+from decimal import Decimal
 
+from jmcambios.analysis import crossing
+from jmcambios.analysis.crossing import CrossReport
 from jmcambios.analysis.filters import AdFilter
 from jmcambios.analysis.market_stats import SideStats, Spread, spread, summarize
 from jmcambios.connectors.binance.market import MarketDataError, MarketSource
 from jmcambios.domain import MarketSnapshot, Side
 from jmcambios.monitor.recorder import SnapshotRecorder
+from jmcambios.storage.history import HistoryStore
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +30,7 @@ class CycleResult:
     excluded: dict[Side, dict[str, int]] = field(default_factory=dict)
     spread: Spread | None = None
     filtered_spread: Spread | None = None
+    cross: CrossReport | None = None
     errors: list[str] = field(default_factory=list)
     alerts: list[str] = field(default_factory=list)
 
@@ -41,6 +46,8 @@ class Monitor:
         *,
         ad_filter: AdFilter | None = None,
         recorder: SnapshotRecorder | None = None,
+        store: HistoryStore | None = None,
+        my_methods: dict[str, Decimal] | None = None,
         interval_s: float = 60.0,
         max_backoff_s: float = 900.0,
         clock: Callable[[], datetime],
@@ -50,6 +57,8 @@ class Monitor:
         self._source = source
         self._filter = ad_filter or AdFilter()
         self._recorder = recorder
+        self._store = store
+        self._my_methods = my_methods
         self._interval = interval_s
         self._max_backoff = max_backoff_s
         self._clock = clock
@@ -84,8 +93,10 @@ class Monitor:
 
         if Side.ASK in result.stats and Side.BID in result.stats:
             result.spread = spread(result.stats[Side.ASK], result.stats[Side.BID])
-            if result.spread and result.spread.inverted:
-                result.alerts.append("ANOMALÍA: el mejor precio de venta es menor que el de compra (spread negativo)")
+            result.cross = crossing.analyze(
+                result.snapshots[Side.ASK].ads, result.snapshots[Side.BID].ads, self._my_methods
+            )
+        self._store_cycle(result)
         if result.filtered_stats.get(Side.ASK) and result.filtered_stats.get(Side.BID):
             result.filtered_spread = spread(result.filtered_stats[Side.ASK], result.filtered_stats[Side.BID])
 
@@ -93,6 +104,23 @@ class Monitor:
         if self.consecutive_failures >= 3:
             result.alerts.append(f"{self.consecutive_failures} ciclos seguidos con errores; esperando más entre intentos")
         return result
+
+    def _store_cycle(self, result: CycleResult) -> None:
+        if self._store is None or not result.snapshots:
+            return
+        cycle_ts = int(result.started_at.timestamp())
+        try:
+            for side, snap in result.snapshots.items():
+                self._store.record_snapshot(snap, result.stats[side], cycle_ts)
+            if result.spread is not None:
+                any_snap = next(iter(result.snapshots.values()))
+                self._store.record_cycle(
+                    any_snap.venue, f"{any_snap.asset}/{any_snap.fiat}", cycle_ts, result.spread,
+                    result.stats[Side.ASK].best_price, result.stats[Side.BID].best_price, result.cross,
+                )
+        except Exception as exc:  # la base no debe tumbar el monitor
+            log.exception("error guardando en la base histórica")
+            result.errors.append(f"no se pudo guardar en la base histórica: {type(exc).__name__}: {exc}")
 
     def next_delay(self) -> float:
         if self.consecutive_failures == 0:
