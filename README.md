@@ -2,7 +2,7 @@
 
 Sistema de observación, análisis y posicionamiento estratégico de anuncios Binance P2P para el mercado USDT/COP.
 
-**Estado actual: FASE 4 (competencia y rentabilidad real).** Ver:
+**Estado actual: FASE 5 (presión del mercado y motor de precios).** Ver:
 - [`docs/FASE1_VIABILIDAD.md`](docs/FASE1_VIABILIDAD.md) — diagnóstico técnico: qué está confirmado, qué falta verificar y qué no es posible.
 - [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) — módulos y flujo.
 - [`PROJECT_STATE.md`](PROJECT_STATE.md) — estado del proyecto entre sesiones.
@@ -98,6 +98,19 @@ jmcambios-negocio competencia --margen-min 0,3    # posición de tus anuncios y 
 - **Beneficio realizado**: ciclos cerrados con costo conocido (costo promedio ponderado). Lo vendido sin compra registrada en el periodo se informa aparte y no se cuenta como ganancia.
 - **4x1000**: Binance no informa desde qué cuenta pagaste; se estima con la cuenta de la misma entidad del método de pago (`JMC_MY_PAY_METHODS`) y se muestra el rango mínimo–máximo.
 - **Estimado**: inventario abierto valorado al mejor precio de compra del mercado. **Potencial**: llegará con el motor de precios (Fase 5).
+
+## Precios: presión del mercado y 3 escenarios (Fase 5)
+
+```bash
+jmcambios-negocio presion                                  # presión alcista/bajista con confianza (usa data/history.db; no necesita API)
+jmcambios-negocio recomendar --capital 10.000.000          # 3 escenarios para tus anuncios (lee mercado y anuncios en vivo)
+jmcambios-negocio recomendar --margen-min 0,3 --meta 127.000
+```
+
+- **Presión** (−100 a +100) y **confianza** (0–100). Cada señal indica si es **observada** (precio/liquidez publicados), **inferida** (cantidad que baja sin cambio de precio → posible ejecución) o **no verificable** (volumen ejecutado real). Con datos de más de 10 min la confianza se limita a 20.
+- **Escenarios**: conservador (puesto #8 entre compatibles, margen mín. + 0,30 pp), equilibrado (#3, + 0,15 pp), agresivo (#1, margen mínimo). Si el mercado no da el margen, el precio se mueve para protegerlo; la presión (solo con confianza ≥ 50) decide de qué lado se cede.
+- En `JMC_MODE=OBSERVATION` se muestran solo los escenarios; en `RECOMMENDATION` además el cambio sugerido para cada anuncio. **Nunca se modifica nada en Binance.**
+- El monitor muestra una línea de presión en cada ciclo.
 
 ## Pruebas
 

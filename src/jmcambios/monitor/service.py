@@ -9,8 +9,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 
-from jmcambios.analysis import crossing
+from jmcambios.analysis import crossing, pressure
 from jmcambios.analysis.crossing import CrossReport
+from jmcambios.analysis.pressure import PressureReport
 from jmcambios.analysis.filters import AdFilter
 from jmcambios.analysis.market_stats import SideStats, Spread, spread, summarize
 from jmcambios.connectors.binance.market import MarketDataError, MarketSource
@@ -31,6 +32,7 @@ class CycleResult:
     spread: Spread | None = None
     filtered_spread: Spread | None = None
     cross: CrossReport | None = None
+    pressure: PressureReport | None = None
     errors: list[str] = field(default_factory=list)
     alerts: list[str] = field(default_factory=list)
 
@@ -99,6 +101,7 @@ class Monitor:
                 result.snapshots[Side.ASK].ads, result.snapshots[Side.BID].ads, self._my_methods, **self._fees
             )
         self._store_cycle(result)
+        self._measure_pressure(result)
         if result.filtered_stats.get(Side.ASK) and result.filtered_stats.get(Side.BID):
             result.filtered_spread = spread(result.filtered_stats[Side.ASK], result.filtered_stats[Side.BID])
 
@@ -128,6 +131,15 @@ class Monitor:
         except Exception as exc:  # la base no debe tumbar el monitor
             log.exception("error guardando en la base histórica")
             result.errors.append(f"no se pudo guardar en la base histórica: {type(exc).__name__}: {exc}")
+
+    def _measure_pressure(self, result: CycleResult) -> None:
+        if self._store is None or not result.snapshots:
+            return
+        snap = next(iter(result.snapshots.values()))
+        try:
+            result.pressure = pressure.analyze(self._store, snap.venue, f"{snap.asset}/{snap.fiat}")
+        except Exception:  # un fallo de análisis no debe tumbar el monitor
+            log.exception("error calculando la presión del mercado")
 
     def next_delay(self) -> float:
         if self.consecutive_failures == 0:

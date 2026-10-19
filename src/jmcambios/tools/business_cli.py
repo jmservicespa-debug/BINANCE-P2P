@@ -1,9 +1,11 @@
-"""CLI de negocio — FASE 4: órdenes, rentabilidad real y competencia.
+"""CLI de negocio — FASES 4 y 5: órdenes, rentabilidad, competencia y precios.
 
   jmcambios-negocio sincronizar            # descarga tu historial de órdenes (últimos 6 meses) a la base
   jmcambios-negocio costos                 # comisiones reales cobradas por Binance (maker/taker)
   jmcambios-negocio rentabilidad           # beneficio realizado/estimado, precios efectivos, rotación
   jmcambios-negocio competencia            # posición de tus anuncios y precios límite rentables
+  jmcambios-negocio presion                # presión del mercado (alcista/bajista) con confianza — FASE 5
+  jmcambios-negocio recomendar             # 3 escenarios de precio para tus anuncios — FASE 5
 
 Solo lectura: nada de esto modifica anuncios ni órdenes.
 """
@@ -23,20 +25,26 @@ from jmcambios.analysis.competition import (
     min_profitable_sell_price,
     position,
 )
+from jmcambios.analysis import pressure
 from jmcambios.analysis.crossing import parse_my_methods
-from jmcambios.config import Settings
+from jmcambios.analysis.liquidity import hourly_profile
+from jmcambios.analysis.pressure import PressureReport
+from jmcambios.config import Mode, Settings, effective_mode
 from jmcambios.connectors.binance.account import BinanceAccount
 from jmcambios.connectors.binance.client import BinanceP2PClient
 from jmcambios.connectors.binance.market import BinanceMarketSource, MarketDataError
 from jmcambios.domain import Side
-from jmcambios.domain.account import OrderSide
+from jmcambios.domain.account import MyAd, OrderSide
 from jmcambios.logging_utils import setup_logging
 from jmcambios.monitor.report import BOGOTA, money, pct
 from jmcambios.profitability.calculator import ProfitReport, calculate
+from jmcambios.pricing.engine import AdProfile, Costs, SidePrice, daily_goal
+from jmcambios.pricing.engine import plan as pricing_plan
 from jmcambios.profitability.costs import CostConfig, fraction, observed_fee
 from jmcambios.storage.history import HistoryStore
 
 COT_DAY = timedelta(days=1)
+DEFAULT_MAKER_RATE = Decimal("0.002")  # commissionRate de los anuncios COP observado en la verificación
 
 
 def pct3(value: Decimal | None) -> str:
@@ -230,6 +238,18 @@ def _print_position(p: AdPosition) -> None:
             print(f"      - {c.nickname}: {c.month_orders} órdenes · {money(c.price)} · {money(c.qty, 0)} {a.asset}")
 
 
+def _maker_fees(store: HistoryStore, my_ads: list[MyAd], settings: Settings) -> dict[OrderSide, tuple[Decimal, str]]:
+    """Comisión maker por lado: OBSERVADA en tus órdenes; si no hay suficientes, la tasa de tus anuncios."""
+    all_orders = store.load_orders()
+    maker_rates = [fraction(a.commission_rate) for a in my_ads if a.commission_rate is not None]
+    ad_rate = max(maker_rates) if maker_rates else DEFAULT_MAKER_RATE
+    out = {}
+    for side in (OrderSide.BUY, OrderSide.SELL):
+        obs = observed_fee(all_orders, role="MAKER", side=side, fiat=settings.fiat)
+        out[side] = (obs.rate, f"observada en {obs.orders} órdenes ({obs.scope})") if obs else (ad_rate, "tasa de tus anuncios")
+    return out
+
+
 def cmd_competencia(store: HistoryStore, args: argparse.Namespace, settings: Settings) -> int:
     min_margin = (_dec(args.margen_min, "--margen-min") or Decimal("0.3")) / 100
     cfg = _cfg(settings, args)
@@ -253,15 +273,8 @@ def cmd_competencia(store: HistoryStore, args: argparse.Namespace, settings: Set
         _print_position(position(ad, books[Side.BID if ad.side is OrderSide.BUY else Side.ASK].ads, my_users))
 
     # Precios límite [cálculo]: comisión maker OBSERVADA por lado; si no hay, la tasa de tus anuncios.
-    all_orders = store.load_orders()
-    maker_rates = [fraction(a.commission_rate) for a in my_ads if a.commission_rate is not None]
-    ad_rate = max(maker_rates) if maker_rates else Decimal("0")
-    fee_src = {}
-    for side in (OrderSide.BUY, OrderSide.SELL):
-        obs = observed_fee(all_orders, role="MAKER", side=side, fiat=settings.fiat)
-        fee_src[side] = (obs.rate, f"observada en {obs.orders} órdenes ({obs.scope})") if obs else (ad_rate, "tasa de tus anuncios")
+    fee_src = _maker_fees(store, my_ads, settings)
     maker_buy, maker_sell = fee_src[OrderSide.BUY][0], fee_src[OrderSide.SELL][0]
-    maker = max(maker_buy, maker_sell)
     sell_ref = next((a.price for a in my_ads if a.side is OrderSide.SELL and a.online), best_ask)
     gmf_low = min(cfg.gmf_by_account.values(), default=Decimal("0"))
     gmf_high = max([*cfg.gmf_by_account.values(), cfg.default_gmf])
@@ -291,16 +304,186 @@ def cmd_competencia(store: HistoryStore, args: argparse.Namespace, settings: Set
     return 0
 
 
+# ------------------------------------------------------------------ Fase 5
+VENUE = "binance_p2p"
+DEFAULT_LIMITS = (Decimal("200000"), Decimal("3000000"))
+DEFAULT_GOAL = Decimal("127000")  # ≈ 40 USD/día
+MIN_HOUR_CYCLES = 10
+
+
+def _print_pressure(rep: PressureReport) -> None:
+    age = f" · datos de hace {rep.data_age_s // 60} min" if rep.data_age_s is not None else ""
+    print(f"  PRESIÓN DEL MERCADO [cálculo]: {rep.label} · puntaje {rep.score:+.0f} (−100 a +100)"
+          f" · confianza {rep.confidence}/100{age}")
+    if rep.windows:
+        print(f"    ventanas analizadas: {', '.join(f'{m} min' for m in rep.windows)}")
+    for side, act in rep.sides.items():
+        who = "Vendedores (anuncios de venta)" if side is Side.ASK else "Compradores (anuncios de compra)"
+        qty = f"{fmt_signed(act.announced_qty_pct, 1)} %" if act.announced_qty_pct is not None else "—"
+        dp = fmt_signed(act.best_price_delta) if act.best_price_delta is not None else "—"
+        print(f"    {who}, últimos {act.window_min} min: mejor precio {dp} COP [observado] · liquidez {qty} [observado]"
+              f" · nuevos {act.ads_appeared} / retirados {act.ads_disappeared} / cambiaron precio {act.repriced} [observado]"
+              f" · posibles ejecuciones {money(Decimal(str(act.possible_executed_qty)), 0)} USDT [inferido]")
+    strongest = sorted((s for s in rep.signals if abs(s.direction) > 0.05), key=lambda s: -abs(s.direction) * s.weight)[:5]
+    if strongest:
+        print("    Señales más fuertes:")
+        for sg in strongest:
+            arrow = "↑" if sg.direction > 0 else "↓"
+            print(f"      {arrow} {sg.name} ({sg.window_min} min): {sg.detail} [{sg.provenance}]")
+    for u in rep.unverifiable:
+        print(f"    · {u} [no verificable]")
+    for n in rep.notes:
+        print(f"    ⚠ {n}")
+
+
+def cmd_presion(store: HistoryStore, args: argparse.Namespace, settings: Settings) -> int:
+    rep = pressure.analyze(store, VENUE, f"{settings.asset}/{settings.fiat}", int(datetime.now(UTC).timestamp()))
+    print(f"Presión {settings.asset}/{settings.fiat} · {datetime.now(UTC).astimezone(BOGOTA):%Y-%m-%d %H:%M} (hora Colombia)\n")
+    _print_pressure(rep)
+    print("\n  Alcista = el precio del USDT tiende a subir (conviene comprar antes); bajista = tiende a bajar (conviene vender antes).")
+    print("  Es una lectura de corto plazo, no una predicción garantizada.")
+    return 0
+
+
+def fmt_signed(x: float, decimals: int = 2) -> str:
+    return ("+" if x >= 0 else "−") + money(Decimal(str(abs(x))), decimals)
+
+
+def _print_best_hours(store: HistoryStore, market: str) -> None:
+    """Horas (Colombia) con mayor diferencial promedio en el historial, para el tipo de día de hoy."""
+    today = "fin de semana" if datetime.now(UTC).astimezone(BOGOTA).weekday() >= 5 else "hábil"
+    rows = [r for r in hourly_profile(store, VENUE, market) if r.day_type == today and r.cycles >= MIN_HOUR_CYCLES
+            and r.avg_spread is not None]
+    if not rows:
+        return
+    top = sorted(rows, key=lambda r: -r.avg_spread)[:3]
+    print(f"\n  Horas con mayor diferencial en días tipo '{today}' [historial]: "
+          + " · ".join(f"{r.hour:02d}h {money(Decimal(str(r.avg_spread)))} COP" for r in top)
+          + "  → mejores momentos para tener los dos anuncios activos")
+
+
+def _profile(ad: MyAd | None, methods: dict[str, Decimal]) -> AdProfile:
+    if ad is not None:
+        return AdProfile(ad.payment_methods, ad.min_fiat, ad.max_fiat)
+    return AdProfile(tuple(methods), *DEFAULT_LIMITS)
+
+
+def _side_line(sp: SidePrice, asset: str) -> str:
+    kind = "Comprar" if sp.side is OrderSide.BUY else "Vender "
+    extra = f" (competitivo {money(sp.competitive_price)}, movido para proteger el margen)" if sp.adjusted else ""
+    comp = (f"#{sp.rank_compatible} de {sp.compatible_total} compatibles" if sp.rank_compatible <= sp.compatible_total
+            else f"detrás de los {sp.compatible_total} compatibles")
+    return (f"{kind} a {money(sp.price)} → puesto ≈ #{sp.rank} · {comp}"
+            f" · {money(sp.qty_ahead, 0)} {asset} por delante{extra}")
+
+
+def cmd_recomendar(store: HistoryStore, args: argparse.Namespace, settings: Settings) -> int:
+    mode, _ = effective_mode(settings)
+    min_margin = (_dec(args.margen_min, "--margen-min") or Decimal("0.3")) / 100
+    cfg = _cfg(settings, args)
+    goal = _dec(args.meta, "--meta") or DEFAULT_GOAL
+    market = f"{settings.asset}/{settings.fiat}"
+    with _client(settings) as client:
+        try:
+            my_ads = [a for a in BinanceAccount(client).fetch_my_ads() if a.fiat == settings.fiat and a.asset == settings.asset]
+            source = BinanceMarketSource(client, settings)
+            books = {side: source.fetch(side) for side in (Side.ASK, Side.BID)}
+        except MarketDataError as exc:
+            print(f"✘ {exc}")
+            return 1
+    now = datetime.now(UTC)
+    my_ids = {a.ad_id for a in my_ads}
+    my_users = {ad.advertiser.user_id for snap in books.values() for ad in snap.ads if ad.ad_id in my_ids}
+    fees = _maker_fees(store, my_ads, settings)
+    gmf_low = min(cfg.gmf_by_account.values(), default=Decimal("0"))
+    gmf_high = max([*cfg.gmf_by_account.values(), cfg.default_gmf])
+    costs = Costs(maker_buy=fees[OrderSide.BUY][0], maker_sell=fees[OrderSide.SELL][0],
+                  gmf=gmf_low, gmf_worst=gmf_high, min_margin=min_margin)
+    my_buy = next((a for a in my_ads if a.side is OrderSide.BUY), None)
+    my_sell = next((a for a in my_ads if a.side is OrderSide.SELL), None)
+    press = pressure.analyze(store, VENUE, market, int(now.timestamp()))
+    pp = pricing_plan(
+        books[Side.ASK].ads, books[Side.BID].ads,
+        buy_profile=_profile(my_buy, cfg.gmf_by_account), sell_profile=_profile(my_sell, cfg.gmf_by_account),
+        costs=costs, pressure=press, exclude_users=my_users,
+    )
+
+    print(f"Escenarios de precio {market} · {now.astimezone(BOGOTA):%Y-%m-%d %H:%M} (hora Colombia)")
+    print(f"  Mercado [Binance]: mejor venta {money(pp.best_ask)} · mejor compra {money(pp.best_bid)}")
+    print(f"  Costos [cálculo]: comisión maker compra {pct3(costs.maker_buy)} · venta {pct3(costs.maker_sell)}"
+          f" · 4x1000 {pct3(gmf_low)} (cuenta exenta) / {pct3(gmf_high)} · margen mínimo {money(min_margin * 100, 2)}%")
+    for side, snap in books.items():
+        if not snap.complete:
+            pp.warnings.append(f"{side.label_es}: libro incompleto — los puestos pueden estar subestimados")
+    print()
+    _print_pressure(press)
+
+    print(f"\n  ESCENARIOS [cálculo] · se paga desde la cuenta exenta; entre paréntesis, margen pagando con 4x1000")
+    names = {"conservador": "CONSERVADOR (más margen, menos órdenes)",
+             "equilibrado": "EQUILIBRADO",
+             "agresivo": "AGRESIVO (primer puesto, menos margen)"}
+    for sc in pp.scenarios:
+        qty, rot = daily_goal(sc.net_per_unit, goal, sc.buy.price, cfg.capital)
+        print(f"\n    {names[sc.name]} · objetivo: puesto #{sc.target_rank} entre compatibles"
+              f" con margen ≥ {pct3(sc.target_margin)}")
+        print(f"      {_side_line(sc.buy, settings.asset)}")
+        print(f"      {_side_line(sc.sell, settings.asset)}")
+        print(f"      margen neto del ciclo: {pct3(sc.margin)} ({pct3(sc.margin_worst)})"
+              f" · ganancia ≈ {money(sc.net_per_unit)} {settings.fiat} por {settings.asset} vendido")
+        meta = f"      para la meta de {money(goal, 0)} {settings.fiat}/día: rotar ≈ {money(qty, 0)} {settings.asset}/día"
+        if rot is not None:
+            meta += f" = {money(rot, 1)} veces tu capital"
+        print(meta)
+
+    rep = calculate(store.load_orders(fiat=settings.fiat, asset=settings.asset), cfg,
+                    fiat=settings.fiat, asset=settings.asset, start=now - timedelta(days=30))
+    if rep.inventory_qty > 0 and rep.inventory_avg_cost is not None:
+        floor = min_profitable_sell_price(rep.inventory_avg_cost, sell_commission=costs.maker_sell, min_margin=min_margin)
+        print(f"\n  Inventario según tus órdenes COP de 30 días: {money(rep.inventory_qty)} {settings.asset}"
+              f" a costo {money(rep.inventory_avg_cost)} → venderlo con ganancia exige ≥ {money(floor)}"
+              " (si esos USDT ya salieron por otra vía, ignóralo)")
+    if any(sc.margin_worst < 0 for sc in pp.scenarios):
+        pp.warnings.append("pagando desde Bancolombia/Nequi algún escenario PIERDE dinero: paga desde Davivienda/Daviplata")
+    if pp.scenarios and pp.scenarios[-1].buy.adjusted and pp.scenarios[-1].sell.adjusted:
+        pp.warnings.append("con el margen mínimo no se puede estar de primero en compra y venta a la vez: "
+                           "el diferencial del mercado es menor que tus costos + margen")
+    _print_best_hours(store, market)
+    for wmsg in pp.warnings:
+        print(f"  ⚠ {wmsg}")
+
+    if mode is Mode.OBSERVATION:
+        print("\n  Modo OBSERVACIÓN: solo se muestran escenarios. Para recibir recomendaciones pon JMC_MODE=RECOMMENDATION en .env")
+    else:
+        bal = next(sc for sc in pp.scenarios if sc.name == "equilibrado")
+        why = {"comprar": "presión alcista con confianza suficiente: prioriza COMPRAR (se cede margen en la venta)",
+               "vender": "presión bajista con confianza suficiente: prioriza VENDER (se cede margen en la compra)",
+               "equilibrado": "sin señal clara de presión: margen repartido entre compra y venta"}[pp.priority]
+        print(f"\n  RECOMENDACIÓN [modo {mode.value}] · escenario equilibrado · {why}")
+        for mine, target in ((my_buy, bal.buy), (my_sell, bal.sell)):
+            kind = "COMPRA" if target.side is OrderSide.BUY else "VENTA"
+            if mine is None:
+                print(f"    Anuncio de {kind}: no tienes; podrías crearlo a {money(target.price)}")
+            elif mine.price == target.price:
+                print(f"    Anuncio de {kind} {mine.ad_id[-6:]}: ya está en {money(mine.price)}, sin cambios")
+            else:
+                print(f"    Anuncio de {kind} {mine.ad_id[-6:]}: cambiar {money(mine.price)} → {money(target.price)}")
+        print("    Nada se modifica en Binance: tú decides y lo cambias en la app.")
+    print("\n  Puesto = estimación por precio; Binance también ordena por otros criterios. Sin garantía de ejecución.")
+    return 0
+
+
 COMMANDS = {
     "sincronizar": cmd_sincronizar,
     "costos": cmd_costos,
     "rentabilidad": cmd_rentabilidad,
     "competencia": cmd_competencia,
+    "presion": cmd_presion,
+    "recomendar": cmd_recomendar,
 }
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(description="Órdenes, rentabilidad y competencia (Fase 4, solo lectura)")
+    p = argparse.ArgumentParser(description="Órdenes, rentabilidad, competencia y precios (Fases 4–5, solo lectura)")
     p.add_argument("comando", choices=list(COMMANDS))
     p.add_argument("--db", default="data/history.db")
     p.add_argument("--dias", type=int, default=30, help="Días hacia atrás (sincronizar: hasta 180)")
@@ -310,7 +493,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--capital", help="Capital operativo, p. ej. 10.000.000")
     p.add_argument("--costo-orden", help="Costo operativo atribuible por orden completada")
     p.add_argument("--tasa-oportunidad", help="Costo de oportunidad anual en %%, p. ej. 10")
-    p.add_argument("--margen-min", help="competencia: margen mínimo en %%, p. ej. 0,3")
+    p.add_argument("--margen-min", help="competencia/recomendar: margen mínimo en %%, p. ej. 0,3")
+    p.add_argument("--meta", help="recomendar: meta de ganancia diaria en COP (por defecto 127.000)")
     args = p.parse_args(argv)
     if args.comando == "sincronizar" and args.dias == 30:
         args.dias = 180

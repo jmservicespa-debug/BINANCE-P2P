@@ -15,8 +15,8 @@
 | 2 | Validador y normalizador | `jmcambios.normalizer` | 2 |
 | 3 | Base de datos histórica | `jmcambios.storage.history` (SQLite: `snapshots`, `cycles`, `ad_states` solo-cambios) | 3 |
 | 4 | Analizador de competencia | `jmcambios.analysis.competition` (posición estimada, competidores por delante, precios límite) | 4 |
-| 5 | Detector de cambios de liquidez | `jmcambios.analysis.liquidity` (ventanas 5/15/30/60, perfil horario, episodios de cruce) | 3, 5 |
-| 6 | Motor de precios | `jmcambios.pricing` | 5 |
+| 5 | Detector de cambios de liquidez | `jmcambios.analysis.liquidity` (ventanas 5/15/30/60, perfil horario, episodios de cruce) · `jmcambios.analysis.pressure` (presión −100..100 + confianza, señales observado/inferido/no verificable) | 3, 5 |
+| 6 | Motor de precios | `jmcambios.pricing.engine` (3 escenarios por puesto objetivo entre compatibles + margen mínimo por escenario; concesión según presión) | 5 |
 | 7 | Calculadora de rentabilidad | `jmcambios.profitability` (costo promedio, realizado/estimado, 4x1000 con rango) | 4 |
 | 8 | Motor de decisión | `jmcambios.decision` | 5, 8 |
 | 9 | Ejecutor de acciones autorizadas | `jmcambios.executor` | 9 |

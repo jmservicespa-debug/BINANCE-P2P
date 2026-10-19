@@ -102,6 +102,10 @@ def render(result: CycleResult, ad_filter: AdFilter, *, detail: bool = True) -> 
             lines += _side_block(TITLES[side], result.stats[side], detail=detail)
     lines.append(_spread_line("Diferencial entre mejores precios [cálculo]", result.spread))
     lines += _cross_lines(result.cross)
+    if result.pressure is not None and result.pressure.windows:
+        pr = result.pressure
+        lines.append(f"  Presión del mercado [cálculo]: {pr.label} · puntaje {pr.score:+.0f} · confianza {pr.confidence}/100"
+                     " (detalle: jmcambios-negocio presion)")
 
     if ad_filter.active:
         lines.append(f"  --- Con mis filtros ({ad_filter.describe()}) ---")

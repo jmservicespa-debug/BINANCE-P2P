@@ -13,8 +13,9 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 | 1. Viabilidad e integraciones | ✅ Diagnóstico · ✅ Verificación real ejecutada 2026-10-18 (16 OK / 2 error) · ⏳ Pendiente: confirmar cuenta de la key (0 anuncios/órdenes/métodos de pago) y resolver `getReferencePrice` |
 | 2. Monitor de anuncios | ✅ Cerrada 2026-10-19: ejecución real continua ~33 h (2026-10-17 23:37 → 2026-10-19 08:59 COT) sin errores ni caídas, snapshots guardados |
 | 3. Historial y liquidez | ✅ 2026-10-19: datos reales importados (1.958 ciclos, ~33 h) y consultas funcionando en el PC del usuario. Seguir acumulando días hábiles. |
-| 4. Competencia y rentabilidad | ✅ Implementada y ejecutada con la cuenta oficial 2026-10-19 (119 pruebas OK): `jmcambios-negocio sincronizar/costos/rentabilidad/competencia`; 4.597 órdenes, comisiones reales observadas integradas. Rentabilidad COP sin ciclos todavía (sin historial de comerciante COP) · ⏳ Aprobación del usuario para Fase 5 |
-| 5–10 | ⛔ No iniciadas |
+| 4. Competencia y rentabilidad | ✅ Implementada y ejecutada con la cuenta oficial 2026-10-19 (119 pruebas OK): `jmcambios-negocio sincronizar/costos/rentabilidad/competencia`; 4.597 órdenes, comisiones reales observadas integradas. Rentabilidad COP sin ciclos todavía (sin historial de comerciante COP) · Aprobada por el usuario 2026-10-19 |
+| 5. Presión y motor de precios | 🟡 Implementada 2026-10-19 (136 pruebas OK): `jmcambios-negocio presion` / `recomendar`, línea de presión en el monitor · ⏳ Validar con datos reales en el PC del usuario |
+| 6–10 | ⛔ No iniciadas |
 
 ## Decisiones tomadas
 - Integración oficial: **C2C Agent SAPI** (`/sapi/v1/c2c/agent/*`, HMAC, base `https://api.binance.com`) + API pública agent (`/bapi/c2c/v1/public/c2c/agent/*`, base `https://www.binance.com`). Fuente: `github.com/binance/binance-skills-hub/skills/binance/p2p` v1.1.0.
@@ -114,6 +115,12 @@ tests/                     pruebas unitarias (sin red)
 - **Verificado por el usuario en sus extractos:** Davivienda y Daviplata **nunca** cobran GMF; Bancolombia y Nequi **sí**. Se usa como dato observado.
 - Riesgo: si la exención se debe a cuenta marcada exenta / bajo monto, tiene **tope mensual**. Implementar en Fase 4: acumulado mensual de débitos por cuenta + alerta al acercarse al tope (valor del tope a confirmar con Davivienda).
 - Advertencia comunicada al usuario: la exención del GMF en Colombia suele depender de la cuenta marcada como exenta (una por persona, con tope mensual en UVT) o de los depósitos de bajo monto (Nequi/Daviplata, con tope), no de que origen y destino sean de la misma entidad. Validar la tasa efectiva con los **extractos bancarios** antes de la Fase 4.
+
+## Fase 5 — diseño (2026-10-19)
+- `analysis/pressure.py`: por ventana (5/15/30/60, pesos 0,15/0,30/0,30/0,25) señales normalizadas −1..1: mejor precio ASK/BID (observado, 0,1 % = señal completa, peso 1), liquidez anunciada (observado, 10 %, peso 0,6; menos oferta ASK o más demanda BID = alcista), consumo sin cambio de precio ASK−BID (inferido, 1 %, peso 0,8). Confianza = √cobertura × (0,3 + 0,7·acuerdo); solo inferidas ⇒ ≤ 50; incompleto ×0,8; datos > 10 min ⇒ ≤ 20. |puntaje| < 15 neutral, ≥ 40 fuerte.
+- `pricing/engine.py`: precio = superar por 0,01 al competidor compatible nº k (8/3/1). Margen del ciclo m = 1 − P_b(1+c_s)(1+gmf)/(P_s(1−c_b)) con gmf de la cuenta exenta. Margen objetivo por escenario: mínimo + 0,30 / 0,15 / 0 pp. Si no alcanza se abre la diferencia (P_b/k^w, P_s·k^(1−w)); w = 0,25 con presión alcista (cede la venta), 0,75 bajista, 0,5 neutral o confianza < 50.
+- Hallazgo con datos reales: el mercado suele estar apretado/cruzado; con el margen mínimo no se puede estar de primero en ambos lados a la vez → la estrategia es elegir lado según presión y horario (horas con mayor diferencial del historial).
+- Pendiente de fases posteriores: decisión con 7 validaciones (Fase 8), panel (Fase 6), simulación (Fase 7).
 
 ## Próximos pasos
 1. ✅ API key de solo lectura creada (IP whitelist) y guardada con `python -m jmcambios.tools.set_keys`.
