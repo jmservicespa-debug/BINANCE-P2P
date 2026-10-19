@@ -13,7 +13,8 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 | 1. Viabilidad e integraciones | ✅ Diagnóstico · ✅ Verificación real ejecutada 2026-10-18 (16 OK / 2 error) · ⏳ Pendiente: confirmar cuenta de la key (0 anuncios/órdenes/métodos de pago) y resolver `getReferencePrice` |
 | 2. Monitor de anuncios | ✅ Cerrada 2026-10-19: ejecución real continua ~33 h (2026-10-17 23:37 → 2026-10-19 08:59 COT) sin errores ni caídas, snapshots guardados |
 | 3. Historial y liquidez | ✅ 2026-10-19: datos reales importados (1.958 ciclos, ~33 h) y consultas funcionando en el PC del usuario. Seguir acumulando días hábiles. |
-| 4–10 | ⛔ No iniciadas |
+| 4. Competencia y rentabilidad | 🟡 Implementada 2026-10-19 (116 pruebas OK): `jmcambios-negocio sincronizar/costos/rentabilidad/competencia` · ⏳ Pendiente: ejecutar con la cuenta oficial y validar cifras contra el extracto de Binance (unidad de la comisión, comisión maker en el historial) |
+| 5–10 | ⛔ No iniciadas |
 
 ## Decisiones tomadas
 - Integración oficial: **C2C Agent SAPI** (`/sapi/v1/c2c/agent/*`, HMAC, base `https://api.binance.com`) + API pública agent (`/bapi/c2c/v1/public/c2c/agent/*`, base `https://www.binance.com`). Fuente: `github.com/binance/binance-skills-hub/skills/binance/p2p` v1.1.0.

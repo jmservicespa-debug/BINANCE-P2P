@@ -2,7 +2,7 @@
 
 Sistema de observación, análisis y posicionamiento estratégico de anuncios Binance P2P para el mercado USDT/COP.
 
-**Estado actual: FASE 3 (base histórica y estadísticas de liquidez).** Ver:
+**Estado actual: FASE 4 (competencia y rentabilidad real).** Ver:
 - [`docs/FASE1_VIABILIDAD.md`](docs/FASE1_VIABILIDAD.md) — diagnóstico técnico: qué está confirmado, qué falta verificar y qué no es posible.
 - [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) — módulos y flujo.
 - [`PROJECT_STATE.md`](PROJECT_STATE.md) — estado del proyecto entre sesiones.
@@ -83,6 +83,22 @@ Importa los datos viejos **antes** de volver a arrancar el monitor, para que el 
 
 **Cruces de precio:** cuando el mejor anuncio de venta está por debajo del mejor de compra, el monitor indica si es aprovechable con tus métodos de pago (`JMC_MY_PAY_METHODS` en `.env`, con el 4x1000 de cada cuenta), qué cantidad encaja en los límites de ambos anuncios y el margen neto. La comisión del tomador se asume 0 % hasta verificarla con órdenes reales.
 
+## Negocio: órdenes, rentabilidad y competencia (Fase 4)
+
+Requiere la API key de solo lectura de tu **cuenta oficial**.
+
+```bash
+jmcambios-negocio sincronizar                     # descarga tus órdenes de los últimos 6 meses a data/history.db
+jmcambios-negocio costos                          # comisiones reales cobradas por Binance (maker/taker)
+jmcambios-negocio rentabilidad --capital 10.000.000 --dias 30
+jmcambios-negocio rentabilidad --desde 2026-10-01 --hasta 2026-10-15 --costo-orden 500 --tasa-oportunidad 10
+jmcambios-negocio competencia --margen-min 0,3    # posición de tus anuncios y precios límite rentables
+```
+
+- **Beneficio realizado**: ciclos cerrados con costo conocido (costo promedio ponderado). Lo vendido sin compra registrada en el periodo se informa aparte y no se cuenta como ganancia.
+- **4x1000**: Binance no informa desde qué cuenta pagaste; se estima con la cuenta de la misma entidad del método de pago (`JMC_MY_PAY_METHODS`) y se muestra el rango mínimo–máximo.
+- **Estimado**: inventario abierto valorado al mejor precio de compra del mercado. **Potencial**: llegará con el motor de precios (Fase 5).
+
 ## Pruebas
 
 ```bash
@@ -114,6 +130,12 @@ src/jmcambios/
   storage/history.py              base histórica SQLite (anuncios solo cuando cambian)
   storage/importer.py             importación de snapshots .jsonl.gz
   tools/history_cli.py            consultas del historial (CLI jmcambios-history)
+  domain/account.py               órdenes y anuncios propios
+  normalizer/binance_account.py   normalización de órdenes y anuncios propios
+  connectors/binance/account.py   historial de órdenes (ventanas de 30 días) y mis anuncios
+  profitability/                  costos (comisión, 4x1000 estimado) y rentabilidad real
+  analysis/competition.py         posición de mis anuncios y precios límite rentables
+  tools/business_cli.py           CLI jmcambios-negocio
 tests/                            pruebas unitarias
 docs/                             diagnóstico y arquitectura
 ```
