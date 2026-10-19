@@ -143,7 +143,8 @@ tests/                     pruebas unitarias (sin red)
 - Puestos, escenarios y alertas de anuncios se calculan solo contra `userType == merchant` (`JMC_SOLO_VERIFICADOS=true`, por defecto). Si un lado no tiene verificados, se usan todos con aviso.
 - Las estadísticas generales del mercado y la presión siguen usando todo el libro (señal de mercado completa).
 - Elegible en el panel (botones Solo verificados / Todos, recordado en el navegador; `/api/escenarios?verificados=0|1`) y en comandos (`--competencia verificados|todos`).
-- ⏳ Confirmar con datos reales que Binance marca a los verificados como `merchant` (el campo viene de `advertiser.userType`).
+- ✅ Confirmado con datos reales (2026-10-19 14:53): con verificados, mejor compra 3.136 y mejor venta 3.154,99 (≈ 19 COP, 0,6 %), mientras el libro completo mostraba compradores NO verificados a 3.160–3.185,55. Los atípicos de las alertas eran no verificados.
+- `competencia`/`recomendar` muestran mercado completo y solo verificados; precios límite y costo de reposición usan la misma competencia elegida. El panel muestra el mejor precio verificado bajo cada precio.
 
 ## Ideas registradas
 - Producto por suscripción (pedido del usuario 2026-10-19): multiusuario en servidor con IP fija, keys de terceros cifradas y solo lectura, configuración por usuario (bancos/4x1000, moneda, márgenes), registro y pagos, revisión legal (condiciones de Binance para terceros, Ley 1581 de 2012). Riesgo: suscriptores con la misma estrategia compiten entre sí. Primero validar con resultados reales del usuario. Mantener nada personal fijo en el código.

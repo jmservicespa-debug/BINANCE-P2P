@@ -241,6 +241,18 @@ def _maker_fees(store: HistoryStore, my_ads: list[MyAd], settings: Settings) -> 
     return maker_fees(store.load_orders(), my_ads, settings.fiat)
 
 
+def _verified_best(books) -> tuple[Decimal | None, Decimal | None]:
+    ask = min((a.price for a in books[Side.ASK].ads if a.advertiser.is_merchant), default=None)
+    bid = max((a.price for a in books[Side.BID].ads if a.advertiser.is_merchant), default=None)
+    return ask, bid
+
+
+def _print_markets(all_ask, all_bid, ver_ask, ver_bid) -> None:
+    print(f"  Mercado completo [Binance]: mejor venta {money(all_ask)} · mejor compra {money(all_bid)}")
+    spread = f" · diferencia {money(ver_ask - ver_bid)} COP" if ver_ask is not None and ver_bid is not None else ""
+    print(f"  Solo verificados [Binance]: mejor venta {money(ver_ask)} · mejor compra {money(ver_bid)}{spread}")
+
+
 def cmd_competencia(store: HistoryStore, args: argparse.Namespace, settings: Settings) -> int:
     min_margin = (_dec(args.margen_min, "--margen-min") or settings.min_margin_pct) / 100
     cfg = _cfg(settings, args)
@@ -252,12 +264,16 @@ def cmd_competencia(store: HistoryStore, args: argparse.Namespace, settings: Set
         except MarketDataError as exc:
             print(f"✘ {exc}")
             return 1
-    best_ask = min((a.price for a in books[Side.ASK].ads), default=None)
-    best_bid = max((a.price for a in books[Side.BID].ads), default=None)
+    all_ask = min((a.price for a in books[Side.ASK].ads), default=None)
+    all_bid = max((a.price for a in books[Side.BID].ads), default=None)
+    ver_ask, ver_bid = _verified_best(books)
+    # Los precios límite se calculan contra la misma competencia que los puestos.
+    best_ask = (ver_ask or all_ask) if settings.merchants_only else all_ask
+    best_bid = (ver_bid or all_bid) if settings.merchants_only else all_bid
     print(f"Competencia {settings.asset}/{settings.fiat} · {datetime.now(UTC).astimezone(BOGOTA):%Y-%m-%d %H:%M} (hora Colombia)")
     print("  Competencia: " + ("solo comerciantes verificados (JMC_SOLO_VERIFICADOS=true)" if settings.merchants_only
                                   else "todos los anunciantes (JMC_SOLO_VERIFICADOS=false)"))
-    print(f"  Mercado [Binance]: mejor venta {money(best_ask)} · mejor compra {money(best_bid)}")
+    _print_markets(all_ask, all_bid, ver_ask, ver_bid)
     if not my_ads:
         print(f"\n  No tienes anuncios en {settings.fiat}. Puedes crear uno con los precios límite de abajo.")
     my_ids = {a.ad_id for a in my_ads}
@@ -402,7 +418,8 @@ def cmd_recomendar(store: HistoryStore, args: argparse.Namespace, settings: Sett
     print(f"Escenarios de precio {market} · {now.astimezone(BOGOTA):%Y-%m-%d %H:%M} (hora Colombia)")
     print("  Competencia: " + ("solo comerciantes verificados (JMC_SOLO_VERIFICADOS=true)" if settings.merchants_only
                                   else "todos los anunciantes (JMC_SOLO_VERIFICADOS=false)"))
-    print(f"  Mercado [Binance]: mejor venta {money(pp.best_ask)} · mejor compra {money(pp.best_bid)}")
+    _print_markets(min((a.price for a in books[Side.ASK].ads), default=None),
+                   max((a.price for a in books[Side.BID].ads), default=None), *_verified_best(books))
     print(f"  Costos [cálculo]: comisión maker compra {pct3(costs.maker_buy)} · venta {pct3(costs.maker_sell)}"
           f" · 4x1000 {pct3(gmf_low)} (cuenta exenta) / {pct3(gmf_high)} · margen mínimo {money(min_margin * 100, 2)}%")
     for side, snap in books.items():

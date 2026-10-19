@@ -230,7 +230,7 @@ def test_recomendar_cli(tmp_path, capsys, monkeypatch, mode):
     db = tmp_path / "h.db"
     assert business_cli.main(["recomendar", "--db", str(db), "--capital", "10.000.000"]) == 0
     out = capsys.readouterr().out
-    assert "solo comerciantes verificados" in out
+    assert "solo comerciantes verificados" in out and "Solo verificados [Binance]" in out and "Mercado completo" in out
     assert business_cli.main(["recomendar", "--db", str(db), "--competencia", "todos"]) == 0
     assert "todos los anunciantes" in capsys.readouterr().out
     assert "CONSERVADOR" in out and "EQUILIBRADO" in out and "AGRESIVO" in out
@@ -313,3 +313,30 @@ def test_position_merchants_only():
     book = [mk("u", "3170", "10", side=Side.BID, user="x", user_type="user"), bid("b1", "3155"), bid("b2", "3140")]
     assert position(mine, book).estimated_rank == 3
     assert position(mine, book, merchants_only=True).estimated_rank == 2
+
+
+def test_competencia_cli_uses_verified_prices(tmp_path, capsys, monkeypatch):
+    from jmcambios.tools import business_cli
+    from tests.fixtures import make_ad as mk
+
+    class SourceWithOutlier(_FakeSource):
+        def fetch(self, side):
+            snap = super().fetch(side)
+            if side is Side.BID:  # comprador NO verificado muy por encima del resto
+                snap.ads.append(mk("raro", "3185.55", "110", side=Side.BID, user="x", user_type="user",
+                                   methods=("Nequi",), lo="300000", hi="400000"))
+            return snap
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(business_cli, "_client", lambda settings: nullcontext())
+    monkeypatch.setattr(business_cli, "BinanceAccount", _FakeAccount)
+    monkeypatch.setattr(business_cli, "BinanceMarketSource", SourceWithOutlier)
+    db = str(tmp_path / "h.db")
+    assert business_cli.main(["competencia", "--db", db, "--margen-min", "1"]) == 0
+    out = capsys.readouterr().out
+    assert "Mercado completo [Binance]: mejor venta 3.155,00 · mejor compra 3.185,55" in out
+    assert "Solo verificados [Binance]: mejor venta 3.155,00 · mejor compra 3.160,00" in out
+    # Reponer = mejor compra ÷ (1 − comisión 0,2 %): 3.160 → 3.166,33; el atípico daría 3.191,93.
+    assert "costo 3.166,33" in out and "costo 3.191,93" not in out
+    assert business_cli.main(["competencia", "--db", db, "--competencia", "todos"]) == 0
+    assert "costo 3.191,93" in capsys.readouterr().out

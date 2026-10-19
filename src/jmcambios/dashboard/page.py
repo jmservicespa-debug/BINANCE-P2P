@@ -84,8 +84,8 @@ input{font:inherit;font-size:14px;width:96px;min-height:36px;padding:0 10px;bord
 
 <div id="tab-mercado">
   <div class="grid">
-    <div class="card"><span class="label">Mejor precio para COMPRAR</span><span class="big" id="ask">—</span><span class="muted" style="color:var(--real)" id="askn"></span></div>
-    <div class="card"><span class="label">Mejor precio para VENDER</span><span class="big" id="bid">—</span><span class="muted" style="color:var(--real)" id="bidn"></span></div>
+    <div class="card"><span class="label">Mejor precio para COMPRAR</span><span class="big" id="ask">—</span><span class="muted" style="color:var(--real)" id="askn"></span><span class="mono" id="askv"></span></div>
+    <div class="card"><span class="label">Mejor precio para VENDER</span><span class="big" id="bid">—</span><span class="muted" style="color:var(--real)" id="bidn"></span><span class="mono" id="bidv"></span></div>
     <div class="card span2"><div class="row"><div><span class="label">Diferencial entre mejores precios</span><div class="mid" id="spread">—</div></div><span class="chip calc">Cálculo</span></div><div id="cross"></div></div>
   </div>
   <section class="card">
@@ -165,6 +165,8 @@ function renderEstado(s) {
   $('stale').innerHTML = s.age_s > 300 ? `<div class="bad">Datos de hace ${Math.round(s.age_s / 60)} min: ¿está corriendo el monitor en el computador?</div>` : '';
   $('ask').textContent = fmt(m.ask?.best); $('askn').textContent = m.ask ? `Binance · ${m.ask.ads} anuncios` : '';
   $('bid').textContent = fmt(m.bid?.best); $('bidn').textContent = m.bid ? `Binance · ${m.bid.ads} anuncios` : '';
+  $('askv').textContent = m.ask?.verified_best != null ? `Verificados: ${fmt(m.ask.verified_best)}` : '';
+  $('bidv').textContent = m.bid?.verified_best != null ? `Verificados: ${fmt(m.bid.verified_best)}` : '';
   $('spread').textContent = m.spread === undefined ? '—' : `${fmt(m.spread)} COP · ${fmt(m.spread_pct, 3)}%`;
   $('askq').textContent = fmt(m.ask?.qty, 0); $('bidq').textContent = fmt(m.bid?.qty, 0);
   const c = s.cross;

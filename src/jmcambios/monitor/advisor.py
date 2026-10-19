@@ -149,6 +149,11 @@ class Advisor:
                 "depth_1": _f(st.depth_qty.get("1%")), "top1_share": _f(st.top1_share),
                 "complete": snap.complete if snap else None,
             }
+        for side, key in ((Side.ASK, "ask"), (Side.BID, "bid")):
+            snap = result.snapshots.get(side)
+            prices = [a.price for a in snap.ads if a.advertiser.is_merchant] if snap else []
+            if prices and key in market:
+                market[key]["verified_best"] = _f(min(prices) if side is Side.ASK else max(prices))
         if result.spread is not None:
             market["spread"] = _f(result.spread.absolute)
             market["spread_pct"] = _f(result.spread.pct)
