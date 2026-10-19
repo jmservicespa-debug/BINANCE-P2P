@@ -146,6 +146,12 @@ tests/                     pruebas unitarias (sin red)
 - ✅ Confirmado con datos reales (2026-10-19 14:53): con verificados, mejor compra 3.136 y mejor venta 3.154,99 (≈ 19 COP, 0,6 %), mientras el libro completo mostraba compradores NO verificados a 3.160–3.185,55. Los atípicos de las alertas eran no verificados.
 - `competencia`/`recomendar` muestran mercado completo y solo verificados; precios límite y costo de reposición usan la misma competencia elegida. El panel muestra el mejor precio verificado bajo cada precio.
 
+## Objetivo de automatización (Fases 8–9, confirmado por el usuario 2026-10-19)
+- El agente CREA, EDITA, SUBE/BAJA PRECIO y PRENDE/APAGA los anuncios según la estrategia elegida (escenario + margen + verificados/todos + límites del usuario).
+- El usuario es el gestor de pagos: revisa, paga y libera USDT a mano. El sistema NUNCA confirma pagos ni libera USDT; la key de automatización no tiene permiso de retiro.
+- Endpoints ya catalogados: `ads/post`, `ads/update` (exige el anuncio completo, si no -9000), `ads/updateStatus`. Antes de la Fase 9: confirmar con Binance que el uso automatizado está permitido, key aparte solo de anuncios con IP del servidor.
+- Requisitos: límites de riesgo (precio máx. compra / mín. venta, capital, cambios por hora), registro de cada cambio, aviso por Telegram de cada cambio, parada de emergencia, modo automático apagado por defecto y degradación automática a Recomendación.
+
 ## Ideas registradas
 - Producto por suscripción (pedido del usuario 2026-10-19): multiusuario en servidor con IP fija, keys de terceros cifradas y solo lectura, configuración por usuario (bancos/4x1000, moneda, márgenes), registro y pagos, revisión legal (condiciones de Binance para terceros, Ley 1581 de 2012). Riesgo: suscriptores con la misma estrategia compiten entre sí. Primero validar con resultados reales del usuario. Mantener nada personal fijo en el código.
 
