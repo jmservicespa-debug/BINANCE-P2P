@@ -101,11 +101,15 @@ def _window_signals(
             continue
         snap = base.get(side) or {}
         who = "vendedores" if side is Side.ASK else "compradores"
-        price = snap.get("best_price")
-        if wc.best_price_delta is not None and price:
-            d = wc.best_price_delta / price
-            sigs.append(Signal(f"mejor precio de {who}", minutes, _clip(d / PRICE_FULL_SCALE), 1.0, OBSERVED,
-                               f"{_num(wc.best_price_delta)} COP ({_num(d * 100, 3)} %)"))
+        # Preferir el promedio de los 5 mejores: un anuncio atípico no mueve la lectura.
+        if wc.top5_price_delta is not None and snap.get("top5_price"):
+            delta, price, label = wc.top5_price_delta, snap["top5_price"], f"precio de los 5 mejores {who}"
+        else:
+            delta, price, label = wc.best_price_delta, snap.get("best_price"), f"mejor precio de {who}"
+        if delta is not None and price:
+            d = delta / price
+            sigs.append(Signal(label, minutes, _clip(d / PRICE_FULL_SCALE), 1.0, OBSERVED,
+                               f"{_num(delta)} COP ({_num(d * 100, 3)} %)"))
         qty = snap.get("announced_qty")
         if wc.announced_qty_delta is not None and qty:
             d = wc.announced_qty_delta / qty

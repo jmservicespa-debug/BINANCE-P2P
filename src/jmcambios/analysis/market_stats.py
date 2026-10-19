@@ -45,6 +45,7 @@ class SideStats:
     median_price: Decimal | None = None
     mean_price: Decimal | None = None
     vwap: Decimal | None = None  # ponderado por cantidad anunciada
+    top5_avg_price: Decimal | None = None  # promedio de los 5 mejores precios (robusto a un anuncio atípico)
     announced_qty: Decimal = Decimal(0)
     announced_fiat: Decimal = Decimal(0)
     depth_qty: dict[str, Decimal] = field(default_factory=dict)  # "0.5%" -> qty dentro de la banda
@@ -54,6 +55,9 @@ class SideStats:
     top5_share: Decimal | None = None
     hhi: Decimal | None = None  # 0..10000
     by_method: dict[str, MethodStats] = field(default_factory=dict)
+
+
+TOP_AVG_N = 5
 
 
 def _best(side: Side, prices: list[Decimal]) -> Decimal:
@@ -82,6 +86,8 @@ def summarize(side: Side, ads: list[Ad], top_n: int = 10) -> SideStats:
     stats.worst_price = max(prices) if side is Side.ASK else min(prices)
     stats.min_price, stats.max_price = min(prices), max(prices)
     stats.median_price = Decimal(median(prices))
+    top = sorted(prices, reverse=(side is Side.BID))[:TOP_AVG_N]
+    stats.top5_avg_price = _q(sum(top) / len(top))
     stats.mean_price = _q(sum(prices) / len(prices))
     stats.announced_qty = sum((a.available_qty for a in ads), Decimal(0))
     stats.announced_fiat = _q(sum((a.available_fiat for a in ads), Decimal(0)), "1")

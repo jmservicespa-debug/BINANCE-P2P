@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS snapshots (
     best_price REAL, median_price REAL, vwap REAL,
     announced_qty REAL, announced_fiat REAL,
     depth_05 REAL, depth_1 REAL, depth_2 REAL,
-    top1_share REAL, top3_share REAL, top5_share REAL, hhi REAL,
+    top1_share REAL, top3_share REAL, top5_share REAL, hhi REAL, top5_price REAL,
     UNIQUE (venue, market, side, taken_ts)
 );
 CREATE INDEX IF NOT EXISTS ix_snap_cycle ON snapshots (venue, market, cycle_ts);
@@ -106,6 +106,14 @@ class HistoryStore:
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.executescript(SCHEMA)
+        self._migrate()
+
+    def _migrate(self) -> None:
+        """Columnas añadidas después de crear bases existentes."""
+        cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(snapshots)")}
+        if "top5_price" not in cols:
+            with self.conn:
+                self.conn.execute("ALTER TABLE snapshots ADD COLUMN top5_price REAL")
 
     def close(self) -> None:
         self.conn.close()
@@ -130,14 +138,15 @@ class HistoryStore:
             cur = c.execute(
                 """INSERT OR IGNORE INTO snapshots (venue, market, side, taken_ts, cycle_ts, source, complete,
                    reported_total, ads_count, merchants_count, best_price, median_price, vwap, announced_qty,
-                   announced_fiat, depth_05, depth_1, depth_2, top1_share, top3_share, top5_share, hhi)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   announced_fiat, depth_05, depth_1, depth_2, top1_share, top3_share, top5_share, hhi, top5_price)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     snap.venue, market, snap.side.value, ts, cycle_ts, snap.source, int(snap.complete),
                     snap.reported_total, stats.ads_count, stats.merchants_count, _f(stats.best_price),
                     _f(stats.median_price), _f(stats.vwap), _f(stats.announced_qty), _f(stats.announced_fiat),
                     _f(stats.depth_qty.get("0.5%")), _f(stats.depth_qty.get("1%")), _f(stats.depth_qty.get("2%")),
                     _f(stats.top1_share), _f(stats.top3_share), _f(stats.top5_share), _f(stats.hhi),
+                    _f(stats.top5_avg_price),
                 ),
             )
             if cur.rowcount == 0:

@@ -55,7 +55,9 @@ class Advisor:
         ads_every: int = 5,
         alerts: AlertManager | None = None,
         state_path: Path | None = None,
+        cross_min_total: Decimal = rules.CROSS_MIN_TOTAL,
     ) -> None:
+        self._cross_min = cross_min_total
         self._orders = orders
         self._fiat = fiat
         self._gmf = gmf_by_account
@@ -104,7 +106,7 @@ class Advisor:
             ]
 
         failing = bool(result.errors)
-        alerts = [a for a in (rules.cross_alert(result.cross), rules.pressure_alert(result.pressure)) if a]
+        alerts = [a for a in (rules.cross_alert(result.cross, self._cross_min), rules.pressure_alert(result.pressure)) if a]
         alerts += rules.error_alerts(result.errors, consecutive_failures, recovered=self._was_failing and not failing)
         if self.mode is not Mode.OBSERVATION:
             alerts += rules.my_ad_alerts(out.positions, out.plan)

@@ -379,3 +379,12 @@ def test_alertas_probar_without_channels(capsys, monkeypatch):
         monkeypatch.delenv(v, raising=False)
     assert alerts_cli.probar(Settings(_env_file=None)) == 1
     assert "jmcambios-alertas configurar" in capsys.readouterr().out
+
+
+def test_small_cross_is_not_alerted():
+    # Mismo cruce, pero el vendedor solo tiene 50 USDT: ganancia total < 10.000 COP.
+    small = cycle([make_ad("a1", "3150", "50", side=Side.ASK, methods=("DaviviendaSA",), user="s1", lo="100000", hi="5000000")],
+                  [bid(1, "3170", methods=("Nequi",))])
+    assert small.cross.executable and small.cross.best.net_total_max < rules.CROSS_MIN_TOTAL
+    assert rules.cross_alert(small.cross) is None
+    assert rules.cross_alert(small.cross, D("0")) is not None

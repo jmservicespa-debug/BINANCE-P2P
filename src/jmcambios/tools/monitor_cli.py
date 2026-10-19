@@ -87,6 +87,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("--estado", default="data/estado.json", help="Archivo de estado que lee el panel")
     p.add_argument("--anuncios-cada", type=int, default=5, help="Leer mis anuncios cada N ciclos (0 = nunca)")
     p.add_argument("--margen-min", default="0,3", help="Margen mínimo del ciclo en %% para los escenarios")
+    p.add_argument("--cruce-min", default="10.000", help="Ganancia total mínima en COP para alertar un cruce")
     p.add_argument("--sin-alertas", action="store_true", help="No enviar alertas por Telegram/correo")
     return p.parse_args(argv)
 
@@ -160,6 +161,7 @@ def main(argv: list[str] | None = None) -> int:
                 orders=store.load_orders(), fiat=settings.fiat, gmf_by_account=parse_my_methods(settings.my_pay_methods),
                 min_margin=min_margin, mode=mode, fetch_my_ads=account.fetch_my_ads if account else None,
                 ads_every=args.anuncios_cada or 1, alerts=alerts, state_path=Path(args.estado),
+                cross_min_total=_decimal(args.cruce_min, "--cruce-min") or Decimal("0"),
             )
         if args.panel and store is not None:
             server = _start_panel(settings, args)

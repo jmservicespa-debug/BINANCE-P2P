@@ -25,6 +25,7 @@ class WindowChange:
     to_ts: int
     # OBSERVADO (diferencias entre dos snapshots)
     best_price_delta: float | None = None
+    top5_price_delta: float | None = None  # promedio de los 5 mejores: no lo mueve un solo anuncio atípico
     median_delta: float | None = None
     vwap_delta: float | None = None
     ads_count_delta: int | None = None
@@ -55,6 +56,7 @@ def window_change(store: HistoryStore, venue: str, market: str, side: Side, now_
     if gap > 180:
         wc.notes.append(f"sin datos exactos: se compara con un snapshot {gap // 60} min más antiguo")
     wc.best_price_delta = _delta(start["best_price"], end["best_price"])
+    wc.top5_price_delta = _delta(start["top5_price"], end["top5_price"])
     wc.median_delta = _delta(start["median_price"], end["median_price"])
     wc.vwap_delta = _delta(start["vwap"], end["vwap"])
     wc.ads_count_delta = _delta(start["ads_count"], end["ads_count"])

@@ -250,3 +250,36 @@ def test_presion_cli(tmp_path, capsys, monkeypatch):
     assert business_cli.main(["presion", "--db", str(db)]) == 0
     out = capsys.readouterr().out
     assert "PRESIÓN DEL MERCADO" in out and "[observado]" in out and "[no verificable]" in out
+
+
+def test_pressure_ignores_single_outlier_ad(store):
+    # Un comprador aparece 30 COP por encima de todos: el mejor precio salta, el promedio de 5 apenas.
+    bids = [bid(f"B{i}", str(3160 - i)) for i in range(6)]
+    asks = [ask(f"A{i}", str(3170 + i)) for i in range(6)]
+    for m in range(0, 31, 5):
+        extra = [bid("RARO", "3190", qty="110")] if m == 30 else []
+        record(store, m, asks, bids + extra)
+    rep = pressure.analyze(store, VENUE, MARKET)
+    names = {s.name for s in rep.signals}
+    assert "precio de los 5 mejores compradores" in names and "mejor precio de compradores" not in names
+    assert rep.score < 40  # sin el promedio de 5 habría sido "fuerte alcista"
+
+
+def test_old_database_gets_top5_column(tmp_path):
+    import sqlite3
+
+    db = tmp_path / "vieja.db"
+    con = sqlite3.connect(db)
+    con.execute("CREATE TABLE snapshots (id INTEGER PRIMARY KEY, venue TEXT NOT NULL, market TEXT NOT NULL, side TEXT NOT NULL,"
+                " taken_ts INTEGER NOT NULL, cycle_ts INTEGER NOT NULL, source TEXT, complete INTEGER, reported_total INTEGER,"
+                " ads_count INTEGER, merchants_count INTEGER, best_price REAL, median_price REAL, vwap REAL, announced_qty REAL,"
+                " announced_fiat REAL, depth_05 REAL, depth_1 REAL, depth_2 REAL, top1_share REAL, top3_share REAL,"
+                " top5_share REAL, hhi REAL, UNIQUE (venue, market, side, taken_ts))")
+    con.execute("INSERT INTO snapshots (venue, market, side, taken_ts, cycle_ts, best_price) VALUES ('v','m','ASK',1,1,3150)")
+    con.commit()
+    con.close()
+    with HistoryStore(db) as s:
+        rows = s.query("SELECT best_price, top5_price FROM snapshots")
+        assert [(r["best_price"], r["top5_price"]) for r in rows] == [(3150.0, None)]
+        record(s, 0, [ask("A1", "3170")], [bid("B1", "3160")])
+        assert s.query("SELECT top5_price FROM snapshots WHERE side='ASK' AND venue='binance_p2p'")[0][0] == 3170.0

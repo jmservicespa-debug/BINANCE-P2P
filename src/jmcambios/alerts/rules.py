@@ -20,12 +20,15 @@ STRONG_SCORE = 40
 STRONG_CONFIDENCE = 60
 AD_TOLERANCE = Decimal("1")  # COP de diferencia con lo recomendado antes de avisar
 FAILURES_ALERT = 3
+CROSS_MIN_TOTAL = Decimal("10000")  # COP: por debajo no vale el riesgo de operar el cruce
 
 
-def cross_alert(cross: CrossReport | None) -> Alert | None:
+def cross_alert(cross: CrossReport | None, min_total: Decimal = CROSS_MIN_TOTAL) -> Alert | None:
     if cross is None or not cross.executable or cross.best is None:
         return None
     b = cross.best
+    if b.net_total_max < min_total:
+        return None
     return Alert(
         key="cruce", severity=IMPORTANT, cooldown_s=600,
         title="Cruce de precios aprovechable",
