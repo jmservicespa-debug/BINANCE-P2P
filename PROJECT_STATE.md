@@ -14,8 +14,9 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 | 2. Monitor de anuncios | ✅ Cerrada 2026-10-19: ejecución real continua ~33 h (2026-10-17 23:37 → 2026-10-19 08:59 COT) sin errores ni caídas, snapshots guardados |
 | 3. Historial y liquidez | ✅ 2026-10-19: datos reales importados (1.958 ciclos, ~33 h) y consultas funcionando en el PC del usuario. Seguir acumulando días hábiles. |
 | 4. Competencia y rentabilidad | ✅ Implementada y ejecutada con la cuenta oficial 2026-10-19 (119 pruebas OK): `jmcambios-negocio sincronizar/costos/rentabilidad/competencia`; 4.597 órdenes, comisiones reales observadas integradas. Rentabilidad COP sin ciclos todavía (sin historial de comerciante COP) · Aprobada por el usuario 2026-10-19 |
-| 5. Presión y motor de precios | ✅ 2026-10-19 (137 pruebas OK): `jmcambios-negocio presion` / `recomendar` ejecutados con datos reales en el PC del usuario (modo RECOMMENDATION), línea de presión en el monitor · ⏳ Aprobación del usuario para Fase 6 |
-| 6–10 | ⛔ No iniciadas |
+| 5. Presión y motor de precios | ✅ 2026-10-19 (137 pruebas OK): `jmcambios-negocio presion` / `recomendar` ejecutados con datos reales en el PC del usuario (modo RECOMMENDATION), línea de presión en el monitor · Aprobada por el usuario 2026-10-19 |
+| 6. Panel y alertas | 🟡 Implementada 2026-10-19 (154 pruebas OK; panel verificado en Chromium 390 px claro/oscuro sin errores): `jmcambios-monitor --panel`, `jmcambios-panel`, `jmcambios-alertas configurar/probar` · ⏳ Configurar Telegram y abrir el panel en el celular del usuario |
+| 7–10 | ⛔ No iniciadas |
 
 ## Decisiones tomadas
 - Integración oficial: **C2C Agent SAPI** (`/sapi/v1/c2c/agent/*`, HMAC, base `https://api.binance.com`) + API pública agent (`/bapi/c2c/v1/public/c2c/agent/*`, base `https://www.binance.com`). Fuente: `github.com/binance/binance-skills-hub/skills/binance/p2p` v1.1.0.
@@ -124,6 +125,12 @@ tests/                     pruebas unitarias (sin red)
 - Primera ejecución real (2026-10-19 11:27 COT): mercado cruzado (venta 3.149 / compra 3.160). Presión neutral +11, confianza 50 (vendedores −9 COP en 60 min; posibles ejecuciones: 33.830 USDT consumidos a vendedores vs 9.763 a compradores [inferido]). Equilibrado: comprar 3.135,44 (#10 de 145 compatibles) / vender 3.155,59 (#4 de 278), margen 0,45 % ≈ 14,21 COP/USDT → meta 127.000 COP/día exige ≈ 8.935 USDT/día = 2,8× capital de 10 M. Horas con mayor diferencial en días hábiles: 02–04 h (≈ 17–18 COP), muestra aún pequeña.
 - Inventario de 4.100 USDT a 3.239 en `recomendar` = compras COP que salieron por remesas (VES); el cálculo COP no ve esas salidas.
 - Pendiente de fases posteriores: decisión con 7 validaciones (Fase 8), panel (Fase 6), simulación (Fase 7).
+
+## Fase 6 — diseño (2026-10-19)
+- `monitor/advisor.py` tras cada ciclo: lee mis anuncios cada N ciclos (5 por defecto), calcula escenarios (`pricing.plan`) y posiciones, evalúa reglas (`alerts/rules.py`), envía por `AlertManager` (enfriamiento por clave usando la tabla `alerts`) y escribe `data/estado.json` de forma atómica.
+- Alertas de anuncios propios solo en modo RECOMMENDATION/AUTOMATIC (en OBSERVATION no se sugieren precios).
+- Panel: `http.server` de la biblioteca estándar (sin dependencias nuevas), GET solamente (POST → 405), clave en `?t=` comparada con `hmac.compare_digest`, sin registrar URLs (llevan la clave). Acceso fuera de casa = VPS (pendiente).
+- Telegram: token y chat_id en `.env` (redactados en registros vía `Settings.secret_values()`); los errores de red no propagan la URL con el token.
 
 ## Próximos pasos
 1. ✅ API key de solo lectura creada (IP whitelist) y guardada con `python -m jmcambios.tools.set_keys`.

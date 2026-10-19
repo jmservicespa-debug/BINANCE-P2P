@@ -2,7 +2,7 @@
 
 Sistema de observación, análisis y posicionamiento estratégico de anuncios Binance P2P para el mercado USDT/COP.
 
-**Estado actual: FASE 5 (presión del mercado y motor de precios).** Ver:
+**Estado actual: FASE 6 (panel para el celular y alertas por Telegram).** Ver:
 - [`docs/FASE1_VIABILIDAD.md`](docs/FASE1_VIABILIDAD.md) — diagnóstico técnico: qué está confirmado, qué falta verificar y qué no es posible.
 - [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) — módulos y flujo.
 - [`PROJECT_STATE.md`](PROJECT_STATE.md) — estado del proyecto entre sesiones.
@@ -111,6 +111,19 @@ jmcambios-negocio recomendar --margen-min 0,3 --meta 127.000
 - **Escenarios**: conservador (puesto #8 entre compatibles, margen mín. + 0,30 pp), equilibrado (#3, + 0,15 pp), agresivo (#1, margen mínimo). Si el mercado no da el margen, el precio se mueve para protegerlo; la presión (solo con confianza ≥ 50) decide de qué lado se cede.
 - En `JMC_MODE=OBSERVATION` se muestran solo los escenarios; en `RECOMMENDATION` además el cambio sugerido para cada anuncio. **Nunca se modifica nada en Binance.**
 - El monitor muestra una línea de presión en cada ciclo.
+
+## Panel y alertas (Fase 6)
+
+```bash
+jmcambios-alertas configurar                       # conecta tu bot de Telegram (guiado, una sola vez)
+jmcambios-alertas probar                           # mensaje de prueba
+jmcambios-monitor --interval 60 --brief --panel    # monitor + panel + alertas en una sola ventana
+jmcambios-panel                                    # solo el panel (si el monitor corre en otra ventana)
+```
+
+- **Panel**: página de solo lectura para el celular (misma red Wi-Fi) con tres pestañas: Mercado (precios, gráfico, presión), Precios (3 escenarios y tus anuncios) y Resultados (rentabilidad y alertas). El enlace lleva una clave (`JMC_DASHBOARD_TOKEN`, se crea sola). No abras el puerto a internet.
+- **Alertas** (Telegram y/o correo): cruce aprovechable, presión fuerte (|puntaje| ≥ 40 y confianza ≥ 60), API key rechazada (IP), 3+ ciclos con errores, recuperación, inicio/parada del monitor y —en modo RECOMMENDATION— tus anuncios en línea que regalan margen, quedan por debajo del margen objetivo o se quedan atrás. Cada asunto se repite como máximo cada 10–60 min. Todas quedan registradas en la base.
+- El bot **solo envía**: el sistema no lee ni ejecuta nada que llegue por Telegram.
 
 ## Pruebas
 

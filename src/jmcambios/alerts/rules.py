@@ -1,0 +1,113 @@
+"""Reglas de alerta: qué merece un aviso y con qué clave se agrupa.
+
+Ninguna regla actúa sobre Binance: solo describen lo observado/calculado y,
+en modo RECOMENDACIÓN, sugieren un precio que el usuario cambia a mano.
+"""
+
+from __future__ import annotations
+
+from decimal import Decimal
+
+from jmcambios.alerts.manager import IMPORTANT, INFO, URGENT, Alert
+from jmcambios.analysis.competition import AdPosition
+from jmcambios.analysis.crossing import CrossReport
+from jmcambios.analysis.pressure import PressureReport
+from jmcambios.domain.account import OrderSide
+from jmcambios.monitor.report import money
+from jmcambios.pricing.engine import PricePlan
+
+STRONG_SCORE = 40
+STRONG_CONFIDENCE = 60
+AD_TOLERANCE = Decimal("1")  # COP de diferencia con lo recomendado antes de avisar
+FAILURES_ALERT = 3
+
+
+def cross_alert(cross: CrossReport | None) -> Alert | None:
+    if cross is None or not cross.executable or cross.best is None:
+        return None
+    b = cross.best
+    return Alert(
+        key="cruce", severity=IMPORTANT, cooldown_s=600,
+        title="Cruce de precios aprovechable",
+        body=(f"Comprar a {money(b.buy_ad.price)} pagando por {b.pay_method} y vender a {money(b.sell_ad.price)} "
+              f"cobrando por {b.receive_method}.\n"
+              f"Neto ≈ {money(b.net_per_unit)} COP/USDT ({money(b.net_pct, 3)} %) · {money(b.min_qty)}–{money(b.max_qty)} USDT"
+              f" · hasta ≈ {money(b.net_total_max, 0)} COP.\n"
+              "Los anuncios pueden desaparecer en segundos. Verifica en la app antes de operar."),
+    )
+
+
+def pressure_alert(pr: PressureReport | None) -> Alert | None:
+    if pr is None or abs(pr.score) < STRONG_SCORE or pr.confidence < STRONG_CONFIDENCE:
+        return None
+    up = pr.score > 0
+    return Alert(
+        key=f"presion:{'alcista' if up else 'bajista'}", severity=INFO, cooldown_s=3600,
+        title=f"Presión {'alcista' if up else 'bajista'} fuerte",
+        body=(f"Puntaje {pr.score:+.0f} · confianza {pr.confidence}/100.\n"
+              + ("El USDT tiende a subir: prioriza comprar." if up else "El USDT tiende a bajar: prioriza vender.")
+              + "\nLectura de corto plazo, no garantizada."),
+    )
+
+
+def error_alerts(errors: list[str], consecutive_failures: int, recovered: bool) -> list[Alert]:
+    out = []
+    if any("AUTH_ERROR" in e for e in errors):
+        out.append(Alert(
+            key="auth", severity=URGENT, cooldown_s=3600,
+            title="Binance rechazó la API key",
+            body=("Causa más común: cambió tu IP pública (p. ej. tras un corte de internet). "
+                  "Actualízala en Binance → Gestión de API. Mientras tanto no se guardan datos."),
+        ))
+    elif consecutive_failures >= FAILURES_ALERT:
+        out.append(Alert(
+            key="fallas", severity=URGENT, cooldown_s=3600,
+            title=f"El monitor lleva {consecutive_failures} ciclos con errores",
+            body="Último error: " + (errors[-1] if errors else "desconocido") + "\nRevisa el internet del computador.",
+        ))
+    if recovered:
+        out.append(Alert(key="recuperado", severity=INFO, cooldown_s=0, title="Monitor recuperado",
+                         body="Volvió a leer el mercado con normalidad."))
+    return out
+
+
+def my_ad_alerts(positions: list[AdPosition], plan: PricePlan | None) -> list[Alert]:
+    """Solo anuncios EN LÍNEA. Compara con el escenario equilibrado."""
+    bal = next((s for s in plan.scenarios if s.name == "equilibrado"), None) if plan else None
+    out = []
+    for p in positions:
+        ad = p.ad
+        if not ad.online:
+            continue
+        buying = ad.side is OrderSide.BUY
+        kind = "COMPRA" if buying else "VENTA"
+        where = f"Puesto estimado #{p.estimated_rank} de {p.total_competitors + 1}."
+        if p.gap_to_best is not None and p.gap_to_best <= -AD_TOLERANCE:
+            better = p.best_price + Decimal("0.01") if buying else p.best_price - Decimal("0.01")
+            out.append(Alert(
+                key=f"anuncio:{ad.ad_id}:regalando", severity=IMPORTANT,
+                title=f"Tu anuncio de {kind} está regalando margen",
+                body=(f"Está en {money(ad.price)}, {money(-p.gap_to_best)} COP mejor que el siguiente ({money(p.best_price)}). "
+                      f"Con {money(better)} seguirías de primero. {where}\nCámbialo en la app de Binance."),
+            ))
+            continue
+        if bal is None:
+            continue
+        target = bal.buy if buying else bal.sell
+        too_generous = ad.price > target.price + AD_TOLERANCE if buying else ad.price < target.price - AD_TOLERANCE
+        too_far = ad.price < target.price - AD_TOLERANCE if buying else ad.price > target.price + AD_TOLERANCE
+        if too_generous:
+            out.append(Alert(
+                key=f"anuncio:{ad.ad_id}:margen", severity=IMPORTANT,
+                title=f"Tu anuncio de {kind} deja menos margen del objetivo",
+                body=(f"Está en {money(ad.price)}; el escenario equilibrado sugiere {money(target.price)} "
+                      f"(margen del ciclo {money(bal.margin * 100, 3)} %). {where}\nCámbialo en la app de Binance."),
+            ))
+        elif too_far:
+            out.append(Alert(
+                key=f"anuncio:{ad.ad_id}:atras", severity=INFO,
+                title=f"Tu anuncio de {kind} quedó atrás",
+                body=(f"Está en {money(ad.price)}; el equilibrado sugiere {money(target.price)} "
+                      f"(puesto ≈ #{target.rank_compatible} entre compatibles). {where}"),
+            ))
+    return out

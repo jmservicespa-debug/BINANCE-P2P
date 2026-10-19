@@ -21,6 +21,8 @@ jmcambios-verify = "jmcambios.tools.verify_integration:main"
 jmcambios-monitor = "jmcambios.tools.monitor_cli:main"
 jmcambios-history = "jmcambios.tools.history_cli:main"
 jmcambios-negocio = "jmcambios.tools.business_cli:main"
+jmcambios-alertas = "jmcambios.tools.alerts_cli:main"
+jmcambios-panel = "jmcambios.tools.panel_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

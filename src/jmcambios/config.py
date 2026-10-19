@@ -34,6 +34,17 @@ class Settings(BaseSettings):
     # Métodos con los que pago/recibo y su 4x1000: "DaviviendaSA:0,Daviplata:0,BancolombiaSA:0.004,Nequi:0.004"
     my_pay_methods: str | None = Field(default=None, alias="JMC_MY_PAY_METHODS")
 
+    # Alertas (Fase 6). Solo envían avisos: no reciben órdenes ni comandos.
+    telegram_bot_token: SecretStr | None = Field(default=None, alias="JMC_TELEGRAM_BOT_TOKEN")
+    telegram_chat_id: str | None = Field(default=None, alias="JMC_TELEGRAM_CHAT_ID")
+    email_smtp_host: str | None = Field(default=None, alias="JMC_EMAIL_SMTP_HOST")
+    email_smtp_port: int = Field(default=587, alias="JMC_EMAIL_SMTP_PORT")
+    email_user: str | None = Field(default=None, alias="JMC_EMAIL_USER")
+    email_password: SecretStr | None = Field(default=None, alias="JMC_EMAIL_PASSWORD")
+    email_to: str | None = Field(default=None, alias="JMC_EMAIL_TO")
+    # Panel (Fase 6): clave de acceso que va en el enlace del celular.
+    dashboard_token: SecretStr | None = Field(default=None, alias="JMC_DASHBOARD_TOKEN")
+
     recv_window_ms: int = Field(default=10_000, alias="BINANCE_RECV_WINDOW", ge=1000, le=60_000)
     http_timeout_s: float = Field(default=15.0, alias="BINANCE_HTTP_TIMEOUT", gt=0)
 
@@ -47,6 +58,20 @@ class Settings(BaseSettings):
     @property
     def has_trade_credentials(self) -> bool:
         return _present(self.trade_api_key) and _present(self.trade_api_secret)
+
+    @property
+    def has_telegram(self) -> bool:
+        return _present(self.telegram_bot_token) and bool((self.telegram_chat_id or "").strip())
+
+    @property
+    def has_email(self) -> bool:
+        return bool(self.email_smtp_host and self.email_user and self.email_to) and _present(self.email_password)
+
+    def secret_values(self) -> list[str]:
+        """Todos los secretos configurados, para redactarlos de los registros."""
+        fields = (self.api_key, self.api_secret, self.trade_api_key, self.trade_api_secret,
+                  self.telegram_bot_token, self.email_password, self.dashboard_token)
+        return [f.get_secret_value() for f in fields if _present(f)]
 
 
 def _present(value: SecretStr | None) -> bool:

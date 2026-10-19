@@ -38,13 +38,12 @@ from jmcambios.domain.account import MyAd, OrderSide
 from jmcambios.logging_utils import setup_logging
 from jmcambios.monitor.report import BOGOTA, money, pct
 from jmcambios.profitability.calculator import ProfitReport, calculate
-from jmcambios.pricing.engine import AdProfile, Costs, SidePrice, daily_goal
+from jmcambios.pricing.engine import DEFAULT_LIMITS, AdProfile, Costs, SidePrice, daily_goal, maker_fees, profile_for
 from jmcambios.pricing.engine import plan as pricing_plan
-from jmcambios.profitability.costs import CostConfig, fraction, observed_fee
+from jmcambios.profitability.costs import CostConfig, fraction
 from jmcambios.storage.history import HistoryStore
 
 COT_DAY = timedelta(days=1)
-DEFAULT_MAKER_RATE = Decimal("0.002")  # commissionRate de los anuncios COP observado en la verificación
 
 
 def pct3(value: Decimal | None) -> str:
@@ -239,15 +238,7 @@ def _print_position(p: AdPosition) -> None:
 
 
 def _maker_fees(store: HistoryStore, my_ads: list[MyAd], settings: Settings) -> dict[OrderSide, tuple[Decimal, str]]:
-    """Comisión maker por lado: OBSERVADA en tus órdenes; si no hay suficientes, la tasa de tus anuncios."""
-    all_orders = store.load_orders()
-    maker_rates = [fraction(a.commission_rate) for a in my_ads if a.commission_rate is not None]
-    ad_rate = max(maker_rates) if maker_rates else DEFAULT_MAKER_RATE
-    out = {}
-    for side in (OrderSide.BUY, OrderSide.SELL):
-        obs = observed_fee(all_orders, role="MAKER", side=side, fiat=settings.fiat)
-        out[side] = (obs.rate, f"observada en {obs.orders} órdenes ({obs.scope})") if obs else (ad_rate, "tasa de tus anuncios")
-    return out
+    return maker_fees(store.load_orders(), my_ads, settings.fiat)
 
 
 def cmd_competencia(store: HistoryStore, args: argparse.Namespace, settings: Settings) -> int:
@@ -306,7 +297,6 @@ def cmd_competencia(store: HistoryStore, args: argparse.Namespace, settings: Set
 
 # ------------------------------------------------------------------ Fase 5
 VENUE = "binance_p2p"
-DEFAULT_LIMITS = (Decimal("200000"), Decimal("3000000"))
 DEFAULT_GOAL = Decimal("127000")  # ≈ 40 USD/día
 MIN_HOUR_CYCLES = 10
 
@@ -363,9 +353,7 @@ def _print_best_hours(store: HistoryStore, market: str) -> None:
 
 
 def _profile(ad: MyAd | None, methods: dict[str, Decimal]) -> AdProfile:
-    if ad is not None:
-        return AdProfile(ad.payment_methods, ad.min_fiat, ad.max_fiat)
-    return AdProfile(tuple(methods), *DEFAULT_LIMITS)
+    return profile_for(ad, methods, DEFAULT_LIMITS)
 
 
 def _side_line(sp: SidePrice, asset: str) -> str:

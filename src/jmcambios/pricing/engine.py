@@ -24,9 +24,12 @@ from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 
 from jmcambios.analysis.pressure import PressureReport
 from jmcambios.domain import Ad, Side
-from jmcambios.domain.account import OrderSide
+from jmcambios.domain.account import MyAd, Order, OrderSide
+from jmcambios.profitability.costs import fraction, observed_fee
 
 TICK = Decimal("0.01")
+DEFAULT_LIMITS = (Decimal("200000"), Decimal("3000000"))  # límites por defecto si no tienes anuncio
+DEFAULT_MAKER_RATE = Decimal("0.002")  # commissionRate de los anuncios COP observado en la verificación
 MIN_PRESSURE_CONFIDENCE = 50
 
 # (nombre, puesto objetivo entre competidores compatibles, margen extra sobre el mínimo)
@@ -87,6 +90,34 @@ class PricePlan:
     buy_concession: Decimal = Decimal("0.5")  # parte del ajuste que se carga a la compra
     priority: str = "equilibrado"  # "comprar", "vender" o "equilibrado"
     warnings: list[str] = field(default_factory=list)
+
+
+def maker_fees(orders: list[Order], my_ads: list[MyAd], fiat: str) -> dict[OrderSide, tuple[Decimal, str]]:
+    """Comisión maker por lado: OBSERVADA en tus órdenes; si no hay suficientes, la tasa de tus anuncios."""
+    rates = [fraction(a.commission_rate) for a in my_ads if a.commission_rate is not None]
+    ad_rate = max(rates) if rates else DEFAULT_MAKER_RATE
+    out = {}
+    for side in (OrderSide.BUY, OrderSide.SELL):
+        obs = observed_fee(orders, role="MAKER", side=side, fiat=fiat)
+        out[side] = (obs.rate, f"observada en {obs.orders} órdenes ({obs.scope})") if obs else (ad_rate, "tasa de tus anuncios")
+    return out
+
+
+def build_costs(orders: list[Order], my_ads: list[MyAd], fiat: str, gmf_by_account: dict[str, Decimal],
+                default_gmf: Decimal, min_margin: Decimal) -> Costs:
+    fees = maker_fees(orders, my_ads, fiat)
+    return Costs(
+        maker_buy=fees[OrderSide.BUY][0], maker_sell=fees[OrderSide.SELL][0],
+        gmf=min(gmf_by_account.values(), default=Decimal("0")),
+        gmf_worst=max([*gmf_by_account.values(), default_gmf]),
+        min_margin=min_margin,
+    )
+
+
+def profile_for(ad: MyAd | None, methods: dict[str, Decimal], limits: tuple[Decimal, Decimal]) -> AdProfile:
+    if ad is not None:
+        return AdProfile(ad.payment_methods, ad.min_fiat, ad.max_fiat)
+    return AdProfile(tuple(methods), *limits)
 
 
 def compatible(profile: AdProfile, ad: Ad) -> bool:

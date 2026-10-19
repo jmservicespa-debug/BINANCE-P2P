@@ -73,6 +73,15 @@ CREATE TABLE IF NOT EXISTS orders (
     PRIMARY KEY (venue, order_id)
 );
 CREATE INDEX IF NOT EXISTS ix_orders_time ON orders (fiat, created_ts);
+
+-- Alertas (Fase 6): todas quedan registradas, se hayan enviado o no.
+CREATE TABLE IF NOT EXISTS alerts (
+    id INTEGER PRIMARY KEY,
+    ts INTEGER NOT NULL, key TEXT NOT NULL, severity TEXT NOT NULL,
+    title TEXT NOT NULL, body TEXT NOT NULL,
+    sent_to TEXT, suppressed INTEGER NOT NULL DEFAULT 0, errors TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_alerts_key ON alerts (key, ts);
 """
 
 
@@ -249,6 +258,25 @@ class HistoryStore:
             for r in rows
         ]
 
+    def record_alert(self, ts: int, key: str, severity: str, title: str, body: str,
+                     sent_to: list[str], suppressed: bool, errors: list[str]) -> None:
+        with self._tx() as c:
+            c.execute(
+                "INSERT INTO alerts (ts, key, severity, title, body, sent_to, suppressed, errors) VALUES (?,?,?,?,?,?,?,?)",
+                (ts, key, severity, title, body, ",".join(sent_to), int(suppressed), "; ".join(errors) or None),
+            )
+
+    def last_alert_ts(self, key: str) -> int | None:
+        row = self.conn.execute(
+            "SELECT MAX(ts) AS t FROM alerts WHERE key=? AND suppressed=0", (key,)
+        ).fetchone()
+        return row["t"] if row and row["t"] is not None else None
+
+    def recent_alerts(self, limit: int = 30) -> list[sqlite3.Row]:
+        return self.conn.execute(
+            "SELECT * FROM alerts WHERE suppressed=0 ORDER BY ts DESC, id DESC LIMIT ?", (limit,)
+        ).fetchall()
+
     # ------------------------------------------------------------------ lectura
     def snapshot_at(self, venue: str, market: str, side: Side, ts: int) -> sqlite3.Row | None:
         """Último snapshot tomado en o antes de `ts`."""
@@ -276,4 +304,4 @@ class HistoryStore:
         return self.conn.execute(sql, tuple(params)).fetchall()
 
     def counts(self) -> dict[str, int]:
-        return {t: self.conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("snapshots", "cycles", "ad_states", "orders")}
+        return {t: self.conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("snapshots", "cycles", "ad_states", "orders", "alerts")}

@@ -21,8 +21,8 @@
 | 8 | Motor de decisión | `jmcambios.decision` | 5, 8 |
 | 9 | Ejecutor de acciones autorizadas | `jmcambios.executor` | 9 |
 | 10 | Sistema de riesgos | `jmcambios.risk` | 5, 9 |
-| 11 | Panel de control | `jmcambios.dashboard` | 6 |
-| 12 | Sistema de alertas | `jmcambios.alerts` | 6 |
+| 11 | Panel de control | `jmcambios.dashboard` (servidor stdlib de solo lectura + clave; lee `data/estado.json` y la base) | 6 |
+| 12 | Sistema de alertas | `jmcambios.alerts` (Telegram Bot API `sendMessage`, SMTP; reglas + enfriamiento por clave; tabla `alerts`) · asesor del monitor `jmcambios.monitor.advisor` | 6 |
 | 13 | Auditoría y registro | `jmcambios.audit` | 2+ |
 | — | Modelos de dominio (independientes del exchange) | `jmcambios.domain` | 2 |
 | — | Estadísticas de snapshot y filtros de relevancia | `jmcambios.analysis.market_stats`, `jmcambios.analysis.filters` | 2 |
