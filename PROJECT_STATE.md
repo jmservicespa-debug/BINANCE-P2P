@@ -11,7 +11,7 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 | Fase | Estado |
 |---|---|
 | 1. Viabilidad e integraciones | ✅ Diagnóstico · ✅ Verificación real ejecutada 2026-10-18 (16 OK / 2 error) · ⏳ Pendiente: confirmar cuenta de la key (0 anuncios/órdenes/métodos de pago) y resolver `getReferencePrice` |
-| 2. Monitor de anuncios | 🟡 Implementada (2026-10-18), 76 pruebas OK · ⏳ Pendiente: ejecución real en el PC del usuario ≥ 24 h sin errores no controlados |
+| 2. Monitor de anuncios | ✅ Cerrada 2026-10-19: ejecución real continua ~33 h (2026-10-17 23:37 → 2026-10-19 08:59 COT) sin errores ni caídas, snapshots guardados |
 | 3–10 | ⛔ No iniciadas |
 
 ## Decisiones tomadas
@@ -84,7 +84,9 @@ tests/                     pruebas unitarias (sin red)
 2b. ✅ Aclarado: la key verificada es de una cuenta de prueba.
 2c. ✅ Fase 2 aprobada por el usuario: **solo USDT/COP por ahora**; más mercados y exchanges en el futuro (arquitectura preparada).
 2e. ✅ Primera ejecución real del monitor (2026-10-17 23:37 COT): 194 anuncios ASK / 126 comerciantes; 188 BID / 144 comerciantes; mejor ASK 3.160, mejor BID 3.150, spread +10 COP (0,317 %). **Mapeo de lados confirmado** (spread positivo, sin avisos de lado distinto). Libro completo recorrido.
-2f. ⏳ Usuario: dejar `jmcambios-monitor --interval 60 --brief` corriendo ~24 h para cerrar la Fase 2.
+2f. ✅ Prueba de 24 h superada (~33 h).
+- Observaciones: cruces de precio reales (spread negativo, p. ej. −4,41 COP el domingo 08:26) → mejorar alerta para indicar si el cruce es ejecutable (método de pago común, montos compatibles, neto con/sin 4x1000). Lunes 08:59: 279 ASK / 340 BID; liquidez BID 12,8 M USDT con un comerciante concentrando 39 % (HHI 1815).
+3. ⏳ Siguiente: Fase 3 (historial, estadísticas 5/15/30/60 min, por hora y tipo de día) + mejora de la alerta de cruce. El usuario debe mantener el monitor corriendo para acumular días hábiles.
 - Observación para Fase 4: con spread de 10 COP (0,32 %) en la cima del libro, el GMF de 0,4 % (Bancolombia/Nequi) lo vuelve negativo; solo pagando desde Davivienda/Daviplata (exentas) queda margen. Métodos más frecuentes: BreBKeys, Nequi, BancolombiaSA.
 2d. ⏳ Antes de Fase 4: key de solo lectura de la cuenta oficial + `jmcambios-verify`.
 3. ✅ Costos: recibidos (solo 4x1000).
