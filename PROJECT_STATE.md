@@ -15,7 +15,7 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 | 3. Historial y liquidez | ✅ 2026-10-19: datos reales importados (1.958 ciclos, ~33 h) y consultas funcionando en el PC del usuario. Seguir acumulando días hábiles. |
 | 4. Competencia y rentabilidad | ✅ Implementada y ejecutada con la cuenta oficial 2026-10-19 (119 pruebas OK): `jmcambios-negocio sincronizar/costos/rentabilidad/competencia`; 4.597 órdenes, comisiones reales observadas integradas. Rentabilidad COP sin ciclos todavía (sin historial de comerciante COP) · Aprobada por el usuario 2026-10-19 |
 | 5. Presión y motor de precios | ✅ 2026-10-19 (137 pruebas OK): `jmcambios-negocio presion` / `recomendar` ejecutados con datos reales en el PC del usuario (modo RECOMMENDATION), línea de presión en el monitor · Aprobada por el usuario 2026-10-19 |
-| 6. Panel y alertas | 🟡 Implementada 2026-10-19 (154 pruebas OK; panel verificado en Chromium 390 px claro/oscuro sin errores): `jmcambios-monitor --panel`, `jmcambios-panel`, `jmcambios-alertas configurar/probar` · ⏳ Configurar Telegram y abrir el panel en el celular del usuario |
+| 6. Panel y alertas | 🟡 Implementada 2026-10-19 (154 pruebas OK; panel verificado en Chromium 390 px claro/oscuro sin errores): `jmcambios-monitor --panel`, `jmcambios-panel`, `jmcambios-alertas configurar/probar` · ✅ 2026-10-19 en el PC del usuario: Telegram conectado (@JMCambios_Alertas_bot), panel abierto en su Android por Wi-Fi como acceso directo con ícono JM (Chrome no permite 'Instalar' sin HTTPS) · ⏳ 1–2 días de uso para ajustar alertas antes de la Fase 7 |
 | 7–10 | ⛔ No iniciadas |
 
 ## Decisiones tomadas
@@ -131,6 +131,9 @@ tests/                     pruebas unitarias (sin red)
 - Alertas de anuncios propios solo en modo RECOMMENDATION/AUTOMATIC (en OBSERVATION no se sugieren precios).
 - Panel: `http.server` de la biblioteca estándar (sin dependencias nuevas), GET solamente (POST → 405), clave en `?t=` comparada con `hmac.compare_digest`, sin registrar URLs (llevan la clave). Acceso fuera de casa = VPS (pendiente).
 - Telegram: token y chat_id en `.env` (redactados en registros vía `Settings.secret_values()`); los errores de red no propagan la URL con el token.
+
+## Ideas registradas
+- Producto por suscripción (pedido del usuario 2026-10-19): multiusuario en servidor con IP fija, keys de terceros cifradas y solo lectura, configuración por usuario (bancos/4x1000, moneda, márgenes), registro y pagos, revisión legal (condiciones de Binance para terceros, Ley 1581 de 2012). Riesgo: suscriptores con la misma estrategia compiten entre sí. Primero validar con resultados reales del usuario. Mantener nada personal fijo en el código.
 
 ## Próximos pasos
 1. ✅ API key de solo lectura creada (IP whitelist) y guardada con `python -m jmcambios.tools.set_keys`.
