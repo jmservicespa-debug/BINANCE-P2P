@@ -159,6 +159,14 @@ tests/                     pruebas unitarias (sin red)
 - `JMC_INICIO_COMERCIANTE`: fecha desde la que se cuenta la rentabilidad COP (evita mezclar compras COP que salieron como remesas).
 - Siguientes ideas priorizadas: mapa de horas/días (verificados), TRM y premium P2P, vigilancia de competidores, precio por banco y monto, riesgo de contrapartes (triangulación).
 
+## Riesgo de contrapartes (acordado con el usuario 2026-10-19; construir cuando haya órdenes COP reales)
+- Decisión SIEMPRE manual: el sistema no bloquea; informa. Los remesadores pagan/reciben desde terceros y son parte importante del mercado.
+- Semáforo por orden: 🟢 mismo titular + perfil sólido sin negativos · 🟡 tercero pero cliente de confianza o perfil excelente (monto máximo configurable) · 🔴 cuenta nueva/pocas órdenes/negativos/primera vez + tercero/monto inusual.
+- Lista de clientes de confianza y lista negra mantenidas por el usuario; señalar cuando aparezcan en una orden.
+- Registro de órdenes con pago de terceros (quién, monto, fecha) como evidencia ante bancos/Binance.
+- Riesgos explicados al usuario: triangulación (congelamiento de cuenta bancaria), reglas de Binance exigen pagador = titular (apelaciones sin respaldo).
+- ⏳ Verificar con órdenes reales qué datos del cliente (taker) expone la API de detalle de orden: nº de órdenes, % finalización, negativos, antigüedad. No asumir. El nombre del pagador en el banco lo verifica el usuario en su app.
+
 ## Ideas registradas
 - Producto por suscripción (pedido del usuario 2026-10-19): multiusuario en servidor con IP fija, keys de terceros cifradas y solo lectura, configuración por usuario (bancos/4x1000, moneda, márgenes), registro y pagos, revisión legal (condiciones de Binance para terceros, Ley 1581 de 2012). Riesgo: suscriptores con la misma estrategia compiten entre sí. Primero validar con resultados reales del usuario. Mantener nada personal fijo en el código.
 
