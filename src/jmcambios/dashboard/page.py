@@ -84,8 +84,8 @@ input{font:inherit;font-size:14px;width:96px;min-height:36px;padding:0 10px;bord
 
 <div id="tab-mercado">
   <div class="grid">
-    <div class="card"><span class="label">Mejor precio para COMPRAR</span><span class="big" id="ask">—</span><span class="muted" style="color:var(--real)" id="askn"></span><span class="mono" id="askv"></span></div>
-    <div class="card"><span class="label">Mejor precio para VENDER</span><span class="big" id="bid">—</span><span class="muted" style="color:var(--real)" id="bidn"></span><span class="mono" id="bidv"></span></div>
+    <div class="card"><span class="label">Mejor precio para COMPRAR</span><span class="big" id="ask">—</span><span class="muted" style="color:var(--real)" id="askn"></span><span class="muted mono" id="askv"></span></div>
+    <div class="card"><span class="label">Mejor precio para VENDER</span><span class="big" id="bid">—</span><span class="muted" style="color:var(--real)" id="bidn"></span><span class="muted mono" id="bidv"></span></div>
     <div class="card span2"><div class="row"><div><span class="label">Diferencial entre mejores precios</span><div class="mid" id="spread">—</div></div><span class="chip calc">Cálculo</span></div><div id="cross"></div></div>
   </div>
   <section class="card">
