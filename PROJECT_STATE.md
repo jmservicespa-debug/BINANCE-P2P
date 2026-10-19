@@ -58,7 +58,9 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 - Anuncio COMPRA propio (fuera de línea): 3.150, 550 USDT, 200k–3M COP, Daviplata/Davivienda → puesto estimado #7 de 355, 10 COP detrás del mejor.
 - Anuncio VENTA propio (fuera de línea): 3.130, 1.100 USDT → 25 COP POR DEBAJO del mejor (regalaría 0,79 %). Se añadió aviso "regalando margen".
 - Comisión maker según `commissionRate` de los anuncios: 0,2 % por lado → ciclo ≈ 0,4 % + 4x1000 (0–0,4 %). Para 0,3 % neto hace falta ≈ 0,7–1,1 % entre compra y venta; con venta a 3.155, comprar máx. 3.133 (cuenta exenta) / 3.121 (con 4x1000).
-- Pendiente: confirmar la comisión real con `jmcambios-negocio costos`.
+- `costos` (300 órdenes, antes del arreglo de paginación): TODAS como TAKER. Comisión real cobrada (comisión ÷ cantidad): compras 0,047 %, ventas 0,162 % (el campo de tasa viene en 0). Ya se usan por defecto en el análisis de cruces (antes se suponía 0 %).
+- Con comisiones reales, el cruce de −4,41 COP visto el domingo NO era rentable. Hay que reimportar (`jmcambios-history importar`) para recalcular los cruces históricos.
+- Bug corregido: el historial agent entrega máx. 50 filas/página; la sincronización cortaba en la primera página (300 de ~4.700 órdenes). Ahora pagina por total con 50 filas.
 
 ## Verificación con la CUENTA OFICIAL (2026-10-19 14:41 UTC, key `NpSMV...1Pze`, solo lectura, IP 181.42.23.142)
 - 19 OK / 2 error (solo `getReferencePrice`). Categoría de anuncios: `profession` (comerciante). 4 anuncios propios, 30 métodos de pago.

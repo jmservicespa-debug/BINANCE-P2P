@@ -244,3 +244,19 @@ def test_business_cli_rentabilidad_and_costos(tmp_path, capsys, monkeypatch):
     out = capsys.readouterr().out
     assert "beneficio REALIZADO" in out and "rango según 4x1000" in out and "rotación" in out
     assert "TAKER" in out and "MAKER" in out
+
+
+def test_fetch_orders_when_binance_caps_page_size_at_50():
+    def handler(request: httpx.Request):
+        q = dict(httpx.QueryParams(request.url.query))
+        page, total = int(q["page"]), 120
+        start = (page - 1) * 50  # Binance ignora rows=100 y entrega 50
+        rows = [{"orderNumber": f"N{i}", "tradeType": "SELL", "asset": "USDT", "fiat": "VES", "amount": "1",
+                 "totalPrice": "40", "orderStatus": "COMPLETED", "createTime": int(T0.timestamp() * 1000),
+                 "advertisementRole": "TAKER"} for i in range(start, min(start + 50, total))]
+        return httpx.Response(200, json={"code": "000000", "success": True, "data": rows, "total": total})
+
+    s = Settings(_env_file=None, BINANCE_API_KEY="k" * 10, BINANCE_API_SECRET="s" * 10)
+    with BinanceP2PClient(s, transport=httpx.MockTransport(handler)) as client:
+        fetched = BinanceAccount(client, clock=lambda: T0 + timedelta(seconds=1)).fetch_orders(T0 - timedelta(days=10))
+    assert len(fetched.orders) == 120 and fetched.requests == 3

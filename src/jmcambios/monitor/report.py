@@ -76,7 +76,7 @@ def _cross_lines(cross: CrossReport | None) -> list[str]:
         lines.append(
             f"      neto ≈ {money(best.net_per_unit)} COP/USDT ({money(best.net_pct, 3)}%) · cantidad posible "
             f"{money(best.min_qty)}–{money(best.max_qty)} USDT · hasta ≈ {money(best.net_total_max, 0)} COP "
-            f"(comisión taker asumida 0%, por verificar; el anuncio puede desaparecer antes de completar)"
+            f"(incluye comisión taker observada ≈0,05% compra / 0,16% venta; el anuncio puede desaparecer antes de completar)"
         )
     else:
         reasons = ", ".join(f"{k} ({v})" for k, v in sorted(cross.rejected.items(), key=lambda kv: -kv[1])) or "sin pares"

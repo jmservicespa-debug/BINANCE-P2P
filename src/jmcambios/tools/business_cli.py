@@ -125,7 +125,7 @@ def cmd_costos(store: HistoryStore, args: argparse.Namespace, settings: Settings
             f"  {role:<7}{side:<6}{len(items):>9}{len(with_c):>14}{pct3(avg_rate):>12}{pct3(eff):>19}"
         )
     print("\nRol: MAKER = la orden entró por tu anuncio; TAKER = tomaste el anuncio de otro.")
-    print("Estas tasas reemplazan el supuesto de 'comisión taker 0 %' usado en el análisis de cruces.")
+    print("'Comisión/cantidad' es lo realmente cobrado (comisión ÷ cantidad); 'Tasa prom.' es la tasa que informa Binance.")
     return 0
 
 

@@ -4,8 +4,9 @@ Un cruce solo es aprovechable si YO puedo: pagarle al vendedor con un método qu
 tengo (al menor 4x1000 posible), recibir del comprador en un método que tengo, y
 mover una cantidad que encaje en los límites de ambos anuncios.
 
-La comisión que Binance cobra al tomador (taker) se toma como parámetro: no se
-asume conocida hasta verificarla con órdenes reales.
+La comisión de tomador (taker) es un parámetro por lado. Valores por defecto
+observados en las órdenes reales del usuario (2026-10-19): ~0,047 % al comprar y
+~0,162 % al vender, cobrada en USDT.
 """
 
 from __future__ import annotations
@@ -79,7 +80,8 @@ def analyze(
     bids: list[Ad],
     my_methods: dict[str, Decimal] | None = None,
     *,
-    taker_fee_rate: Decimal = Decimal("0"),
+    taker_fee_buy: Decimal = Decimal("0.00047"),
+    taker_fee_sell: Decimal = Decimal("0.00162"),
     max_pairs: int = 400,
 ) -> CrossReport:
     methods = my_methods if my_methods is not None else DEFAULT_MY_METHODS
@@ -117,7 +119,7 @@ def analyze(
                 continue
             gmf, pay = min(pay_options)
             gross = b.price - a.price
-            fees = a.price * gmf + (a.price + b.price) * taker_fee_rate
+            fees = a.price * gmf + a.price * taker_fee_buy + b.price * taker_fee_sell
             net = gross - fees
             opp = CrossOpportunity(a, b, pay, receive, gmf, lo, hi, gross, net)
             if net <= 0:

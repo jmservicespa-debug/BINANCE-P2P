@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import httpx
+import pytest
 
 from jmcambios.analysis.filters import AdFilter
 from jmcambios.config import Settings
@@ -161,7 +162,7 @@ def test_monitor_writes_history_and_renders_cross(tmp_path):
     def handler(request):
         body = json.loads(request.content)
         if body["tradeType"] == "BUY":  # anuncios de venta: uno barato que cruza
-            items = [search_item("A1", "3155.59", "500", methods=("DaviviendaSA",), trade_type="SELL")]
+            items = [search_item("A1", "3140", "500", methods=("DaviviendaSA",), trade_type="SELL")]
         else:
             items = [search_item("B1", "3160", "500", user="b1", methods=("Nequi",), trade_type="BUY")]
         return httpx.Response(200, json={"code": "000000", "success": True, "data": items, "total": 1})
@@ -173,7 +174,7 @@ def test_monitor_writes_history_and_renders_cross(tmp_path):
         assert store.counts() == {"snapshots": 2, "cycles": 1, "ad_states": 2, "orders": 0}
         row = store.query("SELECT crossed, executable, best_pay_method, best_net_per_unit FROM cycles")[0]
         assert row["crossed"] == 1 and row["executable"] == 1 and row["best_pay_method"] == "DaviviendaSA"
-        assert row["best_net_per_unit"] == 4.41
+        assert row["best_net_per_unit"] == pytest.approx(20 - 3140 * 0.00047 - 3160 * 0.00162)
 
     text = render(result, AdFilter())
     assert "CRUCE DE PRECIOS" in text and "Aprovechable" in text and "DaviviendaSA" in text

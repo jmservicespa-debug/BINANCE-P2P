@@ -19,7 +19,7 @@ from jmcambios.normalizer.binance_p2p import InvalidAd
 
 WINDOW = timedelta(days=30)
 MAX_LOOKBACK = timedelta(days=180)
-ROWS = 100
+ROWS = 50  # Binance devuelve máx. 50 por página (observado); pedir más desalinea la paginación
 
 
 @dataclass
@@ -48,6 +48,7 @@ class BinanceAccount:
         out = OrderFetch()
         seen: set[str] = set()
         for start_ms, end_ms in self._windows(since):
+            got = 0
             for page in range(1, self._max_pages + 1):
                 params = {"startTimestamp": start_ms, "endTimestamp": end_ms, "page": page, "rows": ROWS}
                 r = self._client.call(ep.ORDER_HISTORY, params)
@@ -55,6 +56,7 @@ class BinanceAccount:
                 if not r.ok:
                     raise MarketDataError(f"historial de órdenes: {r.outcome.value} {r.code or ''} {r.message or ''}".strip())
                 items = _items(r.data)
+                got += len(items)
                 if page == 1 and r.total is not None:
                     out.reported_totals.append(r.total)
                 for item in items:
@@ -69,7 +71,8 @@ class BinanceAccount:
                 if on_progress:
                     day = datetime.fromtimestamp(start_ms / 1000, UTC).date()
                     on_progress(f"ventana desde {day}: página {page}, {len(out.orders)} órdenes")
-                if len(items) < ROWS or (r.total is not None and page * ROWS >= r.total):
+                # Cortar solo cuando no llegan más filas o ya se tiene el total informado.
+                if not items or (r.total is not None and got >= r.total) or (r.total is None and len(items) < ROWS):
                     break
         return out
 

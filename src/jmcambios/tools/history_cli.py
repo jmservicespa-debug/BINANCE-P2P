@@ -131,7 +131,7 @@ def cmd_cruces(store: HistoryStore, args: argparse.Namespace, settings: Settings
             f"  {_when(e.start_ts):<18}{e.minutes:>8.0f} m{e.cycles:>8}{e.executable_cycles:>8}"
             f"{_num(e.best_net_per_unit):>15}{_num(e.best_net_pct, 3):>9}{_num(e.best_max_qty, 0):>12}"
         )
-    print("\nNeto = después del 4x1000 del método con que pagarías; comisión taker asumida 0% (por verificar).")
+    print("\nNeto = después del 4x1000 del método con que pagarías; comisión taker observada ≈0,05% compra / 0,16% venta.")
     print("Un cruce visto en un ciclo pudo desaparecer en segundos: duración mínima real = intervalo del monitor.")
     return 0
 
