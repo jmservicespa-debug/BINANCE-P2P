@@ -88,14 +88,16 @@ def _to_check(name: str, result: ApiResult, requires_auth: bool, schema_of: Call
 def reference_price_variants(asset: str, fiat: str, trade_type: str) -> list[dict[str, Any]]:
     """Variantes del cuerpo de getReferencePrice.
 
-    La forma documentada devolvió -31002 "illegal parameter" en la primera
-    verificación real (2026-10-18); se prueban variantes para identificar la válida.
+    La forma documentada devolvió -31002 "illegal parameter" (2026-10-18/19) y
+    tradeType "0"/"1" devolvió -1102; se prueban variantes para identificar la válida.
     """
-    numeric = "0" if trade_type == "BUY" else "1"
+    numeric = 0 if trade_type == "BUY" else 1
     return [
         {"assets": [asset], "fiatCurrency": fiat, "tradeType": trade_type},
         {"assets": [asset], "fiatCurrency": fiat, "tradeType": trade_type, "payType": "BANK"},
+        {"assets": [asset], "fiatCurrency": fiat, "tradeType": str(numeric)},
         {"assets": [asset], "fiatCurrency": fiat, "tradeType": numeric},
+        {"fiatCurrency": fiat, "tradeType": trade_type},
         {"asset": asset, "fiatCurrency": fiat, "tradeType": trade_type},
         {"assets": [asset], "fiat": fiat, "tradeType": trade_type},
     ]

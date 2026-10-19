@@ -103,6 +103,7 @@ def test_network_error_is_reported_not_raised():
         (200, {"code": "000000", "success": True}, Outcome.OK),
         (400, {"code": -2015, "msg": "Invalid API-key, IP, or permissions for action."}, Outcome.AUTH_ERROR),
         (400, {"code": -1022, "msg": "Signature invalid"}, Outcome.AUTH_ERROR),
+        (400, {"code": -1102, "msg": "Mandatory parameter"}, Outcome.API_ERROR),
         (200, {"code": "000002", "message": "Permission denied", "success": False}, Outcome.PERMISSION_DENIED),
         (451, None, Outcome.GEO_OR_IP_BLOCKED),
         (403, None, Outcome.GEO_OR_IP_BLOCKED),

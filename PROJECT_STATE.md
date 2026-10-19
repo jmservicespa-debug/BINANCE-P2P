@@ -47,6 +47,14 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 - **Triangulación BRL / COP / CLP** (y otros fiat): cálculo de rutas USDT entre monedas con todos los costos y tipos de cambio; requiere cuentas/medios de pago locales y revisión normativa por país.
 - Diseño: el dominio ya es independiente del exchange y de la moneda (`venue`, `asset`, `fiat` en cada `Ad`/`MarketSnapshot`).
 
+## Verificación con la CUENTA OFICIAL (2026-10-19 14:41 UTC, key `NpSMV...1Pze`, solo lectura, IP 181.42.23.142)
+- 19 OK / 2 error (solo `getReferencePrice`). Categoría de anuncios: `profession` (comerciante). 4 anuncios propios, 30 métodos de pago.
+- Órdenes: ~780 por ventana de 30 días, estable 6 meses (716–822); 23.098 órdenes históricas. Compras 30 d: 29 (COP 27, EUR 2). Ventas: mayoría VES (47/50 en la muestra).
+- Historial trae `advertisementRole` (MAKER/TAKER), `takerCommission`, `takerCommissionRate`, `takerAmount`, `payMethodName`, `unitPrice`.
+- Endpoint clásico `/sapi/v1/c2c/orderMatch/listUserOrderHistory`: máx. 50 filas/página y peso UID alto (900–1800). Usar el agent (`/sapi/v1/c2c/agent/...`, peso IP 1).
+- `getReferencePrice`: -31002 con el cuerpo documentado; tradeType "0" → -1102 (se clasificaba mal como AUTH; corregido). Se añadieron variantes.
+- La IP pública del usuario cambia tras cortes de internet → la key deja de funcionar hasta actualizar la IP en Binance. Se añadió aviso en monitor y verificador.
+
 ## Hallazgos con datos reales (2026-10-17 23:37 → 2026-10-19 ~09:00, mayormente fin de semana)
 - 1.958 ciclos; 219 con cruce de precios (11,2 %); 35 episodios; 18 aprovechables con los métodos del usuario.
 - Los cruces duran 0–9 min (casi todos 1–3 ciclos). Netos típicos 0,3–6 COP/USDT (0,01–0,2 %) por 57–580 USDT.

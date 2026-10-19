@@ -61,7 +61,8 @@ class ApiResult:
         return self.outcome is Outcome.OK
 
 
-_AUTH_CODES = {"-2014", "-2015", "-1021", "-1022", "-1102"}
+# -1102 ("parámetro obligatorio ausente o mal formado") es un error de la petición, no de credenciales.
+_AUTH_CODES = {"-2014", "-2015", "-1021", "-1022"}
 
 
 def classify(status: int, payload: Any) -> tuple[Outcome, str | None, str | None]:
