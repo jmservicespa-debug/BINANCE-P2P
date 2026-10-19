@@ -150,6 +150,16 @@ def test_plan_crossed_market_protects_margin():
         assert sc.margin_worst < sc.margin
 
 
+def test_scenarios_are_monotonic():
+    # Libro de compra muy plano arriba: sin la regla, el conservador compraría más caro que el equilibrado.
+    asks = [ask("a0", "3149")] + [ask(f"a{i}", str(3155 + i)) for i in range(1, 10)]
+    bids = [bid(f"b{i}", p) for i, p in enumerate(["3160", "3150", "3140", "3136", "3136", "3136", "3136", "3135.46"])]
+    cons, bal, agg = plan(asks, bids, buy_profile=PROFILE, sell_profile=PROFILE, costs=COSTS).scenarios
+    assert cons.buy.price <= bal.buy.price <= agg.buy.price
+    assert cons.sell.price >= bal.sell.price >= agg.sell.price
+    assert cons.margin >= bal.margin >= agg.margin >= COSTS.min_margin
+
+
 def _pressure(score, confidence):
     return PressureReport(score=score, confidence=confidence, label="")
 

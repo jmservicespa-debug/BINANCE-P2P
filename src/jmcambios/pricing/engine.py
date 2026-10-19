@@ -163,20 +163,26 @@ def plan(
             "mercado cruzado: el mejor vendedor está más barato que el mejor comprador; "
             "un anuncio de compra arriba pagaría más que tomar al mejor vendedor"
         )
+    raw = []
     for name, target, extra in SCENARIOS:
         target_margin = costs.min_margin + extra
         required = (1 + costs.maker_sell) * (1 + costs.gmf) / ((1 - target_margin) * (1 - costs.maker_buy))
         b0 = competitive_price(Side.BID, bids, buy_profile, target)
         s0 = competitive_price(Side.ASK, asks, sell_profile, target)
         b, s = b0, s0
-        adjusted = False
         if s / b < required:
             k = required * b / s  # cuánto hay que abrir la diferencia (>1)
             b = (b0 / k ** w).quantize(TICK, rounding=ROUND_FLOOR)
             s = (s0 * k ** (1 - w)).quantize(TICK, rounding=ROUND_CEILING)
-            adjusted = True
-        buy = _place(Side.BID, bids, buy_profile, b, b0, OrderSide.BUY, adjusted and b != b0)
-        sell = _place(Side.ASK, asks, sell_profile, s, s0, OrderSide.SELL, adjusted and s != s0)
+        raw.append([name, target, target_margin, b0, s0, b, s])
+    # Un escenario más prudente nunca compra más caro ni vende más barato que el siguiente
+    # (solo puede ganar margen al aplicarlo).
+    for i in range(len(raw) - 2, -1, -1):
+        raw[i][5] = min(raw[i][5], raw[i + 1][5])
+        raw[i][6] = max(raw[i][6], raw[i + 1][6])
+    for name, target, target_margin, b0, s0, b, s in raw:
+        buy = _place(Side.BID, bids, buy_profile, b, b0, OrderSide.BUY, b != b0)
+        sell = _place(Side.ASK, asks, sell_profile, s, s0, OrderSide.SELL, s != s0)
         m = cycle_margin(b, s, costs)
         out.scenarios.append(Scenario(
             name=name, target_rank=target, target_margin=target_margin, buy=buy, sell=sell, margin=m,
