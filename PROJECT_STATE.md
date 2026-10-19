@@ -48,6 +48,11 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 - **Triangulación BRL / COP / CLP** (y otros fiat): cálculo de rutas USDT entre monedas con todos los costos y tipos de cambio; requiere cuentas/medios de pago locales y revisión normativa por país.
 - Diseño: el dominio ya es independiente del exchange y de la moneda (`venue`, `asset`, `fiat` en cada `Ad`/`MarketSnapshot`).
 
+## Contexto del usuario (aclarado 2026-10-19)
+- Hoy usa la cuenta oficial casi solo para **vender en VES** (salida de remesas); compra USDT en COP solo para eso. **No tiene historial como comerciante en COP**.
+- Objetivo del proyecto: **empezar a operar como comerciante USDT/COP** (anuncios propios de compra y venta), reduciendo la dependencia de las remesas.
+- Consecuencia: la rentabilidad de la Fase 4 no tiene ciclos COP que medir todavía. Se valida con: comisiones reales (`costos`, rol MAKER en VES como referencia), `competencia` (precios límite sin anuncios COP) y, después, con simulación (Fases 7–8) usando la misma calculadora. Opción a decidir por el usuario: arrancar en pequeño en Modo Recomendación para generar datos reales.
+
 ## Verificación con la CUENTA OFICIAL (2026-10-19 14:41 UTC, key `NpSMV...1Pze`, solo lectura, IP 181.42.23.142)
 - 19 OK / 2 error (solo `getReferencePrice`). Categoría de anuncios: `profession` (comerciante). 4 anuncios propios, 30 métodos de pago.
 - Órdenes: ~780 por ventana de 30 días, estable 6 meses (716–822); 23.098 órdenes históricas. Compras 30 d: 29 (COP 27, EUR 2). Ventas: mayoría VES (47/50 en la muestra).
