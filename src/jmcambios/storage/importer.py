@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -68,10 +69,18 @@ class ImportResult:
     bad_lines: int = 0
 
 
-def import_directory(store: HistoryStore, directory: Path, my_methods: dict[str, Decimal] | None = None) -> ImportResult:
+def import_directory(
+    store: HistoryStore,
+    directory: Path,
+    my_methods: dict[str, Decimal] | None = None,
+    progress: Callable[[str], None] | None = None,
+) -> ImportResult:
     result = ImportResult()
-    for path in sorted(directory.rglob("*.jsonl.gz")):
+    paths = sorted(directory.rglob("*.jsonl.gz"))
+    for n, path in enumerate(paths, 1):
         result.files += 1
+        if progress:
+            progress(f"[{n}/{len(paths)}] {path.name} …")
         try:
             records = read_records(path)
         except (OSError, EOFError, ValueError):

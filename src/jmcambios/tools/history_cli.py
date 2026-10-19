@@ -42,7 +42,10 @@ def cmd_importar(store: HistoryStore, args: argparse.Namespace, settings: Settin
     if not directory.exists():
         print(f"No existe {directory.resolve()}: ejecuta primero jmcambios-monitor.")
         return 1
-    r = import_directory(store, directory, parse_my_methods(settings.my_pay_methods))
+    print("Importando… puede tardar unos minutos (no cierres la ventana).", flush=True)
+    r = import_directory(
+        store, directory, parse_my_methods(settings.my_pay_methods), progress=lambda m: print("  " + m, flush=True)
+    )
     print(f"Archivos: {r.files} · registros leídos: {r.records} · nuevos: {r.inserted} · ya existían: {r.skipped}")
     print(f"Ciclos con análisis de cruce: {r.cycles} · líneas dañadas ignoradas: {r.bad_lines}")
     return 0
