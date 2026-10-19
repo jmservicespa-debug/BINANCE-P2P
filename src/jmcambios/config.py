@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     # Margen neto mínimo del ciclo compra→venta, en % (después de comisiones y 4x1000).
     min_margin_pct: Decimal = Field(default=Decimal("0.3"), alias="JMC_MARGEN_MIN", ge=0, lt=20)
 
+    # Competencia = solo comerciantes verificados (los no verificados no compiten por los mismos clientes).
+    merchants_only: bool = Field(default=True, alias="JMC_SOLO_VERIFICADOS")
+
     # Alertas (Fase 6). Solo envían avisos: no reciben órdenes ni comandos.
     telegram_bot_token: SecretStr | None = Field(default=None, alias="JMC_TELEGRAM_BOT_TOKEN")
     telegram_chat_id: str | None = Field(default=None, alias="JMC_TELEGRAM_CHAT_ID")

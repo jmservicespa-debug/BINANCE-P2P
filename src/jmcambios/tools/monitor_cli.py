@@ -162,6 +162,7 @@ def main(argv: list[str] | None = None) -> int:
                 min_margin=min_margin, mode=mode, fetch_my_ads=account.fetch_my_ads if account else None,
                 ads_every=args.anuncios_cada or 1, alerts=alerts, state_path=Path(args.estado),
                 cross_min_total=_decimal(args.cruce_min, "--cruce-min") or Decimal("0"),
+                merchants_only=settings.merchants_only,
             )
         if args.panel and store is not None:
             server = _start_panel(settings, args)

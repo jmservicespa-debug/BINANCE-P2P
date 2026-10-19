@@ -89,6 +89,7 @@ class PricePlan:
     scenarios: list[Scenario] = field(default_factory=list)
     buy_concession: Decimal = Decimal("0.5")  # parte del ajuste que se carga a la compra
     priority: str = "equilibrado"  # "comprar", "vender" o "equilibrado"
+    merchants_only: bool = False  # puestos y precios calculados solo contra comerciantes verificados
     warnings: list[str] = field(default_factory=list)
 
 
@@ -175,15 +176,25 @@ def plan(
     costs: Costs,
     pressure: PressureReport | None = None,
     exclude_users: set[str] | None = None,
+    merchants_only: bool = False,
 ) -> PricePlan:
     """`asks` = anuncios de venta (compiten con mi VENTA); `bids` = de compra (compiten con mi COMPRA)."""
     ex = exclude_users or set()
     asks = [a for a in asks if a.advertiser.user_id not in ex]
     bids = [a for a in bids if a.advertiser.user_id not in ex]
+    only_merchants = False
+    if merchants_only:
+        m_asks = [a for a in asks if a.advertiser.is_merchant]
+        m_bids = [a for a in bids if a.advertiser.is_merchant]
+        if m_asks and m_bids:
+            asks, bids, only_merchants = m_asks, m_bids, True
     out = PricePlan(
         best_ask=min((a.price for a in asks), default=None),
         best_bid=max((a.price for a in bids), default=None),
+        merchants_only=only_merchants,
     )
+    if merchants_only and not only_merchants and asks and bids:
+        out.warnings.append("no hay comerciantes verificados en uno de los lados: se usaron todos los anuncios")
     if not asks or not bids:
         out.warnings.append("falta uno de los dos lados del libro: no se pueden calcular escenarios")
         return out

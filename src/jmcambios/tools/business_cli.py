@@ -255,13 +255,16 @@ def cmd_competencia(store: HistoryStore, args: argparse.Namespace, settings: Set
     best_ask = min((a.price for a in books[Side.ASK].ads), default=None)
     best_bid = max((a.price for a in books[Side.BID].ads), default=None)
     print(f"Competencia {settings.asset}/{settings.fiat} · {datetime.now(UTC).astimezone(BOGOTA):%Y-%m-%d %H:%M} (hora Colombia)")
+    print("  Competencia: " + ("solo comerciantes verificados (JMC_SOLO_VERIFICADOS=true)" if settings.merchants_only
+                                  else "todos los anunciantes (JMC_SOLO_VERIFICADOS=false)"))
     print(f"  Mercado [Binance]: mejor venta {money(best_ask)} · mejor compra {money(best_bid)}")
     if not my_ads:
         print(f"\n  No tienes anuncios en {settings.fiat}. Puedes crear uno con los precios límite de abajo.")
     my_ids = {a.ad_id for a in my_ads}
     my_users = {ad.advertiser.user_id for snap in books.values() for ad in snap.ads if ad.ad_id in my_ids}
     for ad in my_ads:
-        _print_position(position(ad, books[Side.BID if ad.side is OrderSide.BUY else Side.ASK].ads, my_users))
+        _print_position(position(ad, books[Side.BID if ad.side is OrderSide.BUY else Side.ASK].ads, my_users,
+                                 settings.merchants_only))
 
     # Precios límite [cálculo]: comisión maker OBSERVADA por lado; si no hay, la tasa de tus anuncios.
     fee_src = _maker_fees(store, my_ads, settings)
@@ -393,10 +396,12 @@ def cmd_recomendar(store: HistoryStore, args: argparse.Namespace, settings: Sett
     pp = pricing_plan(
         books[Side.ASK].ads, books[Side.BID].ads,
         buy_profile=_profile(my_buy, cfg.gmf_by_account), sell_profile=_profile(my_sell, cfg.gmf_by_account),
-        costs=costs, pressure=press, exclude_users=my_users,
+        costs=costs, pressure=press, exclude_users=my_users, merchants_only=settings.merchants_only,
     )
 
     print(f"Escenarios de precio {market} · {now.astimezone(BOGOTA):%Y-%m-%d %H:%M} (hora Colombia)")
+    print("  Competencia: " + ("solo comerciantes verificados (JMC_SOLO_VERIFICADOS=true)" if settings.merchants_only
+                                  else "todos los anunciantes (JMC_SOLO_VERIFICADOS=false)"))
     print(f"  Mercado [Binance]: mejor venta {money(pp.best_ask)} · mejor compra {money(pp.best_bid)}")
     print(f"  Costos [cálculo]: comisión maker compra {pct3(costs.maker_buy)} · venta {pct3(costs.maker_sell)}"
           f" · 4x1000 {pct3(gmf_low)} (cuenta exenta) / {pct3(gmf_high)} · margen mínimo {money(min_margin * 100, 2)}%")

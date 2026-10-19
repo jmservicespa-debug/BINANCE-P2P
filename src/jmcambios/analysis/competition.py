@@ -76,10 +76,13 @@ def _competitor(mine: MyAd, a: Ad) -> Competitor:
     )
 
 
-def position(mine: MyAd, market_ads: list[Ad], my_user_ids: set[str] | None = None) -> AdPosition:
+def position(mine: MyAd, market_ads: list[Ad], my_user_ids: set[str] | None = None,
+             merchants_only: bool = False) -> AdPosition:
     side = market_side_for(mine)
     my_user_ids = my_user_ids or set()
     others = [a for a in market_ads if a.ad_id != mine.ad_id and a.advertiser.user_id not in my_user_ids]
+    if merchants_only:
+        others = [a for a in others if a.advertiser.is_merchant] or others
     better = [a for a in others if _better(side, a.price, mine.price)]
     tied = [a for a in others if a.price == mine.price]
     prices = [a.price for a in others]

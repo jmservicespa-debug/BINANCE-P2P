@@ -283,3 +283,30 @@ def test_old_database_gets_top5_column(tmp_path):
         assert [(r["best_price"], r["top5_price"]) for r in rows] == [(3150.0, None)]
         record(s, 0, [ask("A1", "3170")], [bid("B1", "3160")])
         assert s.query("SELECT top5_price FROM snapshots WHERE side='ASK' AND venue='binance_p2p'")[0][0] == 3170.0
+
+
+def test_plan_merchants_only():
+    from tests.fixtures import make_ad as mk
+
+    asks = [mk("u1", "3150", "500", side=Side.ASK, user="x1", user_type="user", methods=("DaviviendaSA",), lo="100000", hi="5000000")]
+    asks += [ask(f"a{i}", str(3200 + i)) for i in range(5)]
+    bids = [mk("u2", "3190", "500", side=Side.BID, user="x2", user_type="user", methods=("DaviviendaSA",), lo="100000", hi="5000000")]
+    bids += [bid(f"b{i}", str(3150 - i)) for i in range(5)]
+    allp = plan(asks, bids, buy_profile=PROFILE, sell_profile=PROFILE, costs=COSTS)
+    mer = plan(asks, bids, buy_profile=PROFILE, sell_profile=PROFILE, costs=COSTS, merchants_only=True)
+    assert allp.best_ask == D("3150") and mer.best_ask == D("3200") and mer.merchants_only
+    assert mer.scenarios[-1].buy.price == D("3150.01") and mer.scenarios[-1].buy.rank == 1
+    only_users = plan(asks[:1], bids[:1], buy_profile=PROFILE, sell_profile=PROFILE, costs=COSTS, merchants_only=True)
+    assert not only_users.merchants_only and any("verificados" in w for w in only_users.warnings)
+
+
+def test_position_merchants_only():
+    from jmcambios.analysis.competition import position
+    from tests.fixtures import make_ad as mk
+
+    mine = MyAd(venue=VENUE, ad_id="mio", side=OrderSide.BUY, asset="USDT", fiat="COP", price=D("3150"), price_type=1,
+                floating_ratio=None, available_qty=D("100"), min_fiat=D("200000"), max_fiat=D("3000000"),
+                payment_methods=("DaviviendaSA",), status=1)
+    book = [mk("u", "3170", "10", side=Side.BID, user="x", user_type="user"), bid("b1", "3155"), bid("b2", "3140")]
+    assert position(mine, book).estimated_rank == 3
+    assert position(mine, book, merchants_only=True).estimated_rank == 2

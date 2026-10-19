@@ -139,6 +139,11 @@ tests/                     pruebas unitarias (sin red)
 - Configurable con `JMC_MARGEN_MIN` (en %, por defecto 0,3; el usuario usará 1).
 - Panel: selector de ganancia (0,5/1/1,5/2 % u otro) → `/api/escenarios?margen=X` recalcula con el último libro de `ad_states`, costos/perfiles/presión de `estado.json`. Solo vista (se recuerda en el navegador); no cambia alertas.
 
+## Competencia = solo comerciantes verificados (2026-10-19, pedido del usuario)
+- Puestos, escenarios y alertas de anuncios se calculan solo contra `userType == merchant` (`JMC_SOLO_VERIFICADOS=true`, por defecto). Si un lado no tiene verificados, se usan todos con aviso.
+- Las estadísticas generales del mercado y la presión siguen usando todo el libro (señal de mercado completa).
+- ⏳ Confirmar con datos reales que Binance marca a los verificados como `merchant` (el campo viene de `advertiser.userType`).
+
 ## Ideas registradas
 - Producto por suscripción (pedido del usuario 2026-10-19): multiusuario en servidor con IP fija, keys de terceros cifradas y solo lectura, configuración por usuario (bancos/4x1000, moneda, márgenes), registro y pagos, revisión legal (condiciones de Binance para terceros, Ley 1581 de 2012). Riesgo: suscriptores con la misma estrategia compiten entre sí. Primero validar con resultados reales del usuario. Mantener nada personal fijo en el código.
 

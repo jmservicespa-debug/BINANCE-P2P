@@ -158,7 +158,8 @@ class PanelData:
         with self._store() as st:
             asks, bids = self._book(st, Side.ASK), self._book(st, Side.BID)
         pp = plan(asks, bids, buy_profile=profiles["buy"], sell_profile=profiles["sell"], costs=costs,
-                  pressure=pressure, exclude_users=set(state.get("my_users") or []))
+                  pressure=pressure, exclude_users=set(state.get("my_users") or []),
+                  merchants_only=bool(state.get("merchants_only", True)))
         f = lambda v: None if v is None else float(v)  # noqa: E731
         return {
             "available": True, "min_margin": float(margin_pct) / 100, "priority": pp.priority, "warnings": pp.warnings,

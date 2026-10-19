@@ -185,7 +185,8 @@ function renderEstado(s) {
 
 function renderPlan(pl) {
   const PRIO = {comprar: 'Presión alcista: prioriza COMPRAR', vender: 'Presión bajista: prioriza VENDER', equilibrado: 'Sin señal clara: margen repartido'};
-  $('prio').innerHTML = pl ? `<span class="muted">${PRIO[pl.priority] || ''}</span>` : '';
+  const who = (lastState?.merchants_only ?? true) ? 'Competencia: solo comerciantes verificados' : 'Competencia: todos los anunciantes';
+  $('prio').innerHTML = pl ? `<span class="muted">${PRIO[pl.priority] || ''}<br>${who}</span>` : '';
   $('scen').innerHTML = (pl?.scenarios || []).map(sc => `
     <section class="card sc ${sc.name === 'equilibrado' ? 'pick' : ''}">
       <div class="row"><h2>${NAMES[sc.name]}</h2><span class="muted">${HINT[sc.name]}</span></div>

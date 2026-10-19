@@ -56,7 +56,9 @@ class Advisor:
         alerts: AlertManager | None = None,
         state_path: Path | None = None,
         cross_min_total: Decimal = rules.CROSS_MIN_TOTAL,
+        merchants_only: bool = True,
     ) -> None:
+        self._merchants_only = merchants_only
         self._cross_min = cross_min_total
         self._orders = orders
         self._fiat = fiat
@@ -101,7 +103,7 @@ class Advisor:
                 snaps[Side.ASK].ads, snaps[Side.BID].ads,
                 buy_profile=profile_for(buy_ad, self._gmf, DEFAULT_LIMITS),
                 sell_profile=profile_for(sell_ad, self._gmf, DEFAULT_LIMITS),
-                costs=self.costs, pressure=result.pressure, exclude_users=my_users,
+                costs=self.costs, pressure=result.pressure, exclude_users=my_users, merchants_only=self._merchants_only,
             )
             self._profiles = {
                 "buy": profile_for(buy_ad, self._gmf, DEFAULT_LIMITS),
@@ -109,7 +111,8 @@ class Advisor:
             }
             self._my_users = my_users
             out.positions = [
-                position(a, snaps[Side.BID if a.side is OrderSide.BUY else Side.ASK].ads, my_users) for a in self.my_ads
+                position(a, snaps[Side.BID if a.side is OrderSide.BUY else Side.ASK].ads, my_users, self._merchants_only)
+                for a in self.my_ads
             ]
 
         failing = bool(result.errors)
@@ -196,6 +199,7 @@ class Advisor:
             "profiles": {k: {"methods": list(p.methods), "min_fiat": _f(p.min_fiat), "max_fiat": _f(p.max_fiat)}
                          for k, p in self._profiles.items()},
             "my_users": sorted(self._my_users),
+            "merchants_only": self._merchants_only,
             "costs": {"maker_buy": _f(self.costs.maker_buy), "maker_sell": _f(self.costs.maker_sell),
                       "gmf": _f(self.costs.gmf), "gmf_worst": _f(self.costs.gmf_worst), "min_margin": _f(self.costs.min_margin)},
             "my_ads": my_ads, "errors": result.errors, "alerts": result.alerts + out.notes,
