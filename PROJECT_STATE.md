@@ -12,7 +12,7 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 |---|---|
 | 1. Viabilidad e integraciones | ✅ Diagnóstico · ✅ Verificación real ejecutada 2026-10-18 (16 OK / 2 error) · ⏳ Pendiente: confirmar cuenta de la key (0 anuncios/órdenes/métodos de pago) y resolver `getReferencePrice` |
 | 2. Monitor de anuncios | ✅ Cerrada 2026-10-19: ejecución real continua ~33 h (2026-10-17 23:37 → 2026-10-19 08:59 COT) sin errores ni caídas, snapshots guardados |
-| 3. Historial y liquidez | 🟡 Implementada 2026-10-19 (97 pruebas OK): SQLite `data/history.db`, importador, `jmcambios-history` (estado/cambios/perfil/cruces), análisis de cruces en el monitor · ⏳ Pendiente: usuario importa datos reales y revisa resultados |
+| 3. Historial y liquidez | ✅ 2026-10-19: datos reales importados (1.958 ciclos, ~33 h) y consultas funcionando en el PC del usuario. Seguir acumulando días hábiles. |
 | 4–10 | ⛔ No iniciadas |
 
 ## Decisiones tomadas
@@ -46,6 +46,13 @@ Rama de desarrollo: `claude/binance-p2p-trading-agent-madi2s`.
 - Más mercados/países y **alertas de arbitraje entre exchanges** (comprar barato en uno, vender en otro), con costo neto completo: comisiones, retiro/red de USDT, tiempo de transferencia, capital repartido.
 - **Triangulación BRL / COP / CLP** (y otros fiat): cálculo de rutas USDT entre monedas con todos los costos y tipos de cambio; requiere cuentas/medios de pago locales y revisión normativa por país.
 - Diseño: el dominio ya es independiente del exchange y de la moneda (`venue`, `asset`, `fiat` en cada `Ad`/`MarketSnapshot`).
+
+## Hallazgos con datos reales (2026-10-17 23:37 → 2026-10-19 ~09:00, mayormente fin de semana)
+- 1.958 ciclos; 219 con cruce de precios (11,2 %); 35 episodios; 18 aprovechables con los métodos del usuario.
+- Los cruces duran 0–9 min (casi todos 1–3 ciclos). Netos típicos 0,3–6 COP/USDT (0,01–0,2 %) por 57–580 USDT.
+- Excepciones: 76,35 COP/USDT (2,4 %, 166 USDT, 1 ciclo — sospechoso: posible error/anuncio con condiciones ocultas o trampa), 19,53 (0,63 %, 953 USDT, 4 min, dom 21:18), 22,48 (0,72 %, 546 USDT, 8 min, lun 07:55).
+- Suma optimista de lo aprovechable visible ≈ 50.000 COP en ~33 h → los cruces son complemento, no la estrategia principal (meta ≈ 127.000 COP/día). La estrategia base debe ser con anuncios propios (maker).
+- Perfil lunes: 07:00 dif. prom. 6,18 (13 % cruce); 08:00 2,07 (29 % cruce, 3 % aprovechable).
 
 ## Entorno del usuario
 - PC Windows, Python 3.12.10, Git 2.55, proyecto en `C:\Users\Jamer\Documents\BINANCE-P2P`, venv `.venv`.
@@ -87,7 +94,7 @@ tests/                     pruebas unitarias (sin red)
 2e. ✅ Primera ejecución real del monitor (2026-10-17 23:37 COT): 194 anuncios ASK / 126 comerciantes; 188 BID / 144 comerciantes; mejor ASK 3.160, mejor BID 3.150, spread +10 COP (0,317 %). **Mapeo de lados confirmado** (spread positivo, sin avisos de lado distinto). Libro completo recorrido.
 2f. ✅ Prueba de 24 h superada (~33 h).
 - Observaciones: cruces de precio reales (spread negativo, p. ej. −4,41 COP el domingo 08:26) → mejorar alerta para indicar si el cruce es ejecutable (método de pago común, montos compatibles, neto con/sin 4x1000). Lunes 08:59: 279 ASK / 340 BID; liquidez BID 12,8 M USDT con un comerciante concentrando 39 % (HHI 1815).
-3. 🟡 En curso: Fase 3 (historial, estadísticas 5/15/30/60 min, por hora y tipo de día) + mejora de la alerta de cruce. El usuario debe mantener el monitor corriendo para acumular días hábiles.
+3. ✅ Fase 3 entregada; siguiente: Fase 4 (requiere API key de solo lectura de la CUENTA OFICIAL para órdenes y comisiones reales). Antes era: Fase 3 (historial, estadísticas 5/15/30/60 min, por hora y tipo de día) + mejora de la alerta de cruce. El usuario debe mantener el monitor corriendo para acumular días hábiles.
 - Observación para Fase 4: con spread de 10 COP (0,32 %) en la cima del libro, el GMF de 0,4 % (Bancolombia/Nequi) lo vuelve negativo; solo pagando desde Davivienda/Daviplata (exentas) queda margen. Métodos más frecuentes: BreBKeys, Nequi, BancolombiaSA.
 2d. ⏳ Antes de Fase 4: key de solo lectura de la cuenta oficial + `jmcambios-verify`.
 3. ✅ Costos: recibidos (solo 4x1000).
