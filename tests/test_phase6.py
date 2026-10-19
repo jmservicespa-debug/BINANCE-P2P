@@ -291,6 +291,23 @@ def test_panel_pages_and_api(running_panel):
     assert e.value.code == 405
 
 
+def test_despike_and_downsample(tmp_path):
+    vals = [3150.0, 3151.0, 3150.5, 2800.0, 3151.0, 3150.0, None, 3152.0]
+    clean = panel.despike(vals)
+    assert clean[3] == pytest.approx(3150.25) and clean[:3] == vals[:3] and clean[6] is None
+    # Un cambio sostenido (no aislado) se conserva.
+    step = [3150.0] * 5 + [3170.0] * 5
+    assert panel.despike(step) == step
+    db = tmp_path / "h.db"
+    with HistoryStore(db) as st:
+        for i in range(1000):
+            st.record_cycle("binance_p2p", "USDT/COP", 1000 + i * 60, None, D("3170"), D("3160"), None)
+    data = panel.PanelData(db, tmp_path / "e.json", venue="binance_p2p", market="USDT/COP", fiat="COP", asset="USDT",
+                           cost_config=panel.cost_config(METHODS))
+    pts = data.serie(72, 1000 + 1000 * 60)["points"]
+    assert len(pts) <= panel.MAX_POINTS and pts[0][1:] == [3170.0, 3160.0]
+
+
 def test_panel_without_state(tmp_path):
     data = panel.PanelData(tmp_path / "h.db", tmp_path / "nada.json", venue="v", market="m", fiat="COP", asset="USDT",
                            cost_config=panel.cost_config(METHODS))

@@ -44,6 +44,31 @@ def lan_ip() -> str:
         return "127.0.0.1"
 
 
+SPIKE_WINDOW = 3  # vecinos a cada lado
+SPIKE_PCT = 0.003  # un minuto que se aleja > 0,3 % de sus vecinos es un dato aislado
+
+
+def _median(values: list[float | None]) -> float | None:
+    v = sorted(x for x in values if x is not None)
+    if not v:
+        return None
+    m = len(v) // 2
+    return v[m] if len(v) % 2 else (v[m - 1] + v[m]) / 2
+
+
+def despike(values: list[float | None]) -> list[float | None]:
+    """Solo para el gráfico: reemplaza picos de un ciclo (p. ej. un anuncio con precio absurdo
+    o un libro incompleto) por la mediana de sus vecinos. Los datos guardados no se tocan."""
+    out = list(values)
+    for i, v in enumerate(values):
+        if v is None:
+            continue
+        med = _median(values[max(0, i - SPIKE_WINDOW): i + SPIKE_WINDOW + 1])
+        if med and abs(v - med) > med * SPIKE_PCT:
+            out[i] = med
+    return out
+
+
 class PanelData:
     def __init__(self, db_path: Path, state_path: Path, *, venue: str, market: str, fiat: str, asset: str,
                  cost_config: CostConfig) -> None:
@@ -70,8 +95,11 @@ class PanelData:
                 "SELECT cycle_ts, ask_best, bid_best FROM cycles WHERE venue=? AND market=? AND cycle_ts>=? ORDER BY cycle_ts",
                 (self.venue, self.market, now_ts - hours * 3600),
             )
-        step = max(1, len(rows) // MAX_POINTS)
-        pts = [[r["cycle_ts"], r["ask_best"], r["bid_best"]] for r in rows[::step]]
+        ts = [r["cycle_ts"] for r in rows]
+        ask = despike([r["ask_best"] for r in rows])
+        bid = despike([r["bid_best"] for r in rows])
+        step = max(1, -(-len(rows) // MAX_POINTS))
+        pts = [[ts[i], _median(ask[i:i + step]), _median(bid[i:i + step])] for i in range(0, len(rows), step)]
         return {"hours": hours, "points": pts}
 
     def rentabilidad(self, now: datetime) -> dict[str, Any]:
