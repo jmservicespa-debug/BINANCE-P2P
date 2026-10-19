@@ -275,9 +275,8 @@ def test_panel_requires_token(running_panel):
 
 def test_panel_icon_is_public(running_panel):
     with urllib.request.urlopen(running_panel + "/icon.png", timeout=5) as r:
-        assert r.status == 200 and r.headers.get("Content-Type") == "image/png" and r.read()[:8] == b"PNG
-
-"
+        assert r.status == 200 and r.headers.get("Content-Type") == "image/png"
+        assert r.read()[:4] == b"\x89PNG"
 
 
 def test_panel_pages_and_api(running_panel):
