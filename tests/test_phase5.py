@@ -230,6 +230,9 @@ def test_recomendar_cli(tmp_path, capsys, monkeypatch, mode):
     db = tmp_path / "h.db"
     assert business_cli.main(["recomendar", "--db", str(db), "--capital", "10.000.000"]) == 0
     out = capsys.readouterr().out
+    assert "solo comerciantes verificados" in out
+    assert business_cli.main(["recomendar", "--db", str(db), "--competencia", "todos"]) == 0
+    assert "todos los anunciantes" in capsys.readouterr().out
     assert "CONSERVADOR" in out and "EQUILIBRADO" in out and "AGRESIVO" in out
     assert "mercado cruzado" in out and "veces tu capital" in out
     if mode == "OBSERVATION":

@@ -416,6 +416,8 @@ def test_panel_scenarios_with_chosen_margin(tmp_path):
     try:
         base = f"http://127.0.0.1:{srv.server_address[1]}"
         assert json.loads(_get(base + "/api/escenarios?margen=1,5&t=clave")[2])["min_margin"] == pytest.approx(0.015)
+        assert json.loads(_get(base + "/api/escenarios?margen=1&verificados=0&t=clave")[2])["merchants_only"] is False
+        assert json.loads(_get(base + "/api/escenarios?margen=1&verificados=1&t=clave")[2])["merchants_only"] is True
         for bad in ("abc", "-1", "50"):
             with pytest.raises(urllib.error.HTTPError) as e:
                 _get(base + f"/api/escenarios?margen={bad}&t=clave")

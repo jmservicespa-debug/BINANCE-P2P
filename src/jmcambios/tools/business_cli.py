@@ -487,13 +487,16 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--costo-orden", help="Costo operativo atribuible por orden completada")
     p.add_argument("--tasa-oportunidad", help="Costo de oportunidad anual en %%, p. ej. 10")
     p.add_argument("--margen-min", help="competencia/recomendar: margen mínimo en %%, p. ej. 1 (por defecto JMC_MARGEN_MIN)")
+    p.add_argument("--competencia", choices=["verificados", "todos"],
+                   help="competencia/recomendar: contra quién calcular puestos y precios (por defecto JMC_SOLO_VERIFICADOS)")
     p.add_argument("--meta", help="recomendar: meta de ganancia diaria en COP (por defecto 127.000)")
     args = p.parse_args(argv)
     if args.comando == "sincronizar" and args.dias == 30:
         args.dias = 180
     settings = Settings()
-    secrets = [s.get_secret_value() for s in (settings.api_key, settings.api_secret) if s]
-    setup_logging(logging.WARNING, secrets)
+    if args.competencia:
+        settings.merchants_only = args.competencia == "verificados"
+    setup_logging(logging.WARNING, settings.secret_values())
     with HistoryStore(args.db) as store:
         return COMMANDS[args.comando](store, args, settings)
 

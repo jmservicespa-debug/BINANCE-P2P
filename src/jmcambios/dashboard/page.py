@@ -113,7 +113,9 @@ input{font:inherit;font-size:14px;width:96px;min-height:36px;padding:0 10px;bord
   <section class="card"><div class="row"><h2>Ganancia libre que buscas</h2><span class="chip calc">Tú eliges</span></div>
     <div class="btns" id="mbtns"><button data-m="0.5">0,5 %</button><button data-m="1">1 %</button><button data-m="1.5">1,5 %</button><button data-m="2">2 %</button></div>
     <div class="row"><label class="muted" for="mcustom">Otro valor en %</label><input id="mcustom" type="number" inputmode="decimal" min="0" max="10" step="0.1" placeholder="p. ej. 1,2"></div>
-    <span class="muted" id="mhint"></span></section>
+    <span class="muted" id="mhint"></span>
+    <div class="row"><span class="label">Competidores</span><div class="btns" id="vbtns"><button data-v="1">Solo verificados</button><button data-v="0">Todos</button></div></div>
+  </section>
   <div id="scen"></div>
   <section class="card"><div class="row"><h2>Mis anuncios</h2><span class="chip real">Binance</span></div><div id="myads" class="muted">—</div></section>
   <div id="pwarn"></div>
@@ -148,6 +150,8 @@ let hours = 6;
 let margin = null;  // % elegido en el panel (null = el de la configuración)
 try { const v = localStorage.getItem('jmc_margen'); if (v !== null && v !== '') margin = +v; } catch (e) {}
 let lastState = null;
+let verified = null;  // true/false elegido en el panel (null = el de la configuración)
+try { const v = localStorage.getItem('jmc_verificados'); if (v === '1' || v === '0') verified = v === '1'; } catch (e) {}
 const MODES = {OBSERVATION: 'Modo: Observación', RECOMMENDATION: 'Modo: Recomendación', AUTOMATIC: 'Modo: Automático'};
 const NAMES = {conservador: 'Conservador', equilibrado: 'Equilibrado', agresivo: 'Agresivo'};
 const HINT = {conservador: 'más margen, menos órdenes', equilibrado: 'recomendado por defecto', agresivo: 'primer puesto, menos margen'};
@@ -183,17 +187,20 @@ function renderEstado(s) {
   renderPlanFor(s);
 }
 
+const compat = (sp) => sp.rank_compatible <= sp.compatible_total
+  ? `#${sp.rank_compatible} de ${sp.compatible_total} compatibles` : `detrás de los ${sp.compatible_total} compatibles`;
+
 function renderPlan(pl) {
   const PRIO = {comprar: 'Presión alcista: prioriza COMPRAR', vender: 'Presión bajista: prioriza VENDER', equilibrado: 'Sin señal clara: margen repartido'};
-  const who = (lastState?.merchants_only ?? true) ? 'Competencia: solo comerciantes verificados' : 'Competencia: todos los anunciantes';
+  const who = (pl?.merchants_only ?? lastState?.merchants_only ?? true) ? 'Competencia: solo comerciantes verificados' : 'Competencia: todos los anunciantes';
   $('prio').innerHTML = pl ? `<span class="muted">${PRIO[pl.priority] || ''}<br>${who}</span>` : '';
   $('scen').innerHTML = (pl?.scenarios || []).map(sc => `
     <section class="card sc ${sc.name === 'equilibrado' ? 'pick' : ''}">
       <div class="row"><h2>${NAMES[sc.name]}</h2><span class="muted">${HINT[sc.name]}</span></div>
       <div class="kv"><span>Comprar a</span><b>${fmt(sc.buy.price)}</b></div>
-      <div class="muted">puesto ≈ #${sc.buy.rank} · #${Math.min(sc.buy.rank_compatible, sc.buy.compatible_total + 1)} de ${sc.buy.compatible_total} compatibles${sc.buy.adjusted ? ' · ajustado por margen' : ''}</div>
+      <div class="muted">puesto ≈ #${sc.buy.rank} · ${compat(sc.buy)}${sc.buy.adjusted ? ' · ajustado por margen' : ''}</div>
       <div class="kv"><span>Vender a</span><b>${fmt(sc.sell.price)}</b></div>
-      <div class="muted">puesto ≈ #${sc.sell.rank} · #${Math.min(sc.sell.rank_compatible, sc.sell.compatible_total + 1)} de ${sc.sell.compatible_total} compatibles${sc.sell.adjusted ? ' · ajustado por margen' : ''}</div>
+      <div class="muted">puesto ≈ #${sc.sell.rank} · ${compat(sc.sell)}${sc.sell.adjusted ? ' · ajustado por margen' : ''}</div>
       <div class="kv"><span>Margen del ciclo</span><b class="${sc.margin_worst < 0 ? '' : 'good'}">${pct(sc.margin)} <span class="muted">(${pct(sc.margin_worst)} con 4x1000)</span></b></div>
       <div class="kv"><span>Ganancia por USDT</span><b>${fmt(sc.net_per_unit)} COP</b></div>
     </section>`).join('');
@@ -214,8 +221,20 @@ async function renderPlanFor(s) {
   $('mhint').innerHTML = `Agresivo ≥ ${fmt(m, 2)} % · equilibrado ≥ ${fmt(m + 0.15, 2)} % · conservador ≥ ${fmt(m + 0.3, 2)} % libre`
     + (ref ? ` (≈ ${fmt(ref * m / 100, 0)}–${fmt(ref * (m + 0.3) / 100, 0)} COP por USDT)` : '')
     + `<br>Solo cambia lo que ves aquí. Las alertas usan el margen de la configuración (${fmt(cfg, 2)} %).`;
-  if (Math.abs(m - cfg) < 1e-9) { renderPlan(s.plan); return; }
-  try { const r = await api('/api/escenarios?margen=' + m); if (r.available) renderPlan(r); } catch (e) { renderPlan(s.plan); }
+  const cfgV = s.merchants_only ?? true;
+  const v = verified === null ? cfgV : verified;
+  document.querySelectorAll('#vbtns button').forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === v));
+  if (Math.abs(m - cfg) < 1e-9 && v === cfgV) { renderPlan(s.plan ? {...s.plan, merchants_only: cfgV} : s.plan); return; }
+  try {
+    const r = await api('/api/escenarios?margen=' + m + '&verificados=' + (v ? 1 : 0));
+    if (r.available) renderPlan(r);
+  } catch (e) { renderPlan(s.plan); }
+}
+
+function setVerified(v) {
+  verified = v;
+  try { localStorage.setItem('jmc_verificados', v ? '1' : '0'); } catch (e) {}
+  if (lastState) renderPlanFor(lastState);
 }
 
 function setMargin(v) {
@@ -273,6 +292,7 @@ document.querySelectorAll('#hbtns button').forEach(b => b.onclick = () => {
   hours = +b.dataset.h; document.querySelectorAll('#hbtns button').forEach(o => o.classList.toggle('on', o === b)); refresh();
 });
 document.querySelectorAll('#mbtns button').forEach(b => b.onclick = () => { $('mcustom').value = ''; setMargin(+b.dataset.m); });
+document.querySelectorAll('#vbtns button').forEach(b => b.onclick = () => setVerified(b.dataset.v === '1'));
 $('mcustom').onchange = () => { const v = $('mcustom').value.replace(',', '.'); setMargin(v === '' ? null : +v); };
 refresh(); setInterval(refresh, 30000);
 </script>

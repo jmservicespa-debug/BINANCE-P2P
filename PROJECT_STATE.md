@@ -142,6 +142,7 @@ tests/                     pruebas unitarias (sin red)
 ## Competencia = solo comerciantes verificados (2026-10-19, pedido del usuario)
 - Puestos, escenarios y alertas de anuncios se calculan solo contra `userType == merchant` (`JMC_SOLO_VERIFICADOS=true`, por defecto). Si un lado no tiene verificados, se usan todos con aviso.
 - Las estadísticas generales del mercado y la presión siguen usando todo el libro (señal de mercado completa).
+- Elegible en el panel (botones Solo verificados / Todos, recordado en el navegador; `/api/escenarios?verificados=0|1`) y en comandos (`--competencia verificados|todos`).
 - ⏳ Confirmar con datos reales que Binance marca a los verificados como `merchant` (el campo viene de `advertiser.userType`).
 
 ## Ideas registradas

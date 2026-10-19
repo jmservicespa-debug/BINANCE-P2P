@@ -139,7 +139,7 @@ class PanelData:
             for r in rows
         ]
 
-    def escenarios(self, margin_pct: Decimal, now_ts: int) -> dict[str, Any]:
+    def escenarios(self, margin_pct: Decimal, now_ts: int, merchants_only: bool | None = None) -> dict[str, Any]:
         """Recalcula los 3 escenarios con otro margen mínimo, usando el último libro guardado. Solo lectura."""
         state = self.estado(now_ts)
         if not state.get("available") or not state.get("costs"):
@@ -159,10 +159,11 @@ class PanelData:
             asks, bids = self._book(st, Side.ASK), self._book(st, Side.BID)
         pp = plan(asks, bids, buy_profile=profiles["buy"], sell_profile=profiles["sell"], costs=costs,
                   pressure=pressure, exclude_users=set(state.get("my_users") or []),
-                  merchants_only=bool(state.get("merchants_only", True)))
+                  merchants_only=bool(state.get("merchants_only", True)) if merchants_only is None else merchants_only)
         f = lambda v: None if v is None else float(v)  # noqa: E731
         return {
             "available": True, "min_margin": float(margin_pct) / 100, "priority": pp.priority, "warnings": pp.warnings,
+            "merchants_only": pp.merchants_only,
             "scenarios": [{
                 "name": sc.name, "target_margin": f(sc.target_margin), "margin": f(sc.margin),
                 "margin_worst": f(sc.margin_worst), "net_per_unit": f(sc.net_per_unit),
@@ -226,7 +227,8 @@ def make_handler(data: PanelData, token: str) -> type[BaseHTTPRequestHandler]:
                     if not (Decimal("0") <= m <= MAX_MARGIN_PCT):
                         self._send(400, "margen inválido".encode(), "text/plain; charset=utf-8")
                     else:
-                        self._json(data.escenarios(m, ts))
+                        ver = (q.get("verificados") or [""])[0]
+                        self._json(data.escenarios(m, ts, None if ver not in ("0", "1") else ver == "1"))
                 elif url.path == "/api/rentabilidad":
                     self._json(data.rentabilidad(now))
                 elif url.path == "/api/alertas":
