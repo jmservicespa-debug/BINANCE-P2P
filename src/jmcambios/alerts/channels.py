@@ -51,6 +51,17 @@ class TelegramChannel:
             desc = r.json().get("description", "") if r.headers.get("content-type", "").startswith("application/json") else ""
             raise ChannelError(f"Telegram rechazó el mensaje (HTTP {r.status_code}) {desc}".strip())
 
+    def bot_username(self) -> str:
+        """Usuario del bot dueño del token (valida el token y evita escribirle al bot equivocado)."""
+        try:
+            r = self._http.get(self._url("getMe"))
+        except httpx.HTTPError as exc:
+            raise ChannelError(f"Telegram no respondió ({type(exc).__name__})") from None
+        data = r.json() if r.status_code == 200 else {}
+        if not data.get("ok"):
+            raise ChannelError(f"Telegram rechazó el token (HTTP {r.status_code}). Revisa que lo copiaste completo.")
+        return data["result"].get("username", "")
+
     def chat_ids(self) -> list[tuple[str, str]]:
         """Chats que escribieron al bot (para configurar). Devuelve (chat_id, nombre)."""
         try:
@@ -62,7 +73,9 @@ class TelegramChannel:
             raise ChannelError(f"Telegram rechazó el token (HTTP {r.status_code}). Revisa que lo copiaste completo.")
         seen: dict[str, str] = {}
         for upd in data.get("result", []):
-            chat = (upd.get("message") or upd.get("my_chat_member") or {}).get("chat") or {}
+            holder = (upd.get("message") or upd.get("edited_message") or upd.get("my_chat_member")
+                      or (upd.get("callback_query") or {}).get("message") or {})
+            chat = holder.get("chat") or {}
             if "id" in chat:
                 seen[str(chat["id"])] = chat.get("first_name") or chat.get("title") or chat.get("username") or ""
         return list(seen.items())

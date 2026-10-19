@@ -41,9 +41,17 @@ def configurar(prompt: Callable[[str], str] = getpass.getpass, read: Callable[[s
         return 1
 
     bot = make(token, "")
+    try:
+        username = bot.bot_username()
+    except ChannelError as exc:
+        print(f"  ✘ {exc}")
+        return 1
+    print(f"\n  ✔ Token válido. Tu bot es @{username}")
+    print(f"     Ábrelo directo con este enlace: https://t.me/{username}")
     chat_id = None
-    for _ in range(3):
-        read("\n4. Abre tu bot nuevo en Telegram, presiona INICIAR (o escribe /start) y luego vuelve aquí y presiona Enter… ")
+    for _ in range(5):
+        read(f"\n4. En Telegram abre @{username} (no BotFather), toca INICIAR o escríbele 'hola',"
+             " y luego vuelve aquí y presiona Enter… ")
         try:
             chats = bot.chat_ids()
         except ChannelError as exc:
@@ -60,7 +68,8 @@ def configurar(prompt: Callable[[str], str] = getpass.getpass, read: Callable[[s
                 chat_id = chats[int(pick) - 1][0]
                 break
         else:
-            print("  Todavía no veo tu mensaje. Asegúrate de escribirle al bot correcto.")
+            print(f"  Todavía no veo ningún mensaje en @{username}. Revisa que el chat abierto sea ese bot"
+                  " (el nombre arriba del chat) y envíale 'hola'.")
     if chat_id is None:
         print("\nNo se encontró tu chat. No se guardó nada.")
         return 1

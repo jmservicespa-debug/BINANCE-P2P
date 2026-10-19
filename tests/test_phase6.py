@@ -86,14 +86,24 @@ def test_telegram_send_and_errors_never_leak_token():
     assert TOKEN not in str(e.value) and e.value.__cause__ is None
 
 
+def test_telegram_get_me():
+    ok = TelegramChannel(TOKEN, "", transport=httpx.MockTransport(
+        lambda r: httpx.Response(200, json={"ok": True, "result": {"username": "jmcambios_bot"}})))
+    assert ok.bot_username() == "jmcambios_bot"
+    bad = TelegramChannel(TOKEN, "", transport=httpx.MockTransport(lambda r: httpx.Response(401, json={"ok": False})))
+    with pytest.raises(ChannelError):
+        bad.bot_username()
+
+
 def test_telegram_chat_ids():
     payload = {"ok": True, "result": [
         {"message": {"chat": {"id": 42, "first_name": "Jamer"}}},
         {"message": {"chat": {"id": 42, "first_name": "Jamer"}}},
         {"my_chat_member": {"chat": {"id": -100, "title": "Grupo"}}},
+        {"edited_message": {"chat": {"id": 7, "first_name": "Otro"}}},
     ]}
     ch = TelegramChannel(TOKEN, "", transport=httpx.MockTransport(lambda r: httpx.Response(200, json=payload)))
-    assert ch.chat_ids() == [("42", "Jamer"), ("-100", "Grupo")]
+    assert ch.chat_ids() == [("42", "Jamer"), ("-100", "Grupo"), ("7", "Otro")]
     bad = TelegramChannel(TOKEN, "", transport=httpx.MockTransport(lambda r: httpx.Response(401, json={"ok": False})))
     with pytest.raises(ChannelError):
         bad.chat_ids()
@@ -314,6 +324,9 @@ class FakeBot:
     def __init__(self, token, chat_id):
         self.token, self.chat_id = token, chat_id
 
+    def bot_username(self):
+        return "jmcambios_bot"
+
     def chat_ids(self):
         return [("42", "Jamer")]
 
@@ -328,12 +341,12 @@ def test_alertas_configurar(tmp_path, capsys):
     env.write_text("BINANCE_API_KEY=abc\n", encoding="utf-8")
     prompts = iter(["no-es-token", TOKEN])
     rc = alerts_cli.configurar(prompt=lambda _: next(prompts), read=lambda _: "", env_path=env, make=FakeBot)
-    assert rc == 0
+    out = capsys.readouterr().out
+    assert rc == 0 and TOKEN not in out and "no parece un token" in out and "https://t.me/jmcambios_bot" in out
     text = env.read_text(encoding="utf-8")
     assert f"JMC_TELEGRAM_BOT_TOKEN={TOKEN}" in text and "JMC_TELEGRAM_CHAT_ID=42" in text and "BINANCE_API_KEY=abc" in text
     assert FakeBot.sent[-1][0] == "42"
-    out = capsys.readouterr().out
-    assert TOKEN not in out and "no parece un token" in out
+
 
 
 def test_alertas_probar_without_channels(capsys, monkeypatch):
