@@ -193,3 +193,11 @@ def test_history_cli_end_to_end(tmp_path, capsys, monkeypatch):
     assert history_cli.main(["cruces"]) == 0
     out = capsys.readouterr().out
     assert "nuevos: 2" in out and "Snapshots: 2" in out and "Sin cruces" in out
+
+
+def test_auth_error_suggests_ip_change():
+    def handler(request):
+        return httpx.Response(400, json={"code": -2015, "msg": "Invalid API-key, IP, or permissions for action."})
+
+    result = Monitor(source(handler), clock=lambda: NOW).run_cycle()
+    assert any("cambió tu IP" in a for a in result.alerts)

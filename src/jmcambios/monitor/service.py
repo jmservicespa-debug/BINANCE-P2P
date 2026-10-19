@@ -100,6 +100,11 @@ class Monitor:
         if result.filtered_stats.get(Side.ASK) and result.filtered_stats.get(Side.BID):
             result.filtered_spread = spread(result.filtered_stats[Side.ASK], result.filtered_stats[Side.BID])
 
+        if any("AUTH_ERROR" in e for e in result.errors):
+            result.alerts.append(
+                "Binance rechazó la API key. Causa más común: cambió tu IP pública (p. ej. tras un corte de internet). "
+                "Revisa tu IP actual y actualízala en Binance → Gestión de API."
+            )
         self.consecutive_failures = self.consecutive_failures + 1 if result.errors else 0
         if self.consecutive_failures >= 3:
             result.alerts.append(f"{self.consecutive_failures} ciclos seguidos con errores; esperando más entre intentos")

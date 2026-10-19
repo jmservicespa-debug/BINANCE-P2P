@@ -323,6 +323,9 @@ def main(argv: list[str] | None = None) -> int:
     _print_table(checks)
     s = report["summary"]
     print(f"\nMercado público OK: {s['public_market_ok']} · Lectura autenticada OK: {s['authenticated_read_ok']}")
+    if any(c.outcome == "AUTH_ERROR" for c in checks):
+        print("Aviso: Binance rechazó la API key. Revisa (1) que tu IP pública actual sea la registrada en la key,")
+        print("       (2) que la key esté bien guardada (python -m jmcambios.tools.set_keys) y (3) el permiso Enable Reading.")
     print(f"Informe: {path}  (no contiene secretos; compártelo para cerrar la Fase 1)")
     return 0 if s["public_market_ok"] else 1
 
