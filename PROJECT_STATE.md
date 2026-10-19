@@ -167,6 +167,12 @@ tests/                     pruebas unitarias (sin red)
 - Riesgos explicados al usuario: triangulación (congelamiento de cuenta bancaria), reglas de Binance exigen pagador = titular (apelaciones sin respaldo).
 - ⏳ Verificar con órdenes reales qué datos del cliente (taker) expone la API de detalle de orden: nº de órdenes, % finalización, negativos, antigüedad. No asumir. El nombre del pagador en el banco lo verifica el usuario en su app.
 
+## Hoja de ruta: mercado VES + remesas COP→VES (pedido del usuario 2026-10-19, después de terminar COP)
+- Reutilizable ~70–80 %: monitor, historial, competencia, presión, escenarios, panel, alertas, verificados, semáforo (`JMC_FIAT=VES`). Las comisiones VES ya se observan en sus órdenes.
+- Específico de VES: (1) contabilidad y metas en USDT (o COP), no en bolívares, por la depreciación; (2) alerta de bolívares parados (riesgo cambiario por hora); (3) referencia oficial BCV y brecha BCV–P2P; (4) costos y límites diarios por banco/Pago Móvil en lugar del 4x1000; (5) métodos venezolanos (configuración); (6) mercado más rápido → ciclos más cortos y servidor en la nube.
+- Oportunidad principal: remesas COP→VES (su negocio actual): tasa de remesa óptima en tiempo real comprando USDT en COP y vendiendo en VES = triangulación de la hoja de ruta.
+- Estimado con COP terminado: funcionando en días; bien adaptado 1–2 semanas; validado con datos reales 2–4 semanas.
+
 ## Ideas registradas
 - Producto por suscripción (pedido del usuario 2026-10-19): multiusuario en servidor con IP fija, keys de terceros cifradas y solo lectura, configuración por usuario (bancos/4x1000, moneda, márgenes), registro y pagos, revisión legal (condiciones de Binance para terceros, Ley 1581 de 2012). Riesgo: suscriptores con la misma estrategia compiten entre sí. Primero validar con resultados reales del usuario. Mantener nada personal fijo en el código.
 
