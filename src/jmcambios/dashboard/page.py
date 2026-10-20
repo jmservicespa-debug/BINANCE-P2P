@@ -58,12 +58,23 @@ ul{margin:0;padding-left:18px}li{margin:4px 0;font-size:13px}
 .alert{border-left:3px solid var(--border);padding:6px 10px;display:flex;flex-direction:column;gap:2px}
 .alert.urgente{border-color:var(--down)}.alert.importante{border-color:var(--inf)}.alert.info{border-color:var(--real)}
 .alert p{margin:0;font-size:13px;white-space:pre-line;color:var(--soft)}
+/* Pantalla completa (monitor): las tres secciones a la vez, sin pestañas. */
+.coltitle{display:none}
+@media (min-width: 1100px){
+  main{max-width:1680px;padding:0 24px 32px}
+  #cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,1fr);gap:20px;align-items:start}
+  #cols > div.hidden{display:block}
+  .coltitle{display:block;font-size:12px;letter-spacing:.08em;color:var(--muted);margin:4px 4px 10px}
+  .big{font-size:28px}
+  #lmin,#lmax{width:150px}
+}
 nav{position:fixed;left:0;right:0;bottom:0;background:#0B1218;border-top:1px solid var(--line);display:flex;justify-content:center;padding:8px 8px calc(8px + env(safe-area-inset-bottom))}
 nav div{display:flex;gap:6px;max-width:520px;width:100%}
+@media (min-width: 1100px){nav{display:none}}
 nav button{flex:1;min-height:44px;font-size:13px}
 .hidden{display:none}
 th{color:var(--muted);font-weight:500;padding:4px 2px;border-bottom:1px solid var(--line)}td{padding:5px 2px;border-bottom:1px solid var(--line)}
-input{font:inherit;font-size:14px;width:96px;min-height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text)}
+input{font:inherit;font-size:14px;width:118px;min-height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text)}
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){--bg:#F4F6F8;--card:#FFFFFF;--line:#E3E8ED;--border:#D5DCE3;--text:#14202B;--muted:#5D6B78;--soft:#3B4955;
   --accent:#0F7A66;--accent-bg:#DDF3EE;--real:#2558A8;--real-bg:#E3ECFA;--calc-bg:#ECEFF2;--inf:#9A5B0C;--inf-bg:#FBEBD5;--up:#0F7A66;--down:#B3261E;--down-bg:#FBE4E2;--ask:#C77A12;--bid:#2F6FD0}
@@ -83,7 +94,8 @@ input{font:inherit;font-size:14px;width:96px;min-height:36px;padding:0 10px;bord
   <div id="stale"></div>
 </header>
 
-<div id="tab-mercado">
+<div id="cols">
+<div id="tab-mercado"><div class="coltitle">MERCADO</div>
   <div class="grid">
     <div class="card"><span class="label">Mejor precio para COMPRAR</span><span class="big" id="ask">—</span><span class="muted" style="color:var(--real)" id="askn"></span><span class="muted mono" id="askv"></span></div>
     <div class="card"><span class="label">Mejor precio para VENDER</span><span class="big" id="bid">—</span><span class="muted" style="color:var(--real)" id="bidn"></span><span class="muted mono" id="bidv"></span></div>
@@ -108,7 +120,7 @@ input{font:inherit;font-size:14px;width:96px;min-height:36px;padding:0 10px;bord
   </section>
 </div>
 
-<div id="tab-precios" class="hidden">
+<div id="tab-precios" class="hidden"><div class="coltitle">PRECIOS Y ESTRATEGIAS</div>
   <section class="card"><div class="row"><h2>Escenarios de precio</h2><span class="chip calc">Cálculo</span></div>
     <span class="muted" id="costs"></span><div id="prio"></div></section>
   <section class="card"><div class="row"><h2>Ganancia libre que buscas</h2><span class="chip calc">Tú eliges</span></div>
@@ -134,7 +146,7 @@ input{font:inherit;font-size:14px;width:96px;min-height:36px;padding:0 10px;bord
   <p class="muted">Nada se modifica en Binance desde aquí: tú decides y cambias el precio en la app. Puesto = estimación por precio.</p>
 </div>
 
-<div id="tab-resultados" class="hidden">
+<div id="tab-resultados" class="hidden"><div class="coltitle">RESULTADOS Y ALERTAS</div>
   <section class="card" id="today-card"><div class="row"><h2>Hoy</h2><span class="chip calc">Cálculo</span></div>
     <div class="row"><span class="big" id="t-real">—</span><span class="muted" id="t-goal"></span></div>
     <div class="bar"><span id="t-bar" style="left:0;width:0;background:var(--up)"></span></div>
@@ -157,6 +169,7 @@ input{font:inherit;font-size:14px;width:96px;min-height:36px;padding:0 10px;bord
   </section>
   <section class="card"><h2>Alertas recientes</h2><div id="alerts" class="muted">—</div></section>
 </div>
+</div>
 </main>
 <nav><div><button data-tab="mercado" class="on">Mercado</button><button data-tab="precios">Precios</button><button data-tab="resultados">Resultados</button></div></nav>
 
@@ -171,6 +184,9 @@ const api = (p) => fetch(p + (p.includes('?') ? '&' : '?') + 't=' + encodeURICom
 const hhmm = (ts) => new Date(ts * 1000).toLocaleTimeString('es-CO', {timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit'});
 const dmy = (ts) => new Date(ts * 1000).toLocaleString('es-CO', {timeZone: 'America/Bogota', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'});
 let hours = 6;
+const WIDE = window.matchMedia('(min-width: 1100px)');
+const shown = (id) => WIDE.matches || !$(id).classList.contains('hidden');
+WIDE.addEventListener?.('change', () => refresh());
 let margin = null;  // % elegido en el panel (null = el de la configuración)
 try { const v = localStorage.getItem('jmc_margen'); if (v !== null && v !== '') margin = +v; } catch (e) {}
 let lastState = null;
@@ -267,7 +283,7 @@ document.querySelectorAll('#vbtns button').forEach(b => b.classList.toggle('on',
     $('lmin').value = limits ? fmt(limits[0], 0) : ''; $('lmax').value = limits ? fmt(limits[1], 0) : '';
   }
   renderTramos(v);
-  if (!$('tab-precios').classList.contains('hidden')) renderMerchants(v);
+  if (shown('tab-precios')) renderMerchants(v);
   try {
     const r = await api('/api/escenarios?margen=' + m + '&verificados=' + (v ? 1 : 0)
       + (limits ? '&min=' + limits[0] + '&max=' + limits[1] : ''));
@@ -408,7 +424,7 @@ async function refresh() {
   try {
     const [s, d] = await Promise.all([api('/api/estado'), api('/api/serie?horas=' + hours)]);
     renderEstado(s); renderSerie(d);
-    if (!$('tab-resultados').classList.contains('hidden')) {
+    if (shown('tab-resultados')) {
       const [r, a] = await Promise.all([api('/api/rentabilidad'), api('/api/alertas')]); renderRent(r); renderAlerts(a);
     }
   } catch (e) {

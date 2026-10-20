@@ -130,6 +130,7 @@ jmcambios-panel                                    # solo el panel (si el monito
 - Alertas para operar: **Oportunidad de margen** (un tramo de montos alcanza `JMC_MARGEN_MIN` estando de primero en compra y venta; máx. cada 30 min por tramo; solo en RECOMMENDATION) y **Resumen del mercado** a las horas de `JMC_RESUMEN_HORAS` (por defecto 8, 12 y 18 h): verificados, mejor tramo, presión, ganancia del día y tope exento.
 - **Cómo trabajan los mejores** (`jmcambios-negocio comerciantes [--dias 3] [--top 10]` y tarjeta en Precios): de los verificados con más órdenes en 30 días, su puesto típico, distancia al mejor precio, **diferencia propia** (su venta − su compra al mismo tiempo) y lo que te dejaría con tus costos, montos, bancos, horas activas y cuántas veces cambian el precio por hora. Se calcula sobre la base del monitor (muestreo de hasta 240 ciclos); el panel lo guarda 10 min.
 - **Escenario "Como los mejores"**: 4.º escenario que copia el puesto típico de los líderes (p. ej. #10 compra / #9 venta) y muestra cuánto te deja con tus costos.
+- **Pantalla completa**: en pantallas de 1100 px o más (monitor del PC) el panel muestra Mercado, Precios y Resultados a la vez en tres columnas, sin pestañas. Mismo enlace; en el PC también sirve `http://localhost:8765/?t=<clave>`.
 - El bot **solo envía**: el sistema no lee ni ejecuta nada que llegue por Telegram.
 
 ## Pruebas
