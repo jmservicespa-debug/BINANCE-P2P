@@ -57,6 +57,9 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-size: 14px; colo
 .result { background: var(--brand); color: var(--brand-ink); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 4px }
 .result .big { font-family: var(--display); font-weight: 800; font-size: 34px; line-height: 1.1; overflow-wrap: anywhere }
 .result .big.ask { font-size: 26px }
+.getbox { display: flex; flex-direction: column; gap: 2px; margin: 8px 0 4px; padding: 12px 14px; border-radius: 12px; background: var(--brand-ink); color: var(--brand) }
+.getbox span { font-size: 13px; font-weight: 600 }
+.getbox b { font-family: var(--display); font-weight: 800; font-size: 28px; line-height: 1.15; overflow-wrap: anywhere }
 .result .free { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 2px; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; background: color-mix(in srgb, var(--brand-ink) 16%, transparent) }
 .result .break { margin: 6px 0 2px; display: grid; grid-template-columns: 1fr auto; gap: 4px 0; font-size: 14px }
 .result .break dt { opacity: .85 } .result .break dd { margin: 0; padding-left: 12px; text-align: right; font-weight: 600 }

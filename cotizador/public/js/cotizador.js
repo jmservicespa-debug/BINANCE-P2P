@@ -57,7 +57,7 @@ function calc() {
   if (isOther) { otherQuote(); return; }
   const r = ROUTES.find((x) => x.id === route);
   const o = ORIGINS[origin];
-  if (!r) { $('r-free').hidden = true; $('r-break').hidden = true; $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
+  if (!r) { $('r-get').hidden = true; $('r-free').hidden = true; $('r-break').hidden = true; $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
   const bcv = data.bcv?.value;
   // "Que reciba en dólares BCV": solo hacia Venezuela y con el dólar BCV disponible.
   const bcvOk = r.to.includes('VE') && bcv > 0;
@@ -86,8 +86,15 @@ function calc() {
     + `<dt class="total">Total a pagar</dt><dd class="total">${fmt(send, 0)} ${o.cur}</dd>`;
   $('r-label').textContent = mode === 'send' ? `Recibe en ${r.name}` : 'Debes enviar';
   $('r-big').textContent = mode === 'send' ? `${fmt(get, r.dec)} ${r.cur}` : `${fmt(send, 0)} ${o.cur}`;
-  $('r-send').textContent = mode === 'send' ? ''
-    : mode === 'bcv' ? `Recibe ${fmt(get, 0)} ${r.cur} = ${fmt(usd, 0)} USD al dólar BCV` : `Recibe ${fmt(get, r.dec)} ${r.cur}`;
+  // Lo que recibe la persona, bien visible cuando el cliente parte del monto a recibir.
+  $('r-send').textContent = '';
+  $('r-get').hidden = mode === 'send';
+  if (mode !== 'send') {
+    const ves = r.cur === 'VES';
+    $('g-label').textContent = `Recibe en ${r.name}`;
+    $('g-amount').textContent = `${fmt(get, r.dec)} ${ves ? 'Bs' : r.cur}`;
+    $('g-sub').textContent = mode === 'bcv' ? `= ${fmt(usd, 0)} USD al dólar BCV` : ves ? 'Bolívares (VES)' : r.unit;
+  }
   $('r-rate').textContent = '';
   $('r-min').textContent = r.min ? `Envío mínimo: ${fmt(r.min, 0)} ${o.cur}` : '';
   $('r-bcv').hidden = !bcvOk;
@@ -106,6 +113,7 @@ function calc() {
 
 // Monto por debajo del mínimo de la ruta: no se cotiza, se indica el mínimo.
 function minimum(r, o, send) {
+  $('r-get').hidden = true;
   $('r-free').hidden = true;
   $('r-break').hidden = true;
   $('r-label').textContent = `Envíos a ${r.name}`;
@@ -121,6 +129,7 @@ function minimum(r, o, send) {
 
 // Mercado inestable: no se calcula; el cliente pide la tasa del momento con su monto ya escrito.
 function unstable(r, o) {
+  $('r-get').hidden = true;
   $('r-free').hidden = true;
   $('r-break').hidden = true;
   amountLabels(r, o);
