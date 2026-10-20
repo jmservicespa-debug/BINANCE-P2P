@@ -22,6 +22,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 
+from jmcambios.analysis.amounts import competes
 from jmcambios.analysis.pressure import PressureReport
 from jmcambios.domain import Ad, Side
 from jmcambios.domain.account import MyAd, Order, OrderSide
@@ -122,8 +123,9 @@ def profile_for(ad: MyAd | None, methods: dict[str, Decimal], limits: tuple[Deci
 
 
 def compatible(profile: AdProfile, ad: Ad) -> bool:
+    """Competidor directo: comparte un método de pago y cubre al menos la mitad de mi rango de montos."""
     shares = bool(set(profile.methods) & set(ad.payment_methods))
-    return shares and max(profile.min_fiat, ad.min_fiat) <= min(profile.max_fiat, ad.max_fiat_effective)
+    return shares and competes(profile.min_fiat, profile.max_fiat, ad)
 
 
 def cycle_margin(buy: Decimal, sell: Decimal, c: Costs, gmf: Decimal | None = None) -> Decimal:

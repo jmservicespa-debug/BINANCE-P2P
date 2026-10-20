@@ -62,6 +62,7 @@ nav{position:fixed;left:0;right:0;bottom:0;background:#0B1218;border-top:1px sol
 nav div{display:flex;gap:6px;max-width:520px;width:100%}
 nav button{flex:1;min-height:44px;font-size:13px}
 .hidden{display:none}
+th{color:var(--muted);font-weight:500;padding:4px 2px;border-bottom:1px solid var(--line)}td{padding:5px 2px;border-bottom:1px solid var(--line)}
 input{font:inherit;font-size:14px;width:96px;min-height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text)}
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){--bg:#F4F6F8;--card:#FFFFFF;--line:#E3E8ED;--border:#D5DCE3;--text:#14202B;--muted:#5D6B78;--soft:#3B4955;
@@ -114,9 +115,16 @@ input{font:inherit;font-size:14px;width:96px;min-height:36px;padding:0 10px;bord
     <div class="btns" id="mbtns"><button data-m="0.5">0,5 %</button><button data-m="1">1 %</button><button data-m="1.5">1,5 %</button><button data-m="2">2 %</button></div>
     <div class="row"><label class="muted" for="mcustom">Otro valor en %</label><input id="mcustom" type="number" inputmode="decimal" min="0" max="10" step="0.1" placeholder="p. ej. 1,2"></div>
     <span class="muted" id="mhint"></span>
+    <div class="row"><span class="label">Montos por orden (COP)</span>
+      <div class="btns"><input id="lmin" type="text" inputmode="numeric" placeholder="mín." aria-label="Monto mínimo">
+      <input id="lmax" type="text" inputmode="numeric" placeholder="máx." aria-label="Monto máximo"></div></div>
+    <div class="row"><span class="muted" id="lhint"></span><div class="btns"><button id="lapply">Aplicar</button><button id="lreset">Mis anuncios</button></div></div>
     <div class="row"><span class="label">Competidores</span><div class="btns" id="vbtns"><button data-v="1">Solo verificados</button><button data-v="0">Todos</button></div></div>
   </section>
   <div id="scen"></div>
+  <section class="card"><div class="row"><h2>Competencia por monto</h2><span class="chip real">Binance</span></div>
+    <span class="muted">Anuncios que atienden cada tramo y comparten tus métodos. Busca tramos con pocos competidores y buen precio.</span>
+    <div id="tramos" class="muted">—</div></section>
   <section class="card"><div class="row"><h2>Mis anuncios</h2><span class="chip real">Binance</span></div><div id="myads" class="muted">—</div></section>
   <div id="pwarn"></div>
   <p class="muted">Nada se modifica en Binance desde aquí: tú decides y cambias el precio en la app. Puesto = estimación por precio.</p>
@@ -162,6 +170,8 @@ let hours = 6;
 let margin = null;  // % elegido en el panel (null = el de la configuración)
 try { const v = localStorage.getItem('jmc_margen'); if (v !== null && v !== '') margin = +v; } catch (e) {}
 let lastState = null;
+let limits = null;  // [min, max] elegidos en el panel (null = los de tus anuncios)
+try { const v = JSON.parse(localStorage.getItem('jmc_limites') || 'null'); if (Array.isArray(v) && v.length === 2) limits = v; } catch (e) {}
 let verified = null;  // true/false elegido en el panel (null = el de la configuración)
 try { const v = localStorage.getItem('jmc_verificados'); if (v === '1' || v === '0') verified = v === '1'; } catch (e) {}
 const MODES = {OBSERVATION: 'Modo: Observación', RECOMMENDATION: 'Modo: Recomendación', AUTOMATIC: 'Modo: Automático'};
@@ -238,12 +248,44 @@ async function renderPlanFor(s) {
     + `<br>Solo cambia lo que ves aquí. Las alertas usan el margen de la configuración (${fmt(cfg, 2)} %).`;
   const cfgV = s.merchants_only ?? true;
   const v = verified === null ? cfgV : verified;
-  document.querySelectorAll('#vbtns button').forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === v));
-  if (Math.abs(m - cfg) < 1e-9 && v === cfgV) { renderPlan(s.plan ? {...s.plan, merchants_only: cfgV} : s.plan); return; }
+  $('lapply').onclick = () => {
+  const a = parseCop($('lmin').value), b = parseCop($('lmax').value);
+  if (a > 0 && b > a) setLimits([a, b]); else $('lhint').innerHTML = '<span class="neg">El mínimo debe ser menor que el máximo</span>';
+};
+$('lreset').onclick = () => setLimits(null);
+document.querySelectorAll('#vbtns button').forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === v));
+  const prof = s.profiles?.buy;
+  $('lhint').textContent = limits ? `Estrategia para ${fmt(limits[0], 0)}–${fmt(limits[1], 0)}`
+    : (prof ? `De tus anuncios: ${fmt(prof.min_fiat, 0)}–${fmt(prof.max_fiat, 0)}` : '');
+  if (document.activeElement !== $('lmin') && document.activeElement !== $('lmax')) {
+    $('lmin').value = limits ? fmt(limits[0], 0) : ''; $('lmax').value = limits ? fmt(limits[1], 0) : '';
+  }
+  renderTramos(v);
+  if (Math.abs(m - cfg) < 1e-9 && v === cfgV && !limits) { renderPlan(s.plan ? {...s.plan, merchants_only: cfgV} : s.plan); return; }
   try {
-    const r = await api('/api/escenarios?margen=' + m + '&verificados=' + (v ? 1 : 0));
+    const r = await api('/api/escenarios?margen=' + m + '&verificados=' + (v ? 1 : 0)
+      + (limits ? '&min=' + limits[0] + '&max=' + limits[1] : ''));
     if (r.available) renderPlan(r);
   } catch (e) { renderPlan(s.plan); }
+}
+
+async function renderTramos(v) {
+  try {
+    const t = await api('/api/tramos?verificados=' + (v ? 1 : 0));
+    const table = (rows, title) => `<h3 style="margin:10px 0 4px;font-size:14px;color:var(--text)">${title}</h3>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums">
+      <tr><th style="text-align:left">Tramo</th><th style="text-align:right">Anuncios</th><th style="text-align:right">Mejor</th><th style="text-align:right">Tu puesto</th></tr>
+      ${rows.map(x => `<tr><td>${esc(x.label)}</td><td style="text-align:right">${x.ads}</td><td style="text-align:right" class="mono">${fmt(x.best)}</td>
+        <td style="text-align:right">${x.my_rank && x.ads ? '#' + x.my_rank : '—'}</td></tr>`).join('')}</table></div>`;
+    $('tramos').innerHTML = table(t.buy || [], 'Compra (compiten con tu anuncio de compra)') + table(t.sell || [], 'Venta (compiten con tu anuncio de venta)');
+  } catch (e) { $('tramos').textContent = 'Sin datos de tramos todavía.'; }
+}
+
+function parseCop(t) { const x = (t || '').replace(/[^0-9]/g, ''); return x ? +x : NaN; }
+function setLimits(v) {
+  limits = v;
+  try { v ? localStorage.setItem('jmc_limites', JSON.stringify(v)) : localStorage.removeItem('jmc_limites'); } catch (e) {}
+  if (lastState) renderPlanFor(lastState);
 }
 
 function setVerified(v) {

@@ -340,3 +340,22 @@ def test_competencia_cli_uses_verified_prices(tmp_path, capsys, monkeypatch):
     assert "costo 3.166,33" in out and "costo 3.191,93" not in out
     assert business_cli.main(["competencia", "--db", db, "--competencia", "todos"]) == 0
     assert "costo 3.191,93" in capsys.readouterr().out
+
+
+def test_recomendar_with_limits_and_competencia_tranches(tmp_path, capsys, monkeypatch):
+    from jmcambios.tools import business_cli
+
+    assert business_cli._dec("500.000", "x") == D("500000") and business_cli._dec("0.3", "x") == D("0.3")
+    assert business_cli._parse_limits("500.000-2.000.000") == (D("500000"), D("2000000"))
+    with pytest.raises(SystemExit):
+        business_cli._parse_limits("2.000.000-500.000")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(business_cli, "_client", lambda settings: nullcontext())
+    monkeypatch.setattr(business_cli, "BinanceAccount", _FakeAccount)
+    monkeypatch.setattr(business_cli, "BinanceMarketSource", _FakeSource)
+    db = str(tmp_path / "h.db")
+    assert business_cli.main(["recomendar", "--db", db, "--limites", "500.000-2.000.000"]) == 0
+    assert "compra 500.000–2.000.000 · venta 500.000–2.000.000 COP" in capsys.readouterr().out
+    assert business_cli.main(["competencia", "--db", db]) == 0
+    out = capsys.readouterr().out
+    assert "COMPETENCIA POR MONTO" in out and "500 mil – 2 M" in out and "Tu puesto" in out

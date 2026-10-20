@@ -173,6 +173,12 @@ tests/                     pruebas unitarias (sin red)
 - Oportunidad principal: remesas COP→VES (su negocio actual): tasa de remesa óptima en tiempo real comprando USDT en COP y vendiendo en VES = triangulación de la hoja de ruta.
 - Estimado con COP terminado: funcionando en días; bien adaptado 1–2 semanas; validado con datos reales 2–4 semanas.
 
+## Rango de montos en las estrategias (pedido del usuario 2026-10-20)
+- Antes bastaba cualquier cruce de límites para contar como competidor. Ahora: comparte método y cubre ≥ 50 % de mi rango en escala logarítmica (`analysis/amounts.py`, `MIN_OVERLAP`), en puestos, escenarios y alertas.
+- Estrategia para un rango elegido: panel (inputs mín./máx., recordados en el navegador; `/api/escenarios?min=&max=`) y `recomendar --limites MIN-MAX`.
+- Competencia por tramos (< 500 mil, 500 mil–2 M, 2–5 M, 5–10 M, > 10 M): `/api/tramos`, tarjeta en Precios y tabla en `competencia`. Sirve para elegir límites o tener dos anuncios (montos pequeños / grandes).
+- Arreglado: `500.000` se leía como 500 en los comandos.
+
 ## Ideas registradas
 - Producto por suscripción (pedido del usuario 2026-10-19): multiusuario en servidor con IP fija, keys de terceros cifradas y solo lectura, configuración por usuario (bancos/4x1000, moneda, márgenes), registro y pagos, revisión legal (condiciones de Binance para terceros, Ley 1581 de 2012). Riesgo: suscriptores con la misma estrategia compiten entre sí. Primero validar con resultados reales del usuario. Mantener nada personal fijo en el código.
 

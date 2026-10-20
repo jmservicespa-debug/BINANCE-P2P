@@ -159,7 +159,7 @@ def my(side, price, methods=("Nequi",), lo="50000", hi="2000000"):
 
 def test_position_sell_ad_against_asks():
     asks = [
-        make_ad("a1", "3160", "100", user="u1", methods=("Nequi",)),
+        make_ad("a1", "3160", "1000", user="u1", methods=("Nequi",)),
         make_ad("a2", "3165", "200", user="u2", methods=("Efecty",)),
         make_ad("a3", "3170", "50", user="u3"),
         make_ad("a4", "3180", "70", user="u4"),
@@ -169,7 +169,7 @@ def test_position_sell_ad_against_asks():
     assert p.side is Side.ASK and p.total_competitors == 4
     assert p.better_count == 2 and p.estimated_rank == 3 and p.tied_count == 1
     assert p.best_price == D("3160") and p.gap_to_best == D("10")
-    assert p.compatible_ahead == 1 and p.qty_ahead == D("300")
+    assert p.compatible_ahead == 1 and p.qty_ahead == D("1200")
     assert [c.price for c in p.ahead] == [D("3165"), D("3160")]  # el más cercano primero
 
 
@@ -275,3 +275,21 @@ def test_observed_fee_prefers_fiat_then_falls_back():
     assert fee.scope == "todas las monedas" and fee.orders == 7
     assert observed_fee(ves, role="TAKER", side=OrderSide.BUY, fiat="COP") is None
     assert taker_fees_from_orders(ves, "COP") == {"taker_fee_sell": Decimal("0.00142")}
+
+
+def test_partial_range_overlap_is_not_direct_competition():
+    from jmcambios.analysis.amounts import competes, overlap_fraction, tranche_views
+
+    # Mi rango 500 mil – 2 M. Un anuncio de 1,9 M – 20 M apenas se cruza: no es competencia directa.
+    assert overlap_fraction(D("500000"), D("2000000"), D("1900000"), D("20000000")) < 0.1
+    assert overlap_fraction(D("500000"), D("2000000"), D("50000"), D("5000000")) == 1.0
+    big = make_ad("x", "3160", "10000", lo="1900000", hi="20000000", methods=("Nequi",))
+    small = make_ad("y", "3161", "10000", lo="50000", hi="5000000", methods=("Nequi",))
+    assert not competes(D("500000"), D("2000000"), big) and competes(D("500000"), D("2000000"), small)
+    p = position(my("SELL", "3170", lo="500000", hi="2000000"), [big, small])
+    assert p.better_count == 2 and p.compatible_ahead == 1
+    # Por tramos: el anuncio grande solo aparece de 2 M en adelante.
+    views = {v.label: v for v in tranche_views(Side.ASK, [big, small], my_price=D("3170"))}
+    assert views["< 500 mil"].ads == 1 and views["< 500 mil"].best_price == D("3161")
+    assert views["5 – 10 M"].ads == 1 and views["5 – 10 M"].best_price == D("3160")
+    assert views["2 – 5 M"].ads == 2 and views["2 – 5 M"].my_rank == 3

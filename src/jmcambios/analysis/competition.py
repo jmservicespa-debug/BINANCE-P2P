@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from statistics import median
 
+from jmcambios.analysis.amounts import competes
 from jmcambios.domain import Ad, Side
 from jmcambios.domain.account import MyAd, OrderSide
 
@@ -59,9 +60,9 @@ class AdPosition:
 
 
 def _compatible(mine: MyAd, other: Ad) -> bool:
+    """Comparte método de pago y cubre al menos la mitad de mi rango de montos (ver analysis.amounts)."""
     shares_method = bool(set(mine.payment_methods) & set(other.payment_methods))
-    overlap = max(mine.min_fiat, other.min_fiat) <= min(mine.max_fiat, other.max_fiat_effective)
-    return shares_method and overlap
+    return shares_method and competes(mine.min_fiat, mine.max_fiat, other)
 
 
 def _competitor(mine: MyAd, a: Ad) -> Competitor:

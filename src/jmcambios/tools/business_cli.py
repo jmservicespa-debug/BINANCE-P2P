@@ -13,6 +13,7 @@ Solo lectura: nada de esto modifica anuncios ni órdenes.
 from __future__ import annotations
 
 import argparse
+import re
 import logging
 import sys
 from collections import defaultdict
@@ -26,6 +27,7 @@ from jmcambios.analysis.competition import (
     position,
 )
 from jmcambios.analysis import pressure
+from jmcambios.analysis.amounts import tranche_views
 from jmcambios.analysis.crossing import parse_my_methods
 from jmcambios.analysis.liquidity import hourly_profile
 from jmcambios.analysis.pressure import PressureReport
@@ -56,7 +58,7 @@ def _dec(text: str | None, name: str) -> Decimal | None:
     t = text.strip().replace(" ", "")
     if "," in t:
         t = t.replace(".", "").replace(",", ".")
-    elif t.count(".") > 1:
+    elif t.count(".") > 1 or re.fullmatch(r"\d{1,3}\.\d{3}", t):  # 1.000.000 · 500.000
         t = t.replace(".", "")
     try:
         return Decimal(t)
@@ -253,6 +255,35 @@ def _print_markets(all_ask, all_bid, ver_ask, ver_bid) -> None:
     print(f"  Solo verificados [Binance]: mejor venta {money(ver_ask)} · mejor compra {money(ver_bid)}{spread}")
 
 
+def _parse_limits(text: str | None) -> tuple[Decimal, Decimal] | None:
+    if not text:
+        return None
+    parts = text.replace(" ", "").split("-")
+    if len(parts) != 2:
+        raise SystemExit("--limites debe ser MIN-MAX, p. ej. 500.000-2.000.000")
+    lo, hi = (_dec(p, "--limites") for p in parts)
+    if not (lo and hi and Decimal(0) < lo < hi):
+        raise SystemExit("--limites: el mínimo debe ser menor que el máximo")
+    return lo, hi
+
+
+def _print_tranches(books, my_ads, my_users, methods_cfg, merchants_only: bool) -> None:
+    """Competencia por tramo de monto en cada lado, con el puesto de tu anuncio en cada tramo."""
+    who = "verificados" if merchants_only else "todos"
+    print(f"\n  COMPETENCIA POR MONTO [Binance + cálculo] · {who} · que comparten tus métodos")
+    for side, kind, order_side in ((Side.BID, "COMPRA (compradores)", OrderSide.BUY), (Side.ASK, "VENTA (vendedores)", OrderSide.SELL)):
+        ads = [a for a in books[side].ads if a.advertiser.user_id not in my_users]
+        if merchants_only:
+            ads = [a for a in ads if a.advertiser.is_merchant] or ads
+        mine = next((a for a in my_ads if a.side is order_side), None)
+        methods = mine.payment_methods if mine else tuple(methods_cfg)
+        print(f"    {kind}" + (f" · tu precio {money(mine.price)}" if mine else ""))
+        print(f"      {'Tramo':<16}{'Anuncios':>9}{'Mejor precio':>15}{'USDT':>12}" + ("  Tu puesto" if mine else ""))
+        for v in tranche_views(side, ads, methods, mine.price if mine else None):
+            print(f"      {v.label:<16}{v.ads:>9}{money(v.best_price):>15}{money(v.qty, 0):>12}"
+                  + (f"  #{v.my_rank}" if mine and v.ads else ""))
+
+
 def cmd_competencia(store: HistoryStore, args: argparse.Namespace, settings: Settings) -> int:
     min_margin = (_dec(args.margen_min, "--margen-min") or settings.min_margin_pct) / 100
     cfg = _cfg(settings, args)
@@ -310,6 +341,7 @@ def cmd_competencia(store: HistoryStore, args: argparse.Namespace, settings: Set
     fees_cycle = maker_buy + maker_sell
     print(f"    Costos de un ciclo compra+venta: comisión ≈ {pct3(fees_cycle)} + 4x1000 {pct3(gmf_low)}–{pct3(gmf_high)}"
           f" → diferencia mínima entre compra y venta ≈ {pct3(fees_cycle + min_margin + gmf_low)}–{pct3(fees_cycle + min_margin + gmf_high)}")
+    _print_tranches(books, my_ads, my_users, cfg.gmf_by_account, settings.merchants_only)
     print("\n  Posición = estimación por precio; Binance también ordena por otros criterios.")
     return 0
 
@@ -409,9 +441,16 @@ def cmd_recomendar(store: HistoryStore, args: argparse.Namespace, settings: Sett
     my_buy = next((a for a in my_ads if a.side is OrderSide.BUY), None)
     my_sell = next((a for a in my_ads if a.side is OrderSide.SELL), None)
     press = pressure.analyze(store, VENUE, market, int(now.timestamp()))
+    buy_prof, sell_prof = _profile(my_buy, cfg.gmf_by_account), _profile(my_sell, cfg.gmf_by_account)
+    limits = _parse_limits(args.limites)
+    if limits:
+        buy_prof, sell_prof = (AdProfile(p.methods, *limits) for p in (buy_prof, sell_prof))
+    print(f"  Rango de montos de la estrategia: compra {money(buy_prof.min_fiat, 0)}–{money(buy_prof.max_fiat, 0)} · "
+          f"venta {money(sell_prof.min_fiat, 0)}–{money(sell_prof.max_fiat, 0)} COP"
+          + ("" if limits else " (de tus anuncios; cámbialo con --limites MIN-MAX)"))
     pp = pricing_plan(
         books[Side.ASK].ads, books[Side.BID].ads,
-        buy_profile=_profile(my_buy, cfg.gmf_by_account), sell_profile=_profile(my_sell, cfg.gmf_by_account),
+        buy_profile=buy_prof, sell_profile=sell_prof,
         costs=costs, pressure=press, exclude_users=my_users, merchants_only=settings.merchants_only,
     )
 
@@ -504,6 +543,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--costo-orden", help="Costo operativo atribuible por orden completada")
     p.add_argument("--tasa-oportunidad", help="Costo de oportunidad anual en %%, p. ej. 10")
     p.add_argument("--margen-min", help="competencia/recomendar: margen mínimo en %%, p. ej. 1 (por defecto JMC_MARGEN_MIN)")
+    p.add_argument("--limites", help="recomendar: rango de montos del anuncio en COP, p. ej. 500.000-2.000.000")
     p.add_argument("--competencia", choices=["verificados", "todos"],
                    help="competencia/recomendar: contra quién calcular puestos y precios (por defecto JMC_SOLO_VERIFICADOS)")
     p.add_argument("--meta", help="recomendar: meta de ganancia diaria en COP (por defecto 127.000)")
