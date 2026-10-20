@@ -60,6 +60,7 @@ def test_study_profiles_top_merchants(store):
     assert v.sides == "solo venta" and v.own_spread is None and v.rank_sell == 1
     s = merchants.summarize(st)
     assert s["two_sided"] == 1 and s["own_spread"] == pytest.approx(20.5) and s["excluded"] == 0
+    assert s["gap_buy"] == pytest.approx(1.5) and s["gap_sell"] == pytest.approx(3)
     costs = Costs(D("0.00181"), D("0.00008"), D("0"), D("0.004"), D("0.01"))
     net = merchants.net_margin_with_costs(3135, 3155, costs)
     assert D("0.004") < net < D("0.005")
@@ -132,12 +133,11 @@ def test_plan_leaders_scenario():
     bids = [make_ad(f"b{i}", str(3140 - i * 2), "1000", side=Side.BID, user=f"b{i}") for i in range(15)]
     prof = AdProfile(("BancolombiaSA",), D("200000"), D("3000000"))
     costs = Costs(D("0.00181"), D("0.00008"), D("0"), D("0.004"), D("0.01"))
-    pp = plan(asks, bids, buy_profile=prof, sell_profile=prof, costs=costs, leader_ranks=(10, 9))
+    pp = plan(asks, bids, buy_profile=prof, sell_profile=prof, costs=costs, leader_gaps=(D("18"), D("15")))
     lead = pp.scenarios[-1]
     assert lead.name == LEADERS and len(pp.scenarios) == 4
-    assert lead.buy.price == D("3122.01") and lead.sell.price == D("3165.99")  # supera al 10º comprador y al 9º vendedor
-    assert lead.buy.rank == 10 and lead.sell.rank == 9 and not lead.buy.adjusted
-    assert lead.margin > D("0.01")
+    assert lead.buy.price == D("3122.00") and lead.sell.price == D("3165.00")  # mejor 3140 − 18 · mejor 3150 + 15
+    assert not lead.buy.adjusted and lead.margin > D("0.01")
     assert len(plan(asks, bids, buy_profile=prof, sell_profile=prof, costs=costs).scenarios) == 3
 
 
@@ -157,4 +157,6 @@ def test_panel_escenarios_include_leaders(tmp_path):
     data = panel.PanelData(db, state, venue=VENUE, market=MARKET, fiat="COP", asset="USDT",
                            cost_config=panel.cost_config({"BancolombiaSA": D("0.004")}))
     out = data.escenarios(D("1"), int(datetime.now(UTC).timestamp()))
-    assert out["leader_ranks"] == [2, 2] and out["scenarios"][-1]["name"] == "como los mejores"
+    assert out["leader_gaps"] == [1.5, 3.0] and out["scenarios"][-1]["name"] == "como los mejores"
+    lead = out["scenarios"][-1]
+    assert lead["buy"]["price"] == 3134.5 and lead["sell"]["price"] == 3155.0  # mejor comprador 3136 − 1,5 · vendedor 3152 + 3

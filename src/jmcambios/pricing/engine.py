@@ -180,13 +180,13 @@ def plan(
     pressure: PressureReport | None = None,
     exclude_users: set[str] | None = None,
     merchants_only: bool = False,
-    leader_ranks: tuple[int, int] | None = None,
+    leader_gaps: tuple[Decimal, Decimal] | None = None,
 ) -> PricePlan:
     """`asks` = anuncios de venta (compiten con mi VENTA); `bids` = de compra (compiten con mi COMPRA).
 
-    `leader_ranks` = (puesto compra, puesto venta) típicos de los comerciantes líderes: añade el
-    escenario "como los mejores", que copia su ubicación SIN mover precios para proteger el margen
-    (el margen resultante se muestra tal cual, para comparar).
+    `leader_gaps` = (COP bajo el mejor comprador, COP sobre el mejor vendedor) típicos de los líderes:
+    añade el escenario "como los mejores", que copia esa DISTANCIA AL MEJOR PRECIO (medida en el mismo
+    libro, no entre mis compatibles) sin mover precios por margen; el margen se muestra tal cual.
     """
     ex = exclude_users or set()
     asks = [a for a in asks if a.advertiser.user_id not in ex]
@@ -240,13 +240,12 @@ def plan(
             margin_worst=cycle_margin(b, s, costs, costs.gmf_worst),
             net_per_unit=s * m,
         ))
-    if leader_ranks is not None:
-        rb, rs = max(1, leader_ranks[0]), max(1, leader_ranks[1])
-        b = competitive_price(Side.BID, bids, buy_profile, rb)
-        s = competitive_price(Side.ASK, asks, sell_profile, rs)
+    if leader_gaps is not None:
+        b = (out.best_bid - leader_gaps[0]).quantize(TICK)
+        s = (out.best_ask + leader_gaps[1]).quantize(TICK)
         m = cycle_margin(b, s, costs)
         out.scenarios.append(Scenario(
-            name=LEADERS, target_rank=rb, target_margin=m,
+            name=LEADERS, target_rank=0, target_margin=m,
             buy=_place(Side.BID, bids, buy_profile, b, b, OrderSide.BUY, False),
             sell=_place(Side.ASK, asks, sell_profile, s, s, OrderSide.SELL, False),
             margin=m, margin_worst=cycle_margin(b, s, costs, costs.gmf_worst), net_per_unit=s * m,

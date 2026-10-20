@@ -181,7 +181,7 @@ try { const v = localStorage.getItem('jmc_verificados'); if (v === '1' || v === 
 const MODES = {OBSERVATION: 'Modo: Observación', RECOMMENDATION: 'Modo: Recomendación', AUTOMATIC: 'Modo: Automático'};
 const NAMES = {conservador: 'Conservador', equilibrado: 'Equilibrado', agresivo: 'Agresivo', 'como los mejores': 'Como los mejores'};
 const HINT = {conservador: 'más margen, menos órdenes', equilibrado: 'recomendado por defecto', agresivo: 'primer puesto, menos margen',
-  'como los mejores': 'misma ubicación que los líderes'};
+  'como los mejores': 'misma distancia al mejor precio que los líderes'};
 
 function renderEstado(s) {
   if (!s.available) { $('updated').textContent = s.message; return; }

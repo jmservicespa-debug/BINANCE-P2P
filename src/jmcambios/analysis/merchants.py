@@ -217,6 +217,8 @@ def summarize(st: MerchantStudy) -> dict:
         "own_spread": med([m.own_spread for m in two]),
         "own_spread_pct": med([m.own_spread_pct for m in two]),
         "rank_buy": med([m.rank_buy for m in two if m.rank_buy is not None]),
+        "gap_buy": med([m.gap_buy for m in two if m.gap_buy is not None]),
+        "gap_sell": med([m.gap_sell for m in two if m.gap_sell is not None]),
         "rank_sell": med([m.rank_sell for m in two if m.rank_sell is not None]),
         "min_fiat": med([m.min_fiat for m in two if m.min_fiat]),
         "max_fiat": med([m.max_fiat for m in two if m.max_fiat]),
