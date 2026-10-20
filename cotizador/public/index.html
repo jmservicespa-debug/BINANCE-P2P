@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JM Cambios · Cotiza tu envío</title>
+<meta name="description" content="Cotiza tu envío de dinero desde Chile o Colombia con la tasa del día de JM Cambios.">
+<meta name="theme-color" content="#531463">
+<link rel="icon" type="image/png" href="/assets/icon.png">
+<link rel="apple-touch-icon" href="/assets/icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Michroma&family=Source+Sans+3:wght@400;600&display=swap">
+<link rel="stylesheet" href="/css/estilo.css">
+</head>
+<body>
+<main>
+  <header>
+    <a class="brand" href="/">
+      <span class="mark"><svg viewBox="20 14 450 522" aria-hidden="true"><clipPath id="jmhex"><polygon points="245,22 462,148 462,402 245,528 28,402 28,148"/></clipPath><g clip-path="url(#jmhex)" fill="#531463"><rect x="0" y="0" width="250" height="365"/><rect x="283" y="0" width="77" height="550"/><rect x="0" y="395" width="360" height="155"/><rect x="385" y="0" width="165" height="550"/></g></svg></span>
+      <span class="word">JMCAMBIOS<small>SPEED AND TRUST</small></span>
+    </a>
+  </header>
+
+  <section class="card" aria-labelledby="h-cot">
+    <div>
+      <h2 id="h-cot">Cotiza tu envío</h2>
+      <span class="muted" id="updated">Cargando tasas…</span>
+    </div>
+    <div class="msg bad" id="error" hidden></div>
+    <div class="seg" id="origins"></div>
+    <div class="dest" id="dests"></div>
+    <div class="mode" id="modes">
+      <button data-mode="send" aria-pressed="true">Yo envío</button>
+      <button data-mode="get" aria-pressed="false">Quiero que reciba</button>
+    </div>
+    <label class="f" for="amount"><span id="amount-label">Monto que envías</span>
+      <span class="amount"><input id="amount" inputmode="decimal" autocomplete="off" value="100.000"><span id="amount-cur">CLP</span></span>
+    </label>
+    <div class="result" aria-live="polite">
+      <span id="r-label">Recibe</span>
+      <span class="big num" id="r-big">—</span>
+      <div class="row num"><span id="r-send"></span><span id="r-rate"></span></div>
+      <div class="bcv num" id="r-bcv" hidden>
+        <div class="row"><span>Dólar BCV <span id="b-date"></span></span><span id="b-rate"></span></div>
+        <div class="row"><span>Equivale a</span><b id="b-usd"></b></div>
+      </div>
+    </div>
+    <div class="wa" id="wa"></div>
+    <p class="fine">Tasa sujeta a cambios · Se confirma por WhatsApp antes de enviar<br>Atención de lunes a domingo, 10:00 a 22:00 h<br><span id="dest-note"></span></p>
+  </section>
+  <p class="fine">jmservicespa@gmail.com</p>
+</main>
+<script type="module" src="/js/cotizador.js"></script>
+</body>
+</html>

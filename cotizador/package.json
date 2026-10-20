@@ -1,0 +1,9 @@
+{
+  "name": "jmcambios-cotizador",
+  "private": true,
+  "type": "module",
+  "description": "Cotizador de envíos de JM Cambios: panel de tasas, cotizador público y flyers.",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

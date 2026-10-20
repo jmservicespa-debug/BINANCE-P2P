@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>JM Cambios · Panel de tasas</title>
+<meta name="theme-color" content="#531463">
+<link rel="icon" type="image/png" href="/assets/icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Michroma&family=Source+Sans+3:wght@400;600&display=swap">
+<link rel="stylesheet" href="/css/estilo.css">
+</head>
+<body>
+<main>
+  <header>
+    <a class="brand" href="/">
+      <span class="mark"><svg viewBox="20 14 450 522" aria-hidden="true"><clipPath id="jmhex"><polygon points="245,22 462,148 462,402 245,528 28,402 28,148"/></clipPath><g clip-path="url(#jmhex)" fill="#531463"><rect x="0" y="0" width="250" height="365"/><rect x="283" y="0" width="77" height="550"/><rect x="0" y="395" width="360" height="155"/><rect x="385" y="0" width="165" height="550"/></g></svg></span>
+      <span class="word">JMCAMBIOS<small>PANEL DE TASAS</small></span>
+    </a>
+    <button class="btn ghost" id="logout" hidden>Cerrar sesión</button>
+  </header>
+
+  <form class="card" id="login" hidden>
+    <h2>Entrar al panel</h2>
+    <label class="f" for="password">Contraseña
+      <span class="amount"><input id="password" type="password" autocomplete="current-password" required></span>
+    </label>
+    <div class="msg bad" id="login-msg" hidden></div>
+    <button class="btn" type="submit">Entrar</button>
+  </form>
+
+  <section class="card" id="editor" hidden aria-labelledby="h-tasas">
+    <div>
+      <h2 id="h-tasas">Tasas del día</h2>
+      <span class="muted">Escríbelas como en tu flyer (0.9320, 1085…). Al guardar se actualizan el cotizador y los dos flyers. <span id="last"></span></span>
+    </div>
+    <div id="routes"></div>
+    <div>
+      <h3>Dólar BCV</h3>
+      <span class="muted" id="bcv-now">—</span>
+    </div>
+    <div class="route" style="border:0">
+      <span id="bcv-flag"></span>
+      <div><h3>Valor manual</h3><span class="op">Solo se usa si no se puede leer el BCV. Déjalo vacío si no lo necesitas.</span></div>
+      <input type="text" id="bcv" inputmode="decimal" aria-label="Dólar BCV manual" placeholder="—">
+    </div>
+    <div class="msg" id="save-msg" hidden></div>
+    <button class="btn" id="save">Guardar y publicar</button>
+  </section>
+
+  <section class="card" id="flyers" hidden aria-labelledby="h-fly">
+    <div>
+      <h2 id="h-fly">Flyers del día</h2>
+      <span class="muted">Se llenan con las tasas guardadas. Desde el celular, Compartir te deja enviarlos directo a WhatsApp.</span>
+    </div>
+    <div class="flyer"><h3>Desde Chile</h3><img id="fly-CL" alt="Flyer de tasas desde Chile"></div>
+    <div class="row2"><button class="btn ghost" data-dl="CL">Descargar</button><button class="btn" data-share="CL">Compartir</button></div>
+    <div class="flyer"><h3>Desde Colombia</h3><img id="fly-CO" alt="Flyer de tasas desde Colombia"></div>
+    <div class="row2"><button class="btn ghost" data-dl="CO">Descargar</button><button class="btn" data-share="CO">Compartir</button></div>
+  </section>
+
+  <section class="card" id="links" hidden>
+    <h3>Enlaces para tus clientes</h3>
+    <div id="advisors"></div>
+    <span class="muted">Cada enlace lleva el WhatsApp de esa persona. El enlace general muestra los dos.</span>
+  </section>
+</main>
+<script type="module" src="/js/panel.js"></script>
+</body>
+</html>
