@@ -116,7 +116,18 @@ function waButtons(text, action) {
   const label = action ? (adv ? `${action} a ${esc(p.name.split(' ')[0])}` : action)
     : adv ? `Escribir a ${esc(p.name.split(' ')[0])} por WhatsApp` : 'Escribir por WhatsApp';
   return `<a href="https://wa.me/${p.phone}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${label}</a>`
-    + `<span class="fine">${adv ? esc(p.name) + ' · ' : ''}${p.show}</span>`;
+    + `<span class="fine">${adv ? esc(p.name) + ' · ' : ''}${p.show}</span>`
+    + preferential(p);
+}
+
+// Montos altos: tasa preferencial conversada directamente con el asesor.
+function preferential(p) {
+  const r = ROUTES.find((x) => x.id === route);
+  const where = r ? ` desde ${ORIGINS[origin].name} a ${r.name}` : '';
+  const msg = `Hola, quiero enviar un monto alto${where}. ¿Qué tasa preferencial me puedes dar?`;
+  const who = adv ? `Escríbele a ${esc(p.name.split(' ')[0])}` : 'Escríbenos';
+  return `<div class="pref"><div><b>¿Montos altos?</b> Tenemos tasas preferenciales.</div>`
+    + `<a href="https://wa.me/${p.phone}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${who} y pide tu tasa →</a></div>`;
 }
 
 function render() { renderOrigins(); renderDests(); calc(); }
