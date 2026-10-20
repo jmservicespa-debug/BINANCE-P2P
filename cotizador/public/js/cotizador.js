@@ -16,7 +16,8 @@ if (!ADVISORS[adv]) adv = null;
 
 let data = null, origin = 'CL', route = null, mode = 'send';
 const OTHER = 'OTHER';  // origen u otro destino fuera de las rutas principales: tasa por WhatsApp
-const SOON = { BR: 'Brasil' };  // orígenes que se muestran con su bandera y el aviso "Próximamente"
+// Orígenes que se muestran con su bandera y el aviso "Próximamente", con los destinos que vendrán.
+const SOON = { BR: { name: 'Brasil', to: [['CL', 'Chile'], ['CO', 'Colombia'], ['VE', 'Venezuela'], ['USDT', 'USDT']] } };
 const GLOBE = '<svg class="flag" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--box)" stroke="var(--box-line)"/><path d="M1 12h22M12 1c3 3.2 4.5 7 4.5 11S15 19.8 12 23c-3-3.2-4.5-7-4.5-11S9 4.2 12 1z" fill="none" stroke="var(--accent)" stroke-width="1.4"/></svg>';
 const rateOf = (id) => data?.routes.find((r) => r.id === id);
 const statusOf = (id) => rateOf(id)?.status ?? (rateOf(id)?.active ? 'on' : 'off');
@@ -27,7 +28,7 @@ const activeRoutes = (o) => ALL.filter((r) => r.from === o && ['on', 'ask'].incl
 function renderOrigins() {
   $('origins').innerHTML = Object.entries(ORIGINS).map(([k, o]) =>
     `<button data-o="${k}" aria-pressed="${k === origin}">${flag(k)} ${esc(o.name)}</button>`).join('')
-    + Object.entries(SOON).map(([k, n]) => `<button data-o="${k}" aria-pressed="${k === origin}">${flag(k)} ${esc(n)}</button>`).join('')
+    + Object.entries(SOON).map(([k, s]) => `<button data-o="${k}" aria-pressed="${k === origin}">${flag(k)} ${esc(s.name)}</button>`).join('')
     + `<button data-o="${OTHER}" aria-pressed="${origin === OTHER}">${GLOBE} Otro país</button>`;
   $('origins').querySelectorAll('button').forEach((b) => b.onclick = () => {
     origin = b.dataset.o; route = origin === OTHER || SOON[origin] ? null : activeRoutes(origin)[0]?.id ?? OTHER;
@@ -63,7 +64,9 @@ function calc() {
   const soon = Boolean(SOON[origin]);
   $('soon').hidden = !soon;
   $('wa').hidden = soon;
-  if (soon) { $('other').hidden = true; $('quote').hidden = true; $('dest-note').textContent = ''; return; }
+  if (soon) {
+    $('soon-list').innerHTML = SOON[origin].to.map(([c, n]) => `<span>${flag(c)}${esc(n)}</span>`).join('');
+    $('other').hidden = true; $('quote').hidden = true; $('dest-note').textContent = ''; return; }
   const isOther = origin === OTHER || route === OTHER;
   $('other').hidden = !isOther;
   $('quote').hidden = isOther;
