@@ -117,9 +117,9 @@ export function validate(body) {
   }
   const bcv = body?.bcv_manual == null || String(body.bcv_manual).trim() === '' ? null : String(body.bcv_manual).trim();
   if (bcv !== null && !rateNum(bcv)) errors.push('bcv');
-  // Datos de Prex para calcular Brasil: solo se guardan para el panel, nunca se publican.
+  // Datos del proveedor para calcular Brasil: solo se guardan para el panel, nunca se publican.
   const brl = body?.brl && typeof body.brl === 'object'
-    ? { prex: String(body.brl.prex ?? '').slice(0, 20), margin_pct: String(body.brl.margin_pct ?? '').slice(0, 10) } : null;
+    ? { ref: String(body.brl.ref ?? '').slice(0, 20), margin_pct: String(body.brl.margin_pct ?? '').slice(0, 10) } : null;
   return { errors, data: { rates, status, bcv_manual: bcv, ...(brl ? { brl } : {}) } };
 }
 

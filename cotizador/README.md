@@ -11,11 +11,11 @@ no usa llaves de Binance ni toca la cuenta.
   último valor bueno o el valor manual del panel. Verificado en línea (2026-10-20): la página del BCV no
   responde desde Cloudflare; DolarApi sí (881,88 Bs/USD, igual al valor oficial del día). Publicado en https://jmcambios.pages.dev
 
-## Brasil desde Prex (solo panel)
+## Brasil desde el proveedor (solo panel)
 
-- Debajo de Chile → Brasil: escribes cuántos reales da Prex por 100.000 CLP y tu ganancia (8 % por defecto).
-  Precio del real = (100.000 ÷ BRL de Prex) × (1 + ganancia); la tasa del flyer = 1 ÷ ese precio (6 decimales),
-  se pone sola en la casilla de Brasil. Prex y la ganancia se guardan solo para el panel; el público ve la tasa final.
+- Debajo de Chile → Brasil: escribes cuántos reales da el proveedor por 100.000 CLP y tu ganancia (8 % por defecto).
+  Precio del real = (100.000 ÷ BRL del proveedor) × (1 + ganancia); la tasa del flyer = 1 ÷ ese precio (6 decimales),
+  se pone sola en la casilla de Brasil. El proveedor y la ganancia se guardan solo para el panel; el público ve la tasa final.
 
 ## Calculadora USDT (solo panel)
 

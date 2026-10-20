@@ -53,7 +53,7 @@ function renderRoutes() {
         <div><h3>${esc(o.name)} → ${esc(r.name)}</h3><span class="op">${esc(r.unit)} · ${o.cur} ${r.op === 'mul' ? '× tasa' : '÷ tasa'}</span></div>
         <input type="text" id="in-${r.id}" value="${esc(saved.rates[r.id] || '')}" inputmode="decimal" aria-label="Tasa ${esc(o.name)} a ${esc(r.name)}">
         <span class="ex"><span id="ex-${r.id}"></span><select id="st-${r.id}" aria-label="Estado ${esc(o.name)} a ${esc(r.name)}">${STATUS.map(([v, t]) => `<option value="${v}"${v === st ? ' selected' : ''}>${t}</option>`).join('')}</select></span>
-      </div>${r.id === 'cl-br' ? prexBox() : ''}`;
+      </div>${r.id === 'cl-br' ? provBox() : ''}`;
     }).join('')).join('');
   for (const r of ROUTES) {
     const upd = () => {
@@ -67,35 +67,35 @@ function renderRoutes() {
   }
   $('bcv').value = saved.bcv_manual || '';
   $('bcv-flag').innerHTML = flag('VE');
-  ['prex-brl', 'prex-m'].forEach((id) => { $(id).oninput = () => prexCalc(true); });
-  prexCalc(false);
+  ['prov-brl', 'prov-m'].forEach((id) => { $(id).oninput = () => provCalc(true); });
+  provCalc(false);
 }
 
-// Brasil: la tasa sale de lo que da Prex por 100.000 CLP más tu ganancia (el cliente solo ve la tasa final).
-function prexBox() {
+// Brasil: la tasa sale de lo que da el proveedor por 100.000 CLP más tu ganancia (el cliente solo ve la tasa final).
+function provBox() {
   const b = saved.brl || {};
-  return `<div class="prex">
-    <span class="muted">Calcular desde Prex (solo lo ves tú)</span>
+  return `<div class="prov">
+    <span class="muted">Calcular desde tu proveedor (solo lo ves tú)</span>
     <div class="row2">
-      <label class="f" for="prex-brl">Prex por 100 mil (BRL)
-        <span class="amount"><input id="prex-brl" inputmode="decimal" autocomplete="off" placeholder="Ej. 495,62" value="${esc(b.prex || '')}"></span></label>
-      <label class="f" for="prex-m">Tu ganancia (%)
-        <span class="amount"><input id="prex-m" inputmode="decimal" autocomplete="off" value="${esc(b.margin_pct || '8')}"></span></label>
+      <label class="f" for="prov-brl">Proveedor por 100 mil (BRL)
+        <span class="amount"><input id="prov-brl" inputmode="decimal" autocomplete="off" placeholder="Ej. 495,62" value="${esc(b.ref ?? '')}"></span></label>
+      <label class="f" for="prov-m">Tu ganancia (%)
+        <span class="amount"><input id="prov-m" inputmode="decimal" autocomplete="off" value="${esc(b.margin_pct || '8')}"></span></label>
     </div>
-    <span class="muted" id="prex-out"></span>
+    <span class="muted" id="prov-out"></span>
   </div>`;
 }
 
-// Precio del real en CLP = precio Prex + tu ganancia; la tasa del flyer (reales por peso) es su inverso.
-function prexCalc(fill) {
-  const brl = usdtNum($('prex-brl').value);
-  const m = Number(String($('prex-m').value).replace(',', '.'));
+// Precio del real en CLP = precio del proveedor + tu ganancia; la tasa del flyer (reales por peso) es su inverso.
+function provCalc(fill) {
+  const brl = usdtNum($('prov-brl').value);
+  const m = Number(String($('prov-m').value).replace(',', '.'));
   if (!(brl > 0) || !(m >= 0 && m <= 50)) {
-    $('prex-out').textContent = 'Escribe cuántos reales da Prex por 100.000 CLP y tu ganancia para calcular la tasa de Brasil.';
+    $('prov-out').textContent = 'Escribe cuántos reales da tu proveedor por 100.000 CLP y tu ganancia para calcular la tasa de Brasil.';
     return;
   }
-  const prexPrice = 100000 / brl, myPrice = prexPrice * (1 + m / 100), rate = (1 / myPrice).toFixed(6);
-  $('prex-out').textContent = `Prex: ${fmt(prexPrice, 2)} CLP por real · con tu ${fmt(m, m % 1 ? 1 : 0)} %: ${fmt(myPrice, 2)} CLP por real → tasa ${rate}`;
+  const provPrice = 100000 / brl, myPrice = provPrice * (1 + m / 100), rate = (1 / myPrice).toFixed(6);
+  $('prov-out').textContent = `Proveedor: ${fmt(provPrice, 2)} CLP por real · con tu ${fmt(m, m % 1 ? 1 : 0)} %: ${fmt(myPrice, 2)} CLP por real → tasa ${rate}`;
   if (fill) { $('in-cl-br').value = rate; $('in-cl-br').dispatchEvent(new Event('input')); }
 }
 
@@ -115,7 +115,7 @@ function renderLinks() {
 $('save').onclick = async () => {
   const body = { rates: {}, status: {}, bcv_manual: $('bcv').value.trim() || null };
   for (const r of ROUTES) { body.rates[r.id] = $('in-' + r.id).value.trim(); body.status[r.id] = $('st-' + r.id).value; }
-  body.brl = { prex: $('prex-brl').value.trim(), margin_pct: $('prex-m').value.trim() };
+  body.brl = { ref: $('prov-brl').value.trim(), margin_pct: $('prov-m').value.trim() };
   const bad = ROUTES.filter((r) => body.status[r.id] === 'on' && !rateNum(body.rates[r.id]));
   bad.forEach((r) => $('in-' + r.id).classList.add('bad'));
   const msg = $('save-msg');
