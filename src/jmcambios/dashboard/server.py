@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from jmcambios.analysis import merchants
 from jmcambios.analysis.amounts import tranche_views
 from jmcambios.analysis.pressure import PressureReport
 from jmcambios.dashboard.icon import ICON_PNG
@@ -90,6 +91,8 @@ class PanelData:
     def __init__(self, db_path: Path, state_path: Path, *, venue: str, market: str, fiat: str, asset: str,
                  cost_config: CostConfig, start: datetime | None = None) -> None:
         self.start = start
+        self._cache: dict = {}
+        self._lock = threading.Lock()
         self.db_path, self.state_path = db_path, state_path
         self.venue, self.market, self.fiat, self.asset = venue, market, fiat, asset
         self.cost_config = cost_config
@@ -224,6 +227,36 @@ class PanelData:
             out["min_margin"] = float(c["min_margin"])
         return out
 
+    def comerciantes(self, now_ts: int, merchants_only: bool | None = None) -> dict[str, Any]:
+        """Estudio de los mejores comerciantes (últimos 3 días). Se guarda 10 min: tarda unos segundos."""
+        state = self.estado(now_ts)
+        ver = bool(state.get("merchants_only", True)) if merchants_only is None else merchants_only
+        with self._lock:
+            hit = self._cache.get(("comerciantes", ver))
+            if hit and now_ts - hit[0] < 600:
+                return hit[1]
+        with self._store() as st:
+            study = merchants.study(st, self.venue, self.market, days=3, top=10, merchants_only=ver)
+        c = state.get("costs")
+        costs = None
+        if c:
+            D = lambda v: Decimal(str(v))  # noqa: E731
+            costs = Costs(D(c["maker_buy"]), D(c["maker_sell"]), D(c["gmf"]), D(c["gmf_worst"]), D(c["min_margin"]))
+        rows = []
+        for m in study.merchants:
+            net = (float(merchants.net_margin_with_costs(*m.both_prices, costs))
+                   if costs is not None and m.both_prices else None)
+            rows.append({"nickname": m.nickname, "orders": m.month_orders, "sides": m.sides, "presence": m.presence,
+                         "rank_buy": m.rank_buy, "rank_sell": m.rank_sell, "own_spread": m.own_spread,
+                         "own_spread_pct": m.own_spread_pct, "net_with_my_costs": net,
+                         "min_fiat": m.min_fiat, "max_fiat": m.max_fiat, "methods": list(m.methods),
+                         "active_hours": list(m.active_hours), "reprices_per_hour": m.reprices_per_hour})
+        out = {"merchants_only": ver, "samples": study.samples, "notes": study.notes, "merchants": rows,
+               "pattern": merchants.summarize(study)}
+        with self._lock:
+            self._cache[("comerciantes", ver)] = (now_ts, out)
+        return out
+
     def alertas(self) -> list[dict[str, Any]]:
         with self._store() as st:
             return [{"ts": r["ts"], "severity": r["severity"], "title": r["title"], "body": r["body"]}
@@ -284,6 +317,9 @@ def make_handler(data: PanelData, token: str) -> type[BaseHTTPRequestHandler]:
                             self._send(400, "límites inválidos".encode(), "text/plain; charset=utf-8")
                         else:
                             self._json(data.escenarios(m, ts, None if ver not in ("0", "1") else ver == "1", lim))
+                elif url.path == "/api/comerciantes":
+                    ver = (q.get("verificados") or [""])[0]
+                    self._json(data.comerciantes(ts, None if ver not in ("0", "1") else ver == "1"))
                 elif url.path == "/api/tramos":
                     ver = (q.get("verificados") or [""])[0]
                     self._json(data.tramos(ts, None if ver not in ("0", "1") else ver == "1"))

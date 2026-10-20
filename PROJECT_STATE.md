@@ -186,6 +186,13 @@ tests/                     pruebas unitarias (sin red)
 - Observado con datos reales (2026-10-19 ~19:20 COT): tramo < 500 mil daba ≈ 0,95–0,97 % libre siendo #1; 500 mil–5 M ≈ 0,38–0,39 %; > 5 M 0,13–0,47 % (cambia en minutos).
 - `JMC_INICIO_COMERCIANTE` necesario: sin él, Hoy/Rentabilidad mezclan compras COP que salieron como remesas VES (4.100 USDT "parados", −28.030 COP).
 
+## Estudio de los mejores comerciantes (2026-10-20, pedido del usuario)
+- Idea del usuario: si los mejores llevan meses con miles de órdenes, el mercado da; hay que aprender cómo trabajan.
+- `analysis/merchants.py`: muestrea hasta 240 ciclos de la base y, por comerciante (verificados por defecto, top por órdenes 30d, presencia ≥ 10 %): lados (compra y venta / solo uno), presencia, puesto mediano y distancia al mejor por lado, **diferencia propia** (venta − compra simultáneas, COP y %), margen con los costos del usuario [inferido], montos medianos, métodos, horas activas (≥ 50 % de presencia en esa hora), cambios de precio por hora (sobre el tiempo con datos). Patrón agregado de los que anuncian en los dos lados.
+- Comando `comerciantes` y tarjeta "Cómo trabajan los mejores" (`/api/comerciantes`, caché 10 min). Rendimiento: ~4 s con 3 días (~120 mil filas en ad_states).
+- Cuidados: la diferencia propia puede no ser su margen (remesas/otros mercados; costos desconocidos). Necesita días de historial.
+- Usar estos patrones para calibrar la Fase 7.
+
 ## Ideas registradas
 - Producto por suscripción (pedido del usuario 2026-10-19): multiusuario en servidor con IP fija, keys de terceros cifradas y solo lectura, configuración por usuario (bancos/4x1000, moneda, márgenes), registro y pagos, revisión legal (condiciones de Binance para terceros, Ley 1581 de 2012). Riesgo: suscriptores con la misma estrategia compiten entre sí. Primero validar con resultados reales del usuario. Mantener nada personal fijo en el código.
 

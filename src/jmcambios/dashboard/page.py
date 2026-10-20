@@ -125,6 +125,10 @@ input{font:inherit;font-size:14px;width:96px;min-height:36px;padding:0 10px;bord
   <section class="card"><div class="row"><h2>Competencia por monto</h2><span class="chip real">Binance</span></div>
     <span class="muted">Anuncios que atienden cada tramo y comparten tus métodos. Busca tramos con pocos competidores y buen precio.</span>
     <div id="tramos" class="muted">—</div></section>
+  <section class="card"><div class="row"><h2>Cómo trabajan los mejores</h2><span class="chip calc">Últimos 3 días</span></div>
+    <span class="muted">Comerciantes con más órdenes en 30 días y lo que hacen. "Diferencia propia" = su venta − su compra al mismo tiempo.</span>
+    <div id="pattern"></div><div id="comerciantes" class="muted">Cargando…</div>
+    <span class="muted">Puede no ser su margen real: algunos operan remesas u otros mercados y sus costos no se conocen.</span></section>
   <section class="card"><div class="row"><h2>Mis anuncios</h2><span class="chip real">Binance</span></div><div id="myads" class="muted">—</div></section>
   <div id="pwarn"></div>
   <p class="muted">Nada se modifica en Binance desde aquí: tú decides y cambias el precio en la app. Puesto = estimación por precio.</p>
@@ -262,6 +266,7 @@ document.querySelectorAll('#vbtns button').forEach(b => b.classList.toggle('on',
     $('lmin').value = limits ? fmt(limits[0], 0) : ''; $('lmax').value = limits ? fmt(limits[1], 0) : '';
   }
   renderTramos(v);
+  if (!$('tab-precios').classList.contains('hidden')) renderMerchants(v);
   if (Math.abs(m - cfg) < 1e-9 && v === cfgV && !limits) { renderPlan(s.plan ? {...s.plan, merchants_only: cfgV} : s.plan); return; }
   try {
     const r = await api('/api/escenarios?margen=' + m + '&verificados=' + (v ? 1 : 0)
@@ -297,6 +302,29 @@ async function renderTramos(v) {
     }
     $('tramos').innerHTML = table(t.buy || [], 'Compra (compiten con tu anuncio de compra)') + table(t.sell || [], 'Venta (compiten con tu anuncio de venta)') + sug;
   } catch (e) { $('tramos').textContent = 'Sin datos de tramos todavía.'; }
+}
+
+let lastMerchants = 0;
+async function renderMerchants(v) {
+  if (Date.now() - lastMerchants < 120000 && $('comerciantes').dataset.v === String(v)) return;
+  lastMerchants = Date.now(); $('comerciantes').dataset.v = String(v);
+  try {
+    const c = await api('/api/comerciantes?verificados=' + (v ? 1 : 0));
+    const hrs = (h) => { if (!h.length) return '—'; const out = []; let a = h[0], b = h[0];
+      for (const x of h.slice(1).concat([null])) { if (x === b + 1) { b = x; continue; } out.push(a === b ? a + ' h' : `${a}–${b + 1} h`); if (x !== null) a = b = x; }
+      return out.join(', '); };
+    const p = c.pattern;
+    $('pattern').innerHTML = p && p.two_sided ? `<div class="warn" style="margin:6px 0">Patrón de los ${p.two_sided} que compran y venden: diferencia propia típica
+      <b>${fmt(p.own_spread)} COP (${fmt(p.own_spread_pct, 3)} %)</b> · puesto compra #${fmt(p.rank_buy, 0)}, venta #${fmt(p.rank_sell, 0)}
+      · montos ${fmt(p.min_fiat, 0)}–${fmt(p.max_fiat, 0)}${p.reprices_per_hour !== null ? ` · cambian el precio ${fmt(p.reprices_per_hour, 1)} veces/hora` : ''}</div>` : '';
+    $('comerciantes').innerHTML = (c.notes || []).map(n => `<div>⚠ ${esc(n)}</div>`).join('') + c.merchants.map((m, i) => `
+      <div style="border-top:1px solid var(--line);padding:8px 0">
+        <div class="kv"><span><b style="color:var(--text)">${i + 1}. ${esc(m.nickname)}</b> · ${esc(m.sides)}</span><b>${m.orders} órd.</b></div>
+        ${m.own_spread !== null ? `<div>Diferencia propia <b class="mono" style="color:var(--text)">${fmt(m.own_spread)} COP (${fmt(m.own_spread_pct, 3)} %)</b>${m.net_with_my_costs !== null ? ` · con tus costos ${pct(m.net_with_my_costs)}` : ''}</div>` : ''}
+        <div>${m.rank_buy !== null ? `compra #${fmt(m.rank_buy, 0)} ` : ''}${m.rank_sell !== null ? `venta #${fmt(m.rank_sell, 0)} ` : ''}· presente ${fmt(m.presence * 100, 0)} % · ${fmt(m.min_fiat, 0)}–${fmt(m.max_fiat, 0)}</div>
+        <div>${esc(m.methods.join(', '))} · activo ${hrs(m.active_hours)}${m.reprices_per_hour !== null ? ` · ${fmt(m.reprices_per_hour, 1)} cambios/h` : ''}</div>
+      </div>`).join('');
+  } catch (e) { $('comerciantes').textContent = 'Sin datos todavía.'; }
 }
 
 function parseCop(t) { const x = (t || '').replace(/[^0-9]/g, ''); return x ? +x : NaN; }

@@ -6,6 +6,7 @@
   jmcambios-negocio competencia            # posición de tus anuncios y precios límite rentables
   jmcambios-negocio presion                # presión del mercado (alcista/bajista) con confianza — FASE 5
   jmcambios-negocio recomendar             # 3 escenarios de precio para tus anuncios — FASE 5
+  jmcambios-negocio comerciantes           # cómo trabajan los mejores comerciantes verificados (base del monitor)
 
 Solo lectura: nada de esto modifica anuncios ni órdenes.
 """
@@ -26,7 +27,7 @@ from jmcambios.analysis.competition import (
     min_profitable_sell_price,
     position,
 )
-from jmcambios.analysis import pressure
+from jmcambios.analysis import merchants, pressure
 from jmcambios.analysis.amounts import tranche_views
 from jmcambios.analysis.crossing import parse_my_methods
 from jmcambios.analysis.liquidity import hourly_profile
@@ -411,6 +412,67 @@ def _print_pressure(rep: PressureReport) -> None:
         print(f"    ⚠ {n}")
 
 
+def _hours_text(hours: tuple[int, ...]) -> str:
+    """(8, 9, 10, 14, 15) → '8–10 h, 14–15 h'."""
+    if not hours:
+        return "—"
+    out, start, prev = [], hours[0], hours[0]
+    for h in hours[1:] + (None,):
+        if h is not None and h == prev + 1:
+            prev = h
+            continue
+        out.append(f"{start}–{prev + 1} h" if prev != start else f"{start} h")
+        if h is not None:
+            start = prev = h
+    return ", ".join(out)
+
+
+def cmd_comerciantes(store: HistoryStore, args: argparse.Namespace, settings: Settings) -> int:
+    days = 3 if args.dias == 30 else args.dias  # por defecto, los últimos 3 días
+    st = merchants.study(store, VENUE, f"{settings.asset}/{settings.fiat}", days=days, top=args.top,
+                         merchants_only=settings.merchants_only)
+    who = "verificados" if settings.merchants_only else "todos"
+    print(f"Los mejores comerciantes {who} · {settings.asset}/{settings.fiat} · últimos {days:g} días"
+          f" · {st.samples} ciclos muestreados (base del monitor)\n")
+    for n in st.notes:
+        print(f"  ⚠ {n}")
+    if not st.merchants:
+        return 0
+    fees = _maker_fees(store, [], settings)
+    gmf = min(parse_my_methods(settings.my_pay_methods).values(), default=Decimal("0"))
+    costs = Costs(fees[OrderSide.BUY][0], fees[OrderSide.SELL][0], gmf, gmf, settings.min_margin_pct / 100)
+    for i, m in enumerate(st.merchants, 1):
+        print(f"  {i}. {m.nickname} · {m.month_orders} órdenes/30d [Binance]"
+              + (f" · {money(Decimal(str(m.finish_rate * 100)), 1)}% completadas" if m.finish_rate else "")
+              + f" · {m.sides} · presente {money(Decimal(str(m.presence * 100)), 0)}% del tiempo")
+        pos = []
+        if m.rank_buy is not None:
+            pos.append(f"compra puesto ≈ #{m.rank_buy:g} ({money(Decimal(str(m.gap_buy)))} COP bajo el mejor)")
+        if m.rank_sell is not None:
+            pos.append(f"venta puesto ≈ #{m.rank_sell:g} ({money(Decimal(str(m.gap_sell)))} COP sobre el mejor)")
+        print("     " + " · ".join(pos) + " [cálculo]")
+        if m.own_spread is not None:
+            buy, sell = m.both_prices
+            net = merchants.net_margin_with_costs(buy, sell, costs)
+            print(f"     SU DIFERENCIA PROPIA: compra {money(Decimal(str(buy)))} · vende {money(Decimal(str(sell)))}"
+                  f" → {money(Decimal(str(m.own_spread)))} COP ({money(Decimal(str(m.own_spread_pct)), 3)} %)"
+                  f" · con tus costos ≈ {pct3(net)} libre [inferido]")
+        print(f"     montos {money(Decimal(str(m.min_fiat or 0)), 0)}–{money(Decimal(str(m.max_fiat or 0)), 0)} COP"
+              f" · {', '.join(m.methods) or '—'} · activo {_hours_text(m.active_hours)}"
+              + (f" · cambia el precio {m.reprices_per_hour:.1f} veces/hora" if m.reprices_per_hour is not None else ""))
+    s = merchants.summarize(st)
+    if s:
+        print(f"\n  PATRÓN de los {s['two_sided']} que anuncian en compra y venta [cálculo]:")
+        print(f"    diferencia propia típica: {money(Decimal(str(s['own_spread'])))} COP ({money(Decimal(str(s['own_spread_pct'])), 3)} %)"
+              f" · puesto típico: compra #{s['rank_buy']:g}, venta #{s['rank_sell']:g}")
+        print(f"    montos típicos {money(Decimal(str(s['min_fiat'])), 0)}–{money(Decimal(str(s['max_fiat'])), 0)} COP"
+              + (f" · cambian el precio {s['reprices_per_hour']:.1f} veces/hora" if s['reprices_per_hour'] is not None else "")
+              + f" · presentes {money(Decimal(str(s['presence'] * 100)), 0)}% del tiempo")
+    print("\n  Ojo: 'diferencia propia' = su venta − su compra al mismo tiempo. Puede no ser su margen real:"
+          " algunos operan también remesas u otros mercados, y sus costos (4x1000, bancos) no se conocen.")
+    return 0
+
+
 def cmd_presion(store: HistoryStore, args: argparse.Namespace, settings: Settings) -> int:
     rep = pressure.analyze(store, VENUE, f"{settings.asset}/{settings.fiat}", int(datetime.now(UTC).timestamp()))
     print(f"Presión {settings.asset}/{settings.fiat} · {datetime.now(UTC).astimezone(BOGOTA):%Y-%m-%d %H:%M} (hora Colombia)\n")
@@ -562,6 +624,7 @@ COMMANDS = {
     "competencia": cmd_competencia,
     "presion": cmd_presion,
     "recomendar": cmd_recomendar,
+    "comerciantes": cmd_comerciantes,
 }
 
 
@@ -577,6 +640,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--costo-orden", help="Costo operativo atribuible por orden completada")
     p.add_argument("--tasa-oportunidad", help="Costo de oportunidad anual en %%, p. ej. 10")
     p.add_argument("--margen-min", help="competencia/recomendar: margen mínimo en %%, p. ej. 1 (por defecto JMC_MARGEN_MIN)")
+    p.add_argument("--top", type=int, default=10, help="comerciantes: cuántos mostrar (por órdenes en 30 días)")
     p.add_argument("--limites", help="recomendar: rango de montos del anuncio en COP, p. ej. 500.000-2.000.000")
     p.add_argument("--competencia", choices=["verificados", "todos"],
                    help="competencia/recomendar: contra quién calcular puestos y precios (por defecto JMC_SOLO_VERIFICADOS)")
