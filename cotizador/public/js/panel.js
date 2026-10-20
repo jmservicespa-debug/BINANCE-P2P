@@ -1,5 +1,6 @@
 import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum } from './rutas.js';
 import { esc, flag, flags } from './ui.js';
+import { USDT_URL, parseCriptoYa } from './criptoya.js';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -165,6 +166,17 @@ async function loadUsdt(fillInputs) {
   if (status !== 200) return;
   usdt = body;
   if (fillInputs) { $('u-margin').value = body.margin_pct; $('u-manual').value = body.manual || ''; }
+  // Si el servidor no pudo leer CriptoYa, este navegador la consulta directamente (como al abrir su página).
+  if (!usdt.ref?.value || usdt.ref.source === 'manual') {
+    try {
+      const res = await fetch(USDT_URL, { cache: 'no-store' });
+      const got = res.ok ? parseCriptoYa(await res.text()) : null;
+      if (got) usdt.ref = { ...got, age_s: 0, via: 'navegador' };
+      else usdt.ref = { ...usdt.ref, error: `${usdt.ref.error || ''} · navegador: respondió ${res.status}` };
+    } catch (e) {
+      usdt.ref = { ...usdt.ref, error: `${usdt.ref.error || ''} · navegador: ${e.message || 'sin conexión'}` };
+    }
+  }
   renderUsdt();
 }
 
@@ -180,7 +192,7 @@ function renderUsdt() {
   const r = usdt?.ref || {};
   $('u-ref').textContent = r.value ? `${fmt(r.value, 2)} CLP` : 'sin dato';
   const age = r.age_s == null ? '' : r.age_s < 90 ? ' · recién actualizado' : ` · hace ${Math.round(r.age_s / 60)} min`;
-  $('u-src').textContent = r.value ? `${USDT_SOURCES[r.source] || r.source}${age}${r.error ? ` · la fuente falló (${r.error})` : ''}`
+  $('u-src').textContent = r.value ? `${USDT_SOURCES[r.source] || r.source}${r.via ? ' (leído desde este equipo)' : ''}${age}${r.error && !r.via ? ` · la fuente falló (${r.error})` : ''}`
     : `No se pudo leer la referencia${r.error ? ` (${r.error})` : ''}. Escribe un valor manual.`;
   const price = usdtPrice();
   $('u-price').textContent = Number.isFinite(price) ? fmt(price, 2) : '—';

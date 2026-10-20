@@ -2,6 +2,9 @@
 // Guarda las tasas en KV (`env.TASAS`), protege el panel con contraseña y lee el dólar BCV.
 
 import { ROUTES, rateNum } from '../public/js/rutas.js';
+import { USDT_URL, parseCriptoYa } from '../public/js/criptoya.js';
+
+export { parseCriptoYa };
 
 const COOKIE = 'jmc_s';
 const SESSION_S = 12 * 3600;
@@ -210,28 +213,8 @@ export async function publicView(env, saved, now = Date.now()) {
 
 // ------------------------------------------------------------------ USDT/CLP (solo panel)
 
-// Referencia del precio del USDT en pesos chilenos para la calculadora del panel.
-// CriptoYa agrupa precios de varios exchanges (API pública, sin clave). Se usa el precio de venta
-// ("ask": lo que cuesta comprar USDT) de Vita Wallet, el proveedor de JM Cambios; si no viene,
-// Binance P2P; y si tampoco, la mediana de los demás.
-const USDT_URL = 'https://criptoya.com/api/usdt/clp/1';
+// Referencia del precio del USDT en pesos chilenos para la calculadora del panel (CriptoYa, API pública).
 const USDT_TTL_S = 120;
-const USDT_RANGE = [300, 3000];  // CLP por USDT fuera de este rango = dato absurdo, se ignora
-
-export function parseCriptoYa(text) {
-  let d;
-  try { d = JSON.parse(text); } catch { return null; }
-  if (!d || typeof d !== 'object') return null;
-  const ok = (v) => Number.isFinite(v) && v >= USDT_RANGE[0] && v <= USDT_RANGE[1];
-  const vitaKey = Object.keys(d).find((k) => /vita/i.test(k));
-  const v = Number(vitaKey && d[vitaKey]?.ask);
-  if (ok(v)) return { value: v, source: 'vita' };
-  const b = Number(d.binancep2p?.ask);
-  if (ok(b)) return { value: b, source: 'binancep2p' };
-  const asks = Object.values(d).map((x) => Number(x?.ask)).filter(ok).sort((a, z) => a - z);
-  if (!asks.length) return null;
-  return { value: asks[Math.floor(asks.length / 2)], source: 'mediana' };
-}
 
 export async function loadUsdtCfg(env) {
   try { return { margin_pct: '8', manual: null, ...JSON.parse((await env.TASAS.get('usdt_cfg')) || '{}') }; }
@@ -244,7 +227,10 @@ export async function usdtRef(env, manual, now = Date.now()) {
   if (cached && now - cached.ts < USDT_TTL_S * 1000) return { ...cached, age_s: Math.round((now - cached.ts) / 1000) };
   let error;
   try {
-    const res = await fetch(USDT_URL, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(6000) });
+    const res = await fetch(USDT_URL, {
+      headers: { accept: 'application/json', 'user-agent': 'JMCambios-cotizador/1.0 (+https://jmcambios.pages.dev)' },
+      signal: AbortSignal.timeout(6000),
+    });
     const got = res.ok ? parseCriptoYa(await res.text()) : null;
     if (got) {
       const fresh = { ...got, ts: now };
