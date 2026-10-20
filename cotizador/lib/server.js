@@ -217,8 +217,8 @@ export async function publicView(env, saved, now = Date.now()) {
 const USDT_TTL_S = 120;
 
 export async function loadUsdtCfg(env) {
-  try { return { margin_pct: '8', manual: null, ...JSON.parse((await env.TASAS.get('usdt_cfg')) || '{}') }; }
-  catch { return { margin_pct: '8', manual: null }; }
+  try { return { margin_pct: '8', manual: null, published: false, ...JSON.parse((await env.TASAS.get('usdt_cfg')) || '{}') }; }
+  catch { return { margin_pct: '8', manual: null, published: false }; }
 }
 
 export async function usdtRef(env, manual, now = Date.now()) {
@@ -262,7 +262,7 @@ export async function saveUsdtCfg(request, env, now = Date.now()) {
   if (!(margin !== '' && m >= 0 && m <= 50)) return json({ error: 'La ganancia debe estar entre 0 y 50 %.' }, 400);
   const manual = body?.manual == null || String(body.manual).trim() === '' ? null : String(body.manual).trim();
   if (manual !== null && !rateNum(manual)) return json({ error: 'El valor manual no es válido.' }, 400);
-  const cfg = { margin_pct: margin, manual };
+  const cfg = { margin_pct: margin, manual, published: body?.published === true };
   await env.TASAS.put('usdt_cfg', JSON.stringify(cfg));
   return json({ ...cfg, ref: await usdtRef(env, manual, now) });
 }

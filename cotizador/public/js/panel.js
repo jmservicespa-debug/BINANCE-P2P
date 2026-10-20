@@ -1,4 +1,4 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum } from './rutas.js';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js';
 import { esc, flag, flags } from './ui.js';
 import { USDT_URL, parseCriptoYa } from './criptoya.js';
 
@@ -165,7 +165,7 @@ async function loadUsdt(fillInputs) {
   const { status, body } = await api('/api/usdt');
   if (status !== 200) return;
   usdt = body;
-  if (fillInputs) { $('u-margin').value = body.margin_pct; $('u-manual').value = body.manual || ''; }
+  if (fillInputs) { $('u-margin').value = body.margin_pct; $('u-manual').value = body.manual || ''; $('u-pub').checked = !!body.published; }
   // Si el servidor no pudo leer CriptoYa, este navegador la consulta directamente (como al abrir su página).
   if (!usdt.ref?.value || usdt.ref.source === 'manual') {
     try {
@@ -178,14 +178,6 @@ async function loadUsdt(fillInputs) {
     }
   }
   renderUsdt();
-}
-
-// USDT admite decimales: "100,5" o "100.5" = cien y medio; "1.000" o "1.000,25" = mil.
-function usdtNum(v) {
-  let t = String(v || '').trim().replace(/\s/g, '');
-  if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.');
-  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
-  return /^\d+(\.\d+)?$/.test(t) ? parseFloat(t) : NaN;
 }
 
 function renderUsdt() {
@@ -208,13 +200,13 @@ function renderUsdt() {
 ['u-margin', 'u-qty', 'u-clp'].forEach((id) => { $(id).oninput = renderUsdt; });
 
 $('u-save').onclick = async () => {
-  const { status, body } = await api('/api/usdt', { method: 'PUT', body: JSON.stringify({ margin_pct: $('u-margin').value, manual: $('u-manual').value }) });
+  const { status, body } = await api('/api/usdt', { method: 'PUT', body: JSON.stringify({ margin_pct: $('u-margin').value, manual: $('u-manual').value, published: $('u-pub').checked }) });
   const msg = $('u-msg');
   msg.hidden = false;
   if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
   usdt = body;
   msg.className = 'msg';
-  msg.textContent = 'Guardado.';
+  msg.textContent = body.published ? 'Guardado. USDT visible para todos en el cotizador.' : 'Guardado. USDT solo en vista previa (no publicado).';
   renderUsdt();
 };
 setInterval(() => { if (!$('usdt').hidden) loadUsdt(false); }, 60 * 1000);

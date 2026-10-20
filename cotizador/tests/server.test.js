@@ -72,7 +72,7 @@ test('login, guardar tasas y vista pública', async () => {
   assert.equal((await putRates({ request: req('/api/tasas', { method: 'PUT', body: { rates: RATES }, cookie, origin: 'https://otro.com' }), env: e })).status, 403);
   const saved = await putRates({ request: req('/api/tasas', { method: 'PUT', body: { rates: RATES, status: { 'cl-br': 'off' }, bcv_manual: '250,5' }, cookie }), env: e });
   assert.equal(saved.status, 200);
-  const view = await (await getRates({ env: e })).json();
+  const view = await (await getRates({ request: req('/api/tasas'), env: e })).json();
   assert.equal(view.routes.find((r) => r.id === 'cl-ve').rate, '0.9320');
   assert.equal(view.routes.find((r) => r.id === 'cl-br').active, false);
   assert.deepEqual(view.bcv, { value: 250.5, date: null, source: 'manual' });  // el BCV no respondió
@@ -91,7 +91,7 @@ test('mercado inestable: no publica la tasa y el cliente la pide por WhatsApp', 
   const r = await putRates({ request: req('/api/tasas', { method: 'PUT', cookie,
     body: { rates: { ...RATES, 'cl-pe': '' }, status: { 'cl-ve': 'ask', 'cl-pe': 'ask', 'cl-br': 'off' } } }), env: e });
   assert.equal(r.status, 200);
-  const view = await (await getRates({ env: e })).json();
+  const view = await (await getRates({ request: req('/api/tasas'), env: e })).json();
   const ve = view.routes.find((x) => x.id === 'cl-ve');
   assert.deepEqual([ve.status, ve.rate, ve.active], ['ask', '', false]);
   assert.equal(view.routes.find((x) => x.id === 'cl-br').status, 'off');
@@ -100,7 +100,7 @@ test('mercado inestable: no publica la tasa y el cliente la pide por WhatsApp', 
   assert.equal(ses.saved.rates['cl-ve'], '0.9320');  // al volver a Activa no hay que escribirla de nuevo
   // Datos guardados con el formato anterior (active: false) siguen funcionando.
   await e.TASAS.put('tasas', JSON.stringify({ rates: RATES, active: { 'cl-us': false }, updated: 1 }));
-  const old = await (await getRates({ env: e })).json();
+  const old = await (await getRates({ request: req('/api/tasas'), env: e })).json();
   assert.equal(old.routes.find((x) => x.id === 'cl-us').status, 'off');
   assert.equal(old.routes.find((x) => x.id === 'cl-ve').status, 'on');
 });
@@ -128,8 +128,8 @@ test('dólar BCV leído de la página oficial y guardado 1 hora', async () => {
   let calls = 0;
   globalThis.fetch = async () => { calls++; return new Response(html); };
   const e = await env();
-  const a = await (await getRates({ env: e })).json();
-  const b = await (await getRates({ env: e })).json();
+  const a = await (await getRates({ request: req('/api/tasas'), env: e })).json();
+  const b = await (await getRates({ request: req('/api/tasas'), env: e })).json();
   assert.equal(a.bcv.source, 'bcv');
   assert.equal(b.bcv.value, 36.5623);
   assert.equal(calls, 1);
@@ -145,7 +145,7 @@ test('dólar BCV: si la página del BCV falla usa DolarApi; si todo falla, el ma
     return new Response('{"promedio":881.88,"fechaActualizacion":"2026-10-20T12:00:00Z"}');
   };
   const e = await env();
-  const v = await (await getRates({ env: e })).json();
+  const v = await (await getRates({ request: req('/api/tasas'), env: e })).json();
   assert.deepEqual(v.bcv, { value: 881.88, date: '2026-10-20', source: 'dolarapi' });
   // Todo falla: valor manual, motivo guardado (solo para el panel) y sin reintentar en cada visita.
   let calls = 0;
@@ -157,7 +157,7 @@ test('dólar BCV: si la página del BCV falla usa DolarApi; si todo falla, el ma
   await bcv(e2, '881,88', 1_000_000 + 60_000);
   assert.equal(calls, 2);  // un intento por fuente; el segundo pedido no vuelve a consultar
   await e2.TASAS.put('tasas', JSON.stringify({ rates: RATES, bcv_manual: '881,88', updated: 1 }));
-  const pub = await (await getRates({ env: e2 })).json();
+  const pub = await (await getRates({ request: req('/api/tasas'), env: e2 })).json();
   assert.equal(pub.bcv.errors, undefined);
 });
 
@@ -182,7 +182,14 @@ test('USDT/CLP: referencia de CriptoYa (Binance P2P), ganancia y respaldo manual
   assert.equal((await putUsdt({ request: req('/api/usdt', { method: 'PUT', cookie, body: { margin_pct: '80' } }), env: e })).status, 400);
   const s = await (await putUsdt({ request: req('/api/usdt', { method: 'PUT', cookie, body: { margin_pct: '7,5', manual: '950' } }), env: e })).json();
   assert.equal(s.margin_pct, '7.5');
+  // Vista previa: el público no ve USDT; Jamer con la sesión abierta sí; al publicar, todos.
+  assert.equal((await (await getRates({ request: req('/api/tasas'), env: e })).json()).usdt, undefined);
+  assert.deepEqual((await (await getRates({ request: req('/api/tasas', { cookie }), env: e })).json()).usdt, { margin_pct: '7.5', preview: true });
+  await putUsdt({ request: req('/api/usdt', { method: 'PUT', cookie, body: { margin_pct: '8', published: true } }), env: e });
+  assert.deepEqual((await (await getRates({ request: req('/api/tasas'), env: e })).json()).usdt, { margin_pct: '8', preview: false });
+  globalThis.fetch = async () => new Response(body);
   // Fuente caída: usa el valor manual y dice por qué.
+  globalThis.fetch = async () => new Response('caído', { status: 502 });
   globalThis.fetch = async () => new Response('caído', { status: 502 });
   const r = await usdtRef(e, '950', Date.now() + 10 * 60 * 1000);
   assert.deepEqual([r.value, r.source, r.error], [950, 'manual', 'respondió 502']);

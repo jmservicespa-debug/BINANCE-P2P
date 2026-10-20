@@ -1,4 +1,5 @@
-import { ADVISORS, ORIGINS, ROUTES, amountNum, belowMin, convert, fmt, invert } from './rutas.js';
+import { ADVISORS, ORIGINS, ROUTES, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js';
+import { USDT_URL, parseCriptoYa } from './criptoya.js';
 import { esc, flag, flags } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
@@ -18,7 +19,8 @@ const GLOBE = '<svg class="flag" viewBox="0 0 24 24" aria-hidden="true"><circle 
 const rateOf = (id) => data?.routes.find((r) => r.id === id);
 const statusOf = (id) => rateOf(id)?.status ?? (rateOf(id)?.active ? 'on' : 'off');
 // Se muestran las rutas activas y las de mercado inestable (estas sin tasa: se pide por WhatsApp).
-const activeRoutes = (o) => ROUTES.filter((r) => r.from === o && ['on', 'ask'].includes(statusOf(r.id)));
+const ALL = [...ROUTES, USDT_ROUTE];
+const activeRoutes = (o) => ALL.filter((r) => r.from === o && ['on', 'ask'].includes(statusOf(r.id)));
 
 function renderOrigins() {
   $('origins').innerHTML = Object.entries(ORIGINS).map(([k, o]) =>
@@ -55,7 +57,7 @@ function calc() {
   $('other').hidden = !isOther;
   $('quote').hidden = isOther;
   if (isOther) { otherQuote(); return; }
-  const r = ROUTES.find((x) => x.id === route);
+  const r = ALL.find((x) => x.id === route);
   const o = ORIGINS[origin];
   if (!r) { $('r-get').hidden = true; $('r-free').hidden = true; $('r-break').hidden = true; $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
   const bcv = data.bcv?.value;
@@ -67,21 +69,24 @@ function calc() {
   $('r-big').classList.remove('ask');
   const rate = rateOf(r.id).rate;
   amountLabels(r, o);
-  const x = amountNum($('amount').value);
+  const isUsdt = r.cur === 'USDT';
+  const x = (isUsdt && mode === 'get' ? usdtNum : amountNum)($('amount').value);
   const usd = mode === 'bcv' ? x : null;
   // Montos completos, sin decimales: desde ,50 se redondea hacia arriba; por debajo, hacia abajo.
   const target = mode === 'bcv' ? Math.round(x * bcv) : x;  // bolívares que deben llegar
   const send = Math.round(mode === 'send' ? x : invert(r, rate, target));
-  const get = Math.round(mode === 'send' ? convert(r, rate, send) : target);
+  // USDT con 2 decimales, hacia abajo (nunca se entrega de más); el resto, entero.
+  const get = isUsdt ? Math.floor((mode === 'send' ? convert(r, rate, send) : target) * 100) / 100
+    : Math.round(mode === 'send' ? convert(r, rate, send) : target);
   if (belowMin(r, send)) { minimum(r, o, send); return; }
   $('r-big').classList.remove('ask');
   $('r-free').hidden = false;
   $('r-break').hidden = false;
   $('r-break').innerHTML = [
-    ['Monto a enviar', `${fmt(send, 0)} ${o.cur}`],
+    [isUsdt ? 'Monto a pagar' : 'Monto a enviar', `${fmt(send, 0)} ${o.cur}`],
     ['Comisión', `0 ${o.cur}`],
     ['Cargos extras', `0 ${o.cur}`],
-    ['Tasa del día', rate],
+    ['Tasa del día', isUsdt ? `${fmt(Number(rate), 2)} CLP por USDT` : rate],
   ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')
     + `<dt class="total">Total a pagar</dt><dd class="total">${fmt(send, 0)} ${o.cur}</dd>`;
   $('r-label').textContent = mode === 'send' ? `Recibe en ${r.name}` : 'Debes enviar';
@@ -107,6 +112,7 @@ function calc() {
   const ok = Number.isFinite(send) && Number.isFinite(get) && send > 0;
   const text = !ok ? '' : mode === 'bcv'
     ? `Hola, necesito que lleguen ${fmt(get, 0)} Bs a ${r.name} (equivalentes a ${fmt(usd, 0)} USD al dólar BCV), enviando desde ${o.name}. Según el cotizador debo pagar ${fmt(send, 0)} ${o.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`
+    : isUsdt ? `Hola, quiero comprar ${fmt(get, 2)} USDT pagando ${fmt(send, 0)} CLP (precio ${fmt(Number(rate), 2)} CLP por USDT, sin comisión). ¿Me confirmas?`
     : `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${r.name}. Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`;
   $('wa').innerHTML = waButtons(text);
 }
@@ -156,8 +162,8 @@ function amountLabels(r, o) {
 function setMode(m) {
   mode = m;
   document.querySelectorAll('#modes button').forEach((o) => o.setAttribute('aria-pressed', String(o.dataset.mode === m)));
-  const r = ROUTES.find((x) => x.id === route);
-  $('amount').value = m === 'bcv' ? '20' : m === 'send' || r?.cur !== 'USD' ? '100.000' : '100';
+  const r = ALL.find((x) => x.id === route);
+  $('amount').value = m === 'bcv' ? '20' : m === 'send' || !['USD', 'USDT'].includes(r?.cur) ? '100.000' : '100';
 }
 
 function waButtons(text, action) {
@@ -176,6 +182,21 @@ document.querySelectorAll('#modes button').forEach((b) => b.onclick = () => { se
 $('amount').oninput = calc;
 ['o-from', 'o-to', 'o-amount'].forEach((id) => { $(id).oninput = otherQuote; });
 
+// USDT: el precio de Vita (CriptoYa) se lee desde el navegador del cliente y se le suma la ganancia.
+async function loadUsdt() {
+  if (!data?.usdt) return;
+  let ref = null;
+  try {
+    const res = await fetch(USDT_URL, { cache: 'no-store' });
+    ref = res.ok ? parseCriptoYa(await res.text()) : null;
+  } catch { ref = null; }
+  const price = ref ? ref.value * (1 + Number(data.usdt.margin_pct) / 100) : NaN;
+  data.routes = data.routes.filter((x) => x.id !== USDT_ROUTE.id);
+  // Sin precio de referencia: la opción queda como "Mercado inestable" (tasa por WhatsApp).
+  data.routes.push({ id: USDT_ROUTE.id, status: Number.isFinite(price) ? 'on' : 'ask', rate: Number.isFinite(price) ? price.toFixed(2) : '' });
+  $('preview').hidden = !data.usdt.preview;
+}
+
 async function load() {
   try {
     const res = await fetch('/api/tasas', { cache: 'no-store' });
@@ -185,6 +206,7 @@ async function load() {
   } catch {
     if (!data) { $('error').hidden = false; $('error').textContent = 'No pudimos cargar las tasas. Revisa tu conexión o escríbenos por WhatsApp.'; data = { routes: [], bcv: null }; }
   }
+  await loadUsdt();
   $('updated').textContent = data.updated
     ? 'Tasas del ' + new Date(data.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
     : 'Tasas aún no publicadas';

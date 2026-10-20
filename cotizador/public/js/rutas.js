@@ -53,6 +53,18 @@ export function fmt(v, dec) {
   return new Intl.NumberFormat('es-CL', { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(v);
 }
 
+// USDT desde Chile: el precio no se escribe en el panel; sale de Vita (CriptoYa) + la ganancia configurada.
+export const USDT_ROUTE = { id: 'cl-usdt', from: 'CL', to: ['USDT'], name: 'USDT', cur: 'USDT', unit: 'Tether (cripto)', op: 'div', dec: 2,
+  note: 'Recibes los USDT en tu wallet o cuenta de Binance (la red se confirma por WhatsApp)' };
+
+// USDT admite decimales: "100,5" o "100.5" = cien y medio; "1.000" o "1.000,25" = mil.
+export function usdtNum(v) {
+  let t = String(v || '').trim().replace(/\s/g, '');
+  if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
+  return /^\d+(\.\d+)?$/.test(t) ? parseFloat(t) : NaN;
+}
+
 export const belowMin = (route, sendAmount) => Boolean(route.min) && Number.isFinite(sendAmount) && sendAmount < route.min;
 
 export const routeById = (id) => ROUTES.find((r) => r.id === id);
