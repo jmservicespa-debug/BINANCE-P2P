@@ -116,8 +116,8 @@ input{font:inherit;font-size:14px;width:96px;min-height:36px;padding:0 10px;bord
     <div class="row"><label class="muted" for="mcustom">Otro valor en %</label><input id="mcustom" type="number" inputmode="decimal" min="0" max="10" step="0.1" placeholder="p. ej. 1,2"></div>
     <span class="muted" id="mhint"></span>
     <div class="row"><span class="label">Montos por orden (COP)</span>
-      <div class="btns"><input id="lmin" type="text" inputmode="numeric" placeholder="mín." aria-label="Monto mínimo">
-      <input id="lmax" type="text" inputmode="numeric" placeholder="máx." aria-label="Monto máximo"></div></div>
+      <div class="btns"><input id="lmin" type="text" inputmode="numeric" placeholder="mín. ej. 50000" aria-label="Monto mínimo">
+      <input id="lmax" type="text" inputmode="numeric" placeholder="máx. ej. 500000" aria-label="Monto máximo"></div></div>
     <div class="row"><span class="muted" id="lhint"></span><div class="btns"><button id="lapply">Aplicar</button><button id="lreset">Mis anuncios</button></div></div>
     <div class="row"><span class="label">Competidores</span><div class="btns" id="vbtns"><button data-v="1">Solo verificados</button><button data-v="0">Todos</button></div></div>
   </section>
@@ -250,7 +250,8 @@ async function renderPlanFor(s) {
   const v = verified === null ? cfgV : verified;
   $('lapply').onclick = () => {
   const a = parseCop($('lmin').value), b = parseCop($('lmax').value);
-  if (a > 0 && b > a) setLimits([a, b]); else $('lhint').innerHTML = '<span class="neg">El mínimo debe ser menor que el máximo</span>';
+  if (Number.isNaN(a) && Number.isNaN(b)) setLimits(null);  // vacío = límites de tus anuncios
+  else if (a > 0 && b > a) setLimits([a, b]); else $('lhint').innerHTML = '<span class="neg">El mínimo debe ser menor que el máximo</span>';
 };
 $('lreset').onclick = () => setLimits(null);
 document.querySelectorAll('#vbtns button').forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === v));
