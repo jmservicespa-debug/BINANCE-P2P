@@ -3,7 +3,8 @@ import { BRL_BRAKE, USDT_URL, brlPerClp, parseCriptoYa } from './criptoya.js';
 import { esc, flag, flags } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
-const MAIN_LINE = 'jamer';  // a quién escribe quien llega sin enlace de asesor
+const MAIN_LINE = 'jamer';
+const dot = (t) => (t.endsWith('.') ? t : `${t}.`);  // "EE. UU." ya termina en punto  // a quién escribe quien llega sin enlace de asesor
 
 // Asesor: viene en el enlace (?a=jamer) y se recuerda en este celular para la próxima visita.
 let adv = new URLSearchParams(location.search).get('a');
@@ -29,6 +30,7 @@ function renderOrigins() {
   $('origins').querySelectorAll('button').forEach((b) => b.onclick = () => {
     origin = b.dataset.o; route = origin === OTHER ? null : activeRoutes(origin)[0]?.id ?? OTHER;
     ['o-to', 'o-amount', ...(origin === OTHER ? ['o-from'] : [])].forEach((id) => { $(id).value = ''; });
+    $('amount').value = '';
     render();
   });
 }
@@ -39,7 +41,10 @@ function renderDests() {
   const list = activeRoutes(origin);
   $('dests').innerHTML = list.map((r) => `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${esc(r.unit)} (${r.cur})${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`).join('')
     + `<button data-r="${OTHER}" aria-pressed="${route === OTHER}">${GLOBE}<span>Otro destino<small>Tasa por WhatsApp</small></span></button>`;
-  $('dests').querySelectorAll('button').forEach((b) => b.onclick = () => { route = b.dataset.r; render(); });
+  $('dests').querySelectorAll('button').forEach((b) => b.onclick = () => {
+    if (mode !== 'send' && b.dataset.r !== route) $('amount').value = '';  // la casilla está en la moneda del destino
+    route = b.dataset.r; render();
+  });
 }
 
 // Otro país (origen) u otro destino: sin tasa publicada; el cliente la pide por WhatsApp.
@@ -69,6 +74,7 @@ function calc() {
   $('r-big').classList.remove('ask');
   const rate = rateOf(r.id).rate;
   amountLabels(r, o);
+  if (!$('amount').value.trim()) { rateOnly(r, o, rate); return; }
   const isUsdt = r.cur === 'USDT';
   const x = (isUsdt && mode === 'get' ? usdtNum : amountNum)($('amount').value);
   const usd = mode === 'bcv' ? x : null;
@@ -113,7 +119,7 @@ function calc() {
   const text = !ok ? '' : mode === 'bcv'
     ? `Hola, necesito que lleguen ${fmt(get, 0)} Bs a ${r.name} (equivalentes a ${fmt(usd, 0)} USD al dólar BCV), enviando desde ${o.name}. Según el cotizador debo pagar ${fmt(send, 0)} ${o.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`
     : isUsdt ? `Hola, quiero comprar ${fmt(get, 2)} USDT pagando ${fmt(send, 0)} CLP (precio ${fmt(Number(rate), 2)} CLP por USDT, sin comisión). ¿Me confirmas?`
-    : `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${r.name}. Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`;
+    : `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${dot(r.name)} Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`;
   $('wa').innerHTML = waButtons(text);
 }
 
@@ -151,10 +157,11 @@ function unstable(r, o) {
   if (mode === 'send' && belowMin(r, x)) { minimum(r, o, x); return; }
   const amount = !(Number.isFinite(x) && x > 0) ? 'hacer un envío'
     : mode === 'send' ? `enviar ${fmt(x, 0)} ${o.cur}` : mode === 'bcv' ? `que lleguen bolívares equivalentes a ${fmt(x, 0)} USD al dólar BCV` : `que reciban ${fmt(x, r.dec)} ${r.cur}`;
-  $('wa').innerHTML = waButtons(`Hola, quiero ${amount} desde ${o.name} a ${r.name}. ¿Me das la tasa de este momento?`, 'Pedir tasa');
+  $('wa').innerHTML = waButtons(`Hola, quiero ${amount} desde ${o.name} a ${dot(r.name)} ¿Me das la tasa de este momento?`, 'Pedir tasa');
 }
 
 function amountLabels(r, o) {
+  placeholder(r, o);
   $('amount-label').textContent = { send: 'Monto que envías', get: 'Monto que debe recibir', bcv: 'Los bolívares deben equivaler a' }[mode];
   $('amount-cur').textContent = mode === 'send' ? o.cur : mode === 'bcv' ? 'USD BCV' : r.cur;
 }
@@ -162,8 +169,27 @@ function amountLabels(r, o) {
 function setMode(m) {
   mode = m;
   document.querySelectorAll('#modes button').forEach((o) => o.setAttribute('aria-pressed', String(o.dataset.mode === m)));
-  const r = ALL.find((x) => x.id === route);
-  $('amount').value = m === 'bcv' ? '20' : m === 'send' || !['USD', 'USDT'].includes(r?.cur) ? '100.000' : '100';
+  $('amount').value = '';  // cambia la moneda de la casilla: el cliente escribe su monto
+}
+
+// Casilla vacía al inicio: se muestra la tasa del día y un ejemplo en gris según la moneda.
+const EXAMPLES = { CLP: '100.000', COP: '200.000', VES: '100.000', PEN: '300', USD: '100', USDT: '100', BRL: '500' };
+function placeholder(r, o) {
+  const cur = mode === 'send' ? o.cur : mode === 'bcv' ? 'BCV' : r.cur;
+  $('amount').placeholder = `Ej. ${cur === 'BCV' ? '20' : EXAMPLES[cur] || '100'}`;
+}
+
+function rateOnly(r, o, rate) {
+  const isUsdt = r.cur === 'USDT';
+  ['r-get', 'r-free', 'r-break', 'r-bcv'].forEach((id) => { $(id).hidden = true; });
+  $('r-big').classList.add('ask');
+  $('r-label').textContent = `Tasa del día · ${r.name}`;
+  $('r-big').textContent = isUsdt ? `${fmt(Number(rate), 2)} CLP por USDT` : rate;
+  $('r-send').textContent = isUsdt ? 'Escribe el monto para ver cuántos USDT recibes.' : 'Escribe el monto para ver cuánto recibe.';
+  $('r-rate').textContent = '';
+  $('r-min').textContent = r.min ? `Envío mínimo: ${fmt(r.min, 0)} ${o.cur}` : '';
+  $('dest-note').textContent = r.note || '';
+  $('wa').innerHTML = waButtons(isUsdt ? 'Hola, quiero comprar USDT.' : `Hola, quiero cotizar un envío desde ${o.name} a ${dot(r.name)}`);
 }
 
 function waButtons(text, action) {
