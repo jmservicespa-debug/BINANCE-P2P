@@ -212,7 +212,8 @@ export async function publicView(env, saved, now = Date.now()) {
 
 // Referencia del precio del USDT en pesos chilenos para la calculadora del panel.
 // CriptoYa agrupa precios de varios exchanges (API pública, sin clave). Se usa el precio de venta
-// ("ask": lo que cuesta comprar USDT) de Binance P2P; si no viene, la mediana de los demás.
+// ("ask": lo que cuesta comprar USDT) de Vita Wallet, el proveedor de JM Cambios; si no viene,
+// Binance P2P; y si tampoco, la mediana de los demás.
 const USDT_URL = 'https://criptoya.com/api/usdt/clp/1';
 const USDT_TTL_S = 120;
 const USDT_RANGE = [300, 3000];  // CLP por USDT fuera de este rango = dato absurdo, se ignora
@@ -222,6 +223,9 @@ export function parseCriptoYa(text) {
   try { d = JSON.parse(text); } catch { return null; }
   if (!d || typeof d !== 'object') return null;
   const ok = (v) => Number.isFinite(v) && v >= USDT_RANGE[0] && v <= USDT_RANGE[1];
+  const vitaKey = Object.keys(d).find((k) => /vita/i.test(k));
+  const v = Number(vitaKey && d[vitaKey]?.ask);
+  if (ok(v)) return { value: v, source: 'vita' };
   const b = Number(d.binancep2p?.ask);
   if (ok(b)) return { value: b, source: 'binancep2p' };
   const asks = Object.values(d).map((x) => Number(x?.ask)).filter(ok).sort((a, z) => a - z);

@@ -157,7 +157,7 @@ start();
 // ------------------------------------------------------------------ calculadora USDT
 
 let usdt = null;
-const USDT_SOURCES = { binancep2p: 'Binance P2P vía CriptoYa', mediana: 'mediana de exchanges vía CriptoYa', manual: 'valor manual' };
+const USDT_SOURCES = { vita: 'Vita Wallet vía CriptoYa', binancep2p: 'Binance P2P vía CriptoYa', mediana: 'mediana de exchanges vía CriptoYa', manual: 'valor manual' };
 const usdtPrice = () => usdt?.ref?.value ? usdt.ref.value * (1 + (Number(String($('u-margin').value).replace(',', '.')) || 0) / 100) : NaN;
 
 async function loadUsdt(fillInputs) {

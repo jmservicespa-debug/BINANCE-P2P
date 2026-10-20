@@ -13,8 +13,8 @@ no usa llaves de Binance ni toca la cuenta.
 
 ## Calculadora USDT (solo panel)
 
-- Referencia USDT/CLP de CriptoYa (API pública, sin clave): precio de venta (`ask`) de Binance P2P; si no viene,
-  la mediana de los exchanges. Se guarda 2 minutos. Respaldo manual si la fuente falla. Rango aceptado 300–3.000 CLP.
+- Referencia USDT/CLP de CriptoYa (API pública, sin clave): precio de venta (`ask`) de Vita Wallet (el proveedor);
+  si no viene, Binance P2P; si tampoco, la mediana de los exchanges. Se guarda 2 minutos. Respaldo manual si la fuente falla. Rango aceptado 300–3.000 CLP.
 - Precio de venta = referencia × (1 + ganancia %), por defecto 8 %. Cobrar = USDT × precio (entero);
   entregar = CLP ÷ precio (2 decimales, hacia abajo). No se muestra en el cotizador público.
 

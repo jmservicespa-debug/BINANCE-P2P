@@ -164,6 +164,7 @@ test('dólar BCV: si la página del BCV falla usa DolarApi; si todo falla, el ma
 test('USDT/CLP: referencia de CriptoYa (Binance P2P), ganancia y respaldo manual', async () => {
   const body = JSON.stringify({ binancep2p: { ask: 948.5, bid: 940 }, buda: { ask: 951, bid: 939 }, raro: { ask: 5 } });
   assert.deepEqual(parseCriptoYa(body), { value: 948.5, source: 'binancep2p' });
+  assert.deepEqual(parseCriptoYa(JSON.stringify({ vitawallet: { ask: 955.2 }, binancep2p: { ask: 948.5 } })), { value: 955.2, source: 'vita' });
   assert.deepEqual(parseCriptoYa(JSON.stringify({ a: { ask: 950 }, b: { ask: 960 }, c: { ask: 10 } })), { value: 960, source: 'mediana' });
   assert.equal(parseCriptoYa('Invalid pair'), null);
   let calls = 0;
