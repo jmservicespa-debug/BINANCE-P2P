@@ -85,7 +85,7 @@ function provBox() {
         <span class="amount"><input id="prov-m" inputmode="decimal" autocomplete="off" value="${esc(b.margin_pct || '8')}"></span></label>
     </div>
     <span class="muted" id="prov-out"></span>
-    <label class="switch"><input type="checkbox" id="prov-auto" ${b.auto ? 'checked' : ''}> <b>Brasil automático</b></label>
+    <label class="switch"><input type="checkbox" id="prov-auto" ${b.auto ? 'checked' : ''}> <b>Reales (BRL) automático</b></label>
     <span class="muted" id="prov-live">La tasa sigue sola al mercado. Al guardar, se calibra con el número de tu proveedor.</span>
   </div>`;
 }
@@ -123,7 +123,7 @@ $('save').onclick = async () => {
     cal_cross: brlCross };  // calibración: el mercado en el momento en que anotaste a tu proveedor
   if (body.brl.auto && !brlCross) {
     $('save-msg').hidden = false; $('save-msg').className = 'msg bad';
-    $('save-msg').textContent = 'Brasil automático necesita el precio del mercado y no se pudo leer. Desmarca la casilla o inténtalo de nuevo.';
+    $('save-msg').textContent = 'Reales automático necesita el precio del mercado y no se pudo leer. Desmarca la casilla o inténtalo de nuevo.';
     return;
   }
   const bad = ROUTES.filter((r) => body.status[r.id] === 'on' && !rateNum(body.rates[r.id]));
@@ -262,7 +262,7 @@ async function brlLive() {
   brlCross = await brlPerClp();
   const box = $('prov-live');
   if (!box) return;
-  if (!brlCross) { box.textContent = 'No se pudo leer el precio del mercado ahora (CriptoYa). Brasil automático no está disponible en este momento.'; return; }
+  if (!brlCross) { box.textContent = 'No se pudo leer el precio del mercado ahora (CriptoYa). Reales automático no está disponible en este momento.'; return; }
   const b = saved.brl || {};
   let txt = `Mercado ahora: ${brlCross.toFixed(6)} reales por peso.`;
   if (b.auto && b.cal_cross) {
