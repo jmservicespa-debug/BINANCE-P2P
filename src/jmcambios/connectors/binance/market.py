@@ -52,7 +52,7 @@ class BinanceMarketSource:
         settings: Settings,
         *,
         rows: int = 20,
-        max_pages: int = 20,
+        max_pages: int = 30,  # el lado de compra ya pasa de 400 anuncios (20 por página)
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._client = client
