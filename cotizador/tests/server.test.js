@@ -5,7 +5,7 @@ import { onRequestGet as getRates, onRequestPut as putRates } from '../functions
 import { onRequestPost as postLogin } from '../functions/api/login.js';
 import { onRequestGet as getSession } from '../functions/api/sesion.js';
 import { amountNum, convert, invert, rateNum, routeById, ROUTES } from '../public/js/rutas.js';
-import { hashPassword, parseBcv, validate } from '../lib/server.js';
+import { bcv, hashPassword, parseBcv, parseDolarApi, validate } from '../lib/server.js';
 
 const ORIGIN = 'https://jmcambios.com';
 
@@ -123,4 +123,30 @@ test('dólar BCV leído de la página oficial y guardado 1 hora', async () => {
   assert.equal(a.bcv.source, 'bcv');
   assert.equal(b.bcv.value, 36.5623);
   assert.equal(calls, 1);
+});
+
+test('dólar BCV: si la página del BCV falla usa DolarApi; si todo falla, el manual y el motivo', async () => {
+  assert.deepEqual(parseDolarApi('{"fuente":"oficial","promedio":881.88,"fechaActualizacion":"2026-10-20T12:00:00.000Z"}'), { value: 881.88, date: '2026-10-20' });
+  assert.equal(parseDolarApi('no es json'), null);
+  const urls = [];
+  globalThis.fetch = async (url) => {
+    urls.push(String(url));
+    if (String(url).includes('bcv.org.ve')) throw new TypeError('certificado inválido');
+    return new Response('{"promedio":881.88,"fechaActualizacion":"2026-10-20T12:00:00Z"}');
+  };
+  const e = await env();
+  const v = await (await getRates({ env: e })).json();
+  assert.deepEqual(v.bcv, { value: 881.88, date: '2026-10-20', source: 'dolarapi' });
+  // Todo falla: valor manual, motivo guardado (solo para el panel) y sin reintentar en cada visita.
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; return new Response('caído', { status: 503 }); };
+  const e2 = await env();
+  const r = await bcv(e2, '881,88', 1_000_000);
+  assert.equal(r.source, 'manual');
+  assert.deepEqual(r.errors, ['bcv: respondió 503', 'dolarapi: respondió 503']);
+  await bcv(e2, '881,88', 1_000_000 + 60_000);
+  assert.equal(calls, 2);  // un intento por fuente; el segundo pedido no vuelve a consultar
+  await e2.TASAS.put('tasas', JSON.stringify({ rates: RATES, bcv_manual: '881,88', updated: 1 }));
+  const pub = await (await getRates({ env: e2 })).json();
+  assert.equal(pub.bcv.errors, undefined);
 });

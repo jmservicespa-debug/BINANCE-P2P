@@ -2,7 +2,7 @@ import { ADVISORS, FLYERS, ORIGINS, ROUTES, convert, fmt, rateNum } from './ruta
 import { esc, flag, flags } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
-const SOURCES = { bcv: 'leído del BCV', 'bcv-anterior': 'último valor leído del BCV', manual: 'valor manual' };
+const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
 let saved = null;
 const flyerBlobs = {};
 const STATUS = [['on', 'Activa'], ['ask', 'Inestable · tasa por WhatsApp'], ['off', 'Apagada']];
@@ -71,6 +71,7 @@ function renderBcv(b) {
   $('bcv-now').textContent = b?.value
     ? `Hoy en el cotizador: ${fmt(b.value, 2)} Bs/USD (${SOURCES[b.source] || b.source}${b.date ? ', ' + b.date.split('-').reverse().join('/') : ''}).`
     : 'No se pudo leer el BCV y no hay valor manual: el cotizador no muestra el equivalente en dólares.';
+  if (b?.errors?.length) $('bcv-now').textContent += ` Lectura automática fallida (${b.errors.join(' · ')}).`;
 }
 
 function renderLinks() {
