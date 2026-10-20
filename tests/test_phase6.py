@@ -228,7 +228,8 @@ def test_advisor_state_alerts_and_ad_cadence(tmp_path):
     assert len(s["plan"]["scenarios"]) == 3 and s["my_ads"][0]["suggested"] is not None
     assert s["costs"]["maker_buy"] == 0.002  # sin órdenes: tasa del anuncio
     assert s["market"]["ask"]["verified_best"] == 3200.0 and s["market"]["bid"]["verified_best"] == 3150.0
-    assert [t for t, _ in chan.sent] == ["🔔 Tu anuncio de COMPRA está regalando margen"]  # una sola vez (enfriamiento)
+    # una sola vez cada una (enfriamiento); el mercado de ejemplo deja 1 % siendo #1 en montos pequeños
+    assert [t for t, _ in chan.sent] == ["🔔 Tu anuncio de COMPRA está regalando margen", "🔔 Oportunidad de margen: < 500 mil"]
 
 
 def test_advisor_observation_mode_and_errors(tmp_path):
@@ -513,3 +514,21 @@ def test_advisor_operation_state_and_cap_switches_gmf(tmp_path):
     for i in range(9):
         adv.process(cycle(asks, bids), 0, int(NOW.timestamp()) + 60 * (i + 1))
     assert calls == [1]  # siguiente descarga en el ciclo 11
+
+
+
+def test_opportunity_and_summary_alerts(tmp_path):
+    chan = MemoryChannel()
+    adv = Advisor(orders=[], fiat="COP", gmf_by_account=METHODS, mode=Mode.RECOMMENDATION, alerts=AlertManager([chan]),
+                  min_margin=D("0.02"), summary_hours=(8, 12, 18), daily_goal=D("127000"))
+    asks, bids, _ = _setup_ads()
+    at_noon = int(datetime(2026, 10, 20, 17, 5, tzinfo=UTC).timestamp())  # 12:05 Colombia
+    adv.process(cycle(asks, bids), 0, at_noon)
+    titles = [t for t, _ in chan.sent]
+    assert "ℹ️ Resumen del mercado" in titles and not any("Oportunidad" in t for t in titles)  # 1,2 % < mínimo 2 %
+    body = dict(chan.sent)["ℹ️ Resumen del mercado"]
+    assert "Verificados: venden desde 3.200,00 · compran hasta 3.150,00" in body and "Mejor tramo" in body and "Hoy: 0 de 127.000" in body
+    adv.process(cycle(asks, bids), 0, at_noon + 600)  # misma hora: no se repite
+    assert titles.count("ℹ️ Resumen del mercado") == 1 and len(chan.sent) == len(titles)
+    adv.process(cycle(asks, bids), 0, at_noon + 3600)  # 13:05: no es hora de resumen
+    assert len(chan.sent) == len(titles)

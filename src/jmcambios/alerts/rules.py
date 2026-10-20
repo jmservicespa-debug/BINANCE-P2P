@@ -75,6 +75,24 @@ def exempt_alert(usage) -> Alert | None:
     return None
 
 
+def opportunity_alert(opps, best) -> Alert | None:
+    """Un tramo de montos da el margen mínimo estando de primero en compra y venta."""
+    if best is None or not opps[best].meets_min:
+        return None
+    o = opps[best]
+    return Alert(
+        key=f"oportunidad:{o.label}", severity=IMPORTANT, cooldown_s=1800,
+        title=f"Oportunidad de margen: {o.label}",
+        body=(f"Comprar a {money(o.best_bid + Decimal('0.01'))} y vender a {money(o.best_ask - Decimal('0.01'))}"
+              f" → {money(o.margin * 100, 2)} % libre siendo #1 en los dos lados ({o.competitors_buy + o.competitors_sell} competidores).\n"
+              f"Pon tus anuncios con límites dentro de ese tramo. Verifica en la app antes de cambiar precios."),
+    )
+
+
+def summary_alert(key: str, lines: list[str]) -> Alert:
+    return Alert(key=key, severity=INFO, cooldown_s=3 * 3600, title="Resumen del mercado", body="\n".join(lines))
+
+
 def goal_alert(today) -> Alert | None:
     if today is None or not today.goal or today.realized < today.goal:
         return None

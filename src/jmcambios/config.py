@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     exempt_accounts: str | None = Field(default=None, alias="JMC_CUENTAS_EXENTAS")
     merchant_start: date | None = Field(default=None, alias="JMC_INICIO_COMERCIANTE")
 
+    # Horas (Colombia) del resumen por Telegram, separadas por coma; vacío = sin resumen.
+    summary_hours: str = Field(default="8,12,18", alias="JMC_RESUMEN_HORAS")
+
     # Competencia = solo comerciantes verificados (los no verificados no compiten por los mismos clientes).
     merchants_only: bool = Field(default=True, alias="JMC_SOLO_VERIFICADOS")
 

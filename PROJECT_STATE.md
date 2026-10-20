@@ -180,6 +180,12 @@ tests/                     pruebas unitarias (sin red)
 - Arreglado: `500.000` se leía como 500 en los comandos.
 - Sugerencia de tramo (pedido del usuario): por tramo, margen libre del ciclo estando de primero en compra y venta (mejor comprador +0,01 / mejor vendedor −0,01, costos reales); se sugiere el de mayor margen y, en empate, menos competidores. Avisos: si ningún tramo alcanza el margen mínimo, y que los tramos grandes piden más capital y suelen tener menos clientes (volumen no verificable). Panel (★) y `competencia`.
 
+## Alertas para operar (2026-10-20; el usuario notó pocas alertas)
+- Pocas alertas = esperado (cruces ≥ 10.000 COP, presión fuerte con confianza ≥ 60, anuncios solo en línea).
+- Nuevas: **Oportunidad de margen** (mejor tramo cumple el margen mínimo siendo #1 en los dos lados; clave por tramo, 30 min; solo modo RECOMMENDATION) y **Resumen** a las horas `JMC_RESUMEN_HORAS` (8,12,18 por defecto): verificados, mejor tramo, presión, hoy vs meta, tope exento.
+- Observado con datos reales (2026-10-19 ~19:20 COT): tramo < 500 mil daba ≈ 0,95–0,97 % libre siendo #1; 500 mil–5 M ≈ 0,38–0,39 %; > 5 M 0,13–0,47 % (cambia en minutos).
+- `JMC_INICIO_COMERCIANTE` necesario: sin él, Hoy/Rentabilidad mezclan compras COP que salieron como remesas VES (4.100 USDT "parados", −28.030 COP).
+
 ## Ideas registradas
 - Producto por suscripción (pedido del usuario 2026-10-19): multiusuario en servidor con IP fija, keys de terceros cifradas y solo lectura, configuración por usuario (bancos/4x1000, moneda, márgenes), registro y pagos, revisión legal (condiciones de Binance para terceros, Ley 1581 de 2012). Riesgo: suscriptores con la misma estrategia compiten entre sí. Primero validar con resultados reales del usuario. Mantener nada personal fijo en el código.
 

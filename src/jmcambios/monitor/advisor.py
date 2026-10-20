@@ -27,6 +27,9 @@ from jmcambios.domain.account import MyAd, Order, OrderSide
 from jmcambios.monitor.service import CycleResult
 from jmcambios.profitability import daily
 from jmcambios.profitability.costs import CostConfig
+from jmcambios.analysis.amounts import tranche_views
+from jmcambios.monitor.report import money
+from jmcambios.pricing.engine import tranche_opportunities
 from jmcambios.pricing.engine import DEFAULT_LIMITS, AdProfile, Costs, PricePlan, build_costs, plan, profile_for
 
 log = logging.getLogger(__name__)
@@ -39,6 +42,7 @@ class AdvisorOutput:
     deliveries: list[Delivery] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     today: daily.TodaySummary | None = None
+    opportunities: tuple | None = None  # (lista por tramo, índice sugerido)
     exempt: daily.ExemptUsage | None = None
 
 
@@ -68,7 +72,9 @@ class Advisor:
         exempt_cap: Decimal | None = None,
         exempt_accounts: tuple[str, ...] | None = None,
         merchant_start: datetime | None = None,
+        summary_hours: tuple[int, ...] = (),
     ) -> None:
+        self._summary_hours = summary_hours
         self._merchants_only = merchants_only
         self._fetch_orders = fetch_orders
         self._orders_every = max(1, orders_every)
@@ -109,6 +115,44 @@ class Advisor:
             self.costs = self._build_costs()
         except MarketDataError as exc:
             out.notes.append(f"no se pudieron actualizar tus órdenes: {exc}")
+
+    def _opportunities(self, snaps, my_users: set[str]):
+        """Margen por tramo de montos estando de primero (misma competencia que los escenarios)."""
+        side_ads = {}
+        for side in (Side.BID, Side.ASK):
+            ads = [a for a in snaps[side].ads if a.advertiser.user_id not in my_users]
+            if self._merchants_only:
+                ads = [a for a in ads if a.advertiser.is_merchant] or ads
+            side_ads[side] = ads
+        methods = self._profiles["buy"].methods if self._profiles else tuple(self._gmf)
+        return tranche_opportunities(tranche_views(Side.BID, side_ads[Side.BID], methods),
+                                     tranche_views(Side.ASK, side_ads[Side.ASK], methods), self.costs)
+
+    def _summary(self, result: CycleResult, out: AdvisorOutput, now_ts: int):
+        """Resumen a las horas configuradas (hora Colombia), una vez por hora y día."""
+        local = datetime.fromtimestamp(now_ts, UTC).astimezone(daily.COT)
+        if local.hour not in self._summary_hours:
+            return None
+        lines = [f"{local:%Y-%m-%d %H:%M} hora Colombia"]
+        snaps = result.snapshots
+        if Side.ASK in snaps and Side.BID in snaps:
+            asks = [a.price for a in snaps[Side.ASK].ads if a.advertiser.is_merchant]
+            bids = [a.price for a in snaps[Side.BID].ads if a.advertiser.is_merchant]
+            if asks and bids:
+                lines.append(f"Verificados: venden desde {money(min(asks))} · compran hasta {money(max(bids))}"
+                             f" · diferencia {money(min(asks) - max(bids))} COP")
+        if out.opportunities is not None and out.opportunities[1] is not None:
+            o = out.opportunities[0][out.opportunities[1]]
+            lines.append(f"Mejor tramo: {o.label} → {money(o.margin * 100, 2)} % libre siendo #1"
+                         + (" ✔ alcanza tu margen" if o.meets_min else f" (tu mínimo: {money(self.costs.min_margin * 100, 2)} %)"))
+        if result.pressure is not None and result.pressure.windows:
+            lines.append(f"Presión: {result.pressure.label} ({result.pressure.score:+.0f}, confianza {result.pressure.confidence})")
+        if out.today is not None:
+            lines.append(f"Hoy: {money(out.today.realized, 0)} de {money(out.today.goal, 0)} COP"
+                         f" · {out.today.buys} compras / {out.today.sells} ventas")
+        if out.exempt is not None:
+            lines.append(f"Tope exento: {money(out.exempt.ratio * 100, 0)} % usado · quedan {money(out.exempt.remaining, 0)} COP")
+        return rules.summary_alert(f"resumen:{local:%Y-%m-%d}:{local.hour}", lines)
 
     def _operation(self, out: AdvisorOutput, now_ts: int) -> None:
         now = datetime.fromtimestamp(now_ts, UTC)
@@ -158,6 +202,7 @@ class Advisor:
                 position(a, snaps[Side.BID if a.side is OrderSide.BUY else Side.ASK].ads, my_users, self._merchants_only)
                 for a in self.my_ads
             ]
+            out.opportunities = self._opportunities(snaps, my_users)
 
         failing = bool(result.errors)
         alerts = [a for a in (rules.cross_alert(result.cross, self._cross_min), rules.pressure_alert(result.pressure)) if a]
@@ -165,6 +210,11 @@ class Advisor:
         if self.mode is not Mode.OBSERVATION:
             alerts += rules.my_ad_alerts(out.positions, out.plan)
         alerts += [a for a in (rules.exempt_alert(out.exempt), rules.goal_alert(out.today)) if a]
+        if out.opportunities is not None and self.mode is not Mode.OBSERVATION:  # sugiere precios
+            alerts += [a for a in (rules.opportunity_alert(*out.opportunities),) if a]
+        summary = self._summary(result, out, now_ts)
+        if summary is not None:
+            alerts.append(summary)
         if consecutive_failures >= rules.FAILURES_ALERT or any("AUTH_ERROR" in e for e in result.errors):
             self._was_failing = True
         elif not failing:

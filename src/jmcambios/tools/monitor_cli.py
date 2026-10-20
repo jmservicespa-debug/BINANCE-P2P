@@ -185,6 +185,8 @@ def main(argv: list[str] | None = None) -> int:
                 exempt_accounts=tuple(a.strip() for a in settings.exempt_accounts.split(",") if a.strip())
                 if settings.exempt_accounts else None,
                 merchant_start=_start_dt(settings),
+                summary_hours=tuple(int(h) for h in settings.summary_hours.replace(" ", "").split(",")
+                                    if h.isdigit() and 0 <= int(h) <= 23),
             )
         if args.panel and store is not None:
             server = _start_panel(settings, args)
