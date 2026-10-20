@@ -1,4 +1,4 @@
-import { ADVISORS, ORIGINS, ROUTES, amountNum, convert, fmt, invert } from './rutas.js';
+import { ADVISORS, ORIGINS, ROUTES, amountNum, belowMin, convert, fmt, invert } from './rutas.js';
 import { esc, flag, flags } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
@@ -36,7 +36,7 @@ function renderDests() {
 function calc() {
   const r = ROUTES.find((x) => x.id === route);
   const o = ORIGINS[origin];
-  if (!r) { $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
+  if (!r) { $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
   if (statusOf(r.id) === 'ask') { unstable(r, o); return; }
   $('r-big').classList.remove('ask');
   const rate = rateOf(r.id).rate;
@@ -45,10 +45,13 @@ function calc() {
   const x = amountNum($('amount').value);
   const send = mode === 'send' ? x : Math.round(invert(r, rate, x));
   const get = mode === 'send' ? convert(r, rate, x) : x;
+  if (belowMin(r, send)) { minimum(r, o, send); return; }
+  $('r-big').classList.remove('ask');
   $('r-label').textContent = mode === 'send' ? `Recibe en ${r.name}` : 'Debes enviar';
   $('r-big').textContent = mode === 'send' ? `${fmt(get, r.dec)} ${r.cur}` : `${fmt(send, 0)} ${o.cur}`;
   $('r-send').textContent = mode === 'send' ? `Envías ${fmt(send, 0)} ${o.cur}` : `Recibe ${fmt(get, r.dec)} ${r.cur}`;
   $('r-rate').textContent = `Tasa ${rate}`;
+  $('r-min').textContent = r.min ? `Envío mínimo: ${fmt(r.min, 0)} ${o.cur}` : '';
   const bcv = data.bcv?.value;
   $('r-bcv').hidden = !(r.to.includes('VE') && bcv > 0);
   if (!$('r-bcv').hidden) {
@@ -60,6 +63,19 @@ function calc() {
   const ok = Number.isFinite(send) && Number.isFinite(get) && send > 0;
   const text = ok ? `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${r.name}. Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${rate}). ¿Me confirmas?` : '';
   $('wa').innerHTML = waButtons(text);
+}
+
+// Monto por debajo del mínimo de la ruta: no se cotiza, se indica el mínimo.
+function minimum(r, o, send) {
+  $('r-label').textContent = `Envíos a ${r.name}`;
+  $('r-big').textContent = `Mínimo ${fmt(r.min, 0)} ${o.cur}`;
+  $('r-big').classList.add('ask');
+  $('r-send').textContent = mode === 'send' ? `Escribiste ${fmt(send, 0)} ${o.cur}.` : `Para ese monto tendrías que enviar ${fmt(send, 0)} ${o.cur}.`;
+  $('r-rate').textContent = '';
+  $('r-min').textContent = '';
+  $('r-bcv').hidden = true;
+  $('dest-note').textContent = r.note || '';
+  $('wa').innerHTML = waButtons('');
 }
 
 // Mercado inestable: no se calcula; el cliente pide la tasa del momento con su monto ya escrito.
@@ -74,6 +90,8 @@ function unstable(r, o) {
   $('r-rate').textContent = '';
   $('r-bcv').hidden = true;
   $('dest-note').textContent = r.note || '';
+  $('r-min').textContent = r.min ? `Envío mínimo: ${fmt(r.min, 0)} ${o.cur}` : '';
+  if (mode === 'send' && belowMin(r, x)) { minimum(r, o, x); return; }
   const amount = Number.isFinite(x) && x > 0 ? (mode === 'send' ? `enviar ${fmt(x, 0)} ${o.cur}` : `que reciban ${fmt(x, r.dec)} ${r.cur}`) : 'hacer un envío';
   $('wa').innerHTML = waButtons(`Hola, quiero ${amount} desde ${o.name} a ${r.name}. ¿Me das la tasa de este momento?`, 'Pedir tasa por WhatsApp');
 }

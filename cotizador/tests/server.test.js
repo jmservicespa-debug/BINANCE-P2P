@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import { onRequestGet as getRates, onRequestPut as putRates } from '../functions/api/tasas.js';
 import { onRequestPost as postLogin } from '../functions/api/login.js';
 import { onRequestGet as getSession } from '../functions/api/sesion.js';
-import { amountNum, convert, invert, rateNum, routeById, ROUTES } from '../public/js/rutas.js';
+import { amountNum, belowMin, convert, invert, rateNum, routeById, ROUTES } from '../public/js/rutas.js';
 import { bcv, hashPassword, parseBcv, parseDolarApi, validate } from '../lib/server.js';
 
 const ORIGIN = 'https://jmcambios.com';
@@ -38,6 +38,11 @@ test('cálculos con las tasas del flyer', () => {
   assert.equal(amountNum('100.000'), 100000);
   assert.ok(Number.isNaN(rateNum('1.0.5')) && Number.isNaN(rateNum('')) && Number.isNaN(rateNum('-3')));
   assert.equal(ROUTES.length, 7);
+  // Mínimos por ruta (moneda de origen).
+  assert.ok(belowMin(r('cl-ve'), 9999) && !belowMin(r('cl-ve'), 10000));
+  assert.ok(belowMin(r('cl-us'), 39999) && !belowMin(r('cl-us'), 40000));
+  assert.ok(belowMin(r('cl-pa'), 14999) && belowMin(r('co-ve'), 19999) && !belowMin(r('co-ve'), 20000));
+  assert.ok(!belowMin(r('cl-br'), 1));  // Brasil: sin mínimo definido
 });
 
 test('validación: tasa vacía o inválida en una ruta activa', () => {
