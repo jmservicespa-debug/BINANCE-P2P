@@ -176,13 +176,18 @@ class PanelData:
         pressure = PressureReport(score=pr.get("score", 0.0), confidence=pr.get("confidence", 0), label="")
         with self._store() as st:
             asks, bids = self._book(st, Side.ASK), self._book(st, Side.BID)
-        pp = plan(asks, bids, buy_profile=profiles["buy"], sell_profile=profiles["sell"], costs=costs,
+        ver = bool(state.get("merchants_only", True)) if merchants_only is None else merchants_only
+        pattern = self.comerciantes(now_ts, ver).get("pattern") or {}
+        leaders = ((round(pattern["rank_buy"]), round(pattern["rank_sell"]))
+                   if pattern.get("rank_buy") is not None and pattern.get("rank_sell") is not None else None)
+        pp = plan(asks, bids, buy_profile=profiles["buy"], sell_profile=profiles["sell"], costs=costs, leader_ranks=leaders,
                   pressure=pressure, exclude_users=set(state.get("my_users") or []),
                   merchants_only=bool(state.get("merchants_only", True)) if merchants_only is None else merchants_only)
         f = lambda v: None if v is None else float(v)  # noqa: E731
         return {
             "available": True, "min_margin": float(margin_pct) / 100, "priority": pp.priority, "warnings": pp.warnings,
             "merchants_only": pp.merchants_only,
+            "leader_ranks": list(leaders) if leaders else None,
             "limits": [float(profiles["buy"].min_fiat), float(profiles["buy"].max_fiat)],
             "scenarios": [{
                 "name": sc.name, "target_margin": f(sc.target_margin), "margin": f(sc.margin),

@@ -123,3 +123,38 @@ def test_pattern_excludes_inactive_side():
     st = MerchantStudy(0, 1, 100, [mp("a", 38, 10, 9), mp("b", 32, 15, 7), mp("c", 187, 45, 152)])
     s = summarize(st)
     assert s["two_sided"] == 2 and s["excluded"] == 1 and s["own_spread"] == pytest.approx(35)
+
+
+def test_plan_leaders_scenario():
+    from jmcambios.pricing.engine import LEADERS, AdProfile, plan
+
+    asks = [make_ad(f"a{i}", str(3150 + i * 2), "1000", user=f"s{i}") for i in range(15)]
+    bids = [make_ad(f"b{i}", str(3140 - i * 2), "1000", side=Side.BID, user=f"b{i}") for i in range(15)]
+    prof = AdProfile(("BancolombiaSA",), D("200000"), D("3000000"))
+    costs = Costs(D("0.00181"), D("0.00008"), D("0"), D("0.004"), D("0.01"))
+    pp = plan(asks, bids, buy_profile=prof, sell_profile=prof, costs=costs, leader_ranks=(10, 9))
+    lead = pp.scenarios[-1]
+    assert lead.name == LEADERS and len(pp.scenarios) == 4
+    assert lead.buy.price == D("3122.01") and lead.sell.price == D("3165.99")  # supera al 10º comprador y al 9º vendedor
+    assert lead.buy.rank == 10 and lead.sell.rank == 9 and not lead.buy.adjusted
+    assert lead.margin > D("0.01")
+    assert len(plan(asks, bids, buy_profile=prof, sell_profile=prof, costs=costs).scenarios) == 3
+
+
+def test_panel_escenarios_include_leaders(tmp_path):
+    import json
+
+    from jmcambios.dashboard import server as panel
+
+    db = tmp_path / "h.db"
+    with HistoryStore(db) as s:
+        for m in range(0, 120):
+            record(s, m, *book(m))
+    state = tmp_path / "e.json"
+    state.write_text(json.dumps({"generated_ts": int(datetime.now(UTC).timestamp()), "merchants_only": True,
+                                 "costs": {"maker_buy": 0.00181, "maker_sell": 0.00008, "gmf": 0, "gmf_worst": 0.004,
+                                           "min_margin": 0.01}}), encoding="utf-8")
+    data = panel.PanelData(db, state, venue=VENUE, market=MARKET, fiat="COP", asset="USDT",
+                           cost_config=panel.cost_config({"BancolombiaSA": D("0.004")}))
+    out = data.escenarios(D("1"), int(datetime.now(UTC).timestamp()))
+    assert out["leader_ranks"] == [2, 2] and out["scenarios"][-1]["name"] == "como los mejores"

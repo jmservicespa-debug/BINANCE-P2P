@@ -32,6 +32,7 @@ TICK = Decimal("0.01")
 DEFAULT_LIMITS = (Decimal("200000"), Decimal("3000000"))  # límites por defecto si no tienes anuncio
 DEFAULT_MAKER_RATE = Decimal("0.002")  # commissionRate de los anuncios COP observado en la verificación
 MIN_PRESSURE_CONFIDENCE = 50
+LEADERS = "como los mejores"
 
 # (nombre, puesto objetivo entre competidores compatibles, margen extra sobre el mínimo)
 SCENARIOS: tuple[tuple[str, int, Decimal], ...] = (
@@ -179,8 +180,14 @@ def plan(
     pressure: PressureReport | None = None,
     exclude_users: set[str] | None = None,
     merchants_only: bool = False,
+    leader_ranks: tuple[int, int] | None = None,
 ) -> PricePlan:
-    """`asks` = anuncios de venta (compiten con mi VENTA); `bids` = de compra (compiten con mi COMPRA)."""
+    """`asks` = anuncios de venta (compiten con mi VENTA); `bids` = de compra (compiten con mi COMPRA).
+
+    `leader_ranks` = (puesto compra, puesto venta) típicos de los comerciantes líderes: añade el
+    escenario "como los mejores", que copia su ubicación SIN mover precios para proteger el margen
+    (el margen resultante se muestra tal cual, para comparar).
+    """
     ex = exclude_users or set()
     asks = [a for a in asks if a.advertiser.user_id not in ex]
     bids = [a for a in bids if a.advertiser.user_id not in ex]
@@ -232,6 +239,17 @@ def plan(
             name=name, target_rank=target, target_margin=target_margin, buy=buy, sell=sell, margin=m,
             margin_worst=cycle_margin(b, s, costs, costs.gmf_worst),
             net_per_unit=s * m,
+        ))
+    if leader_ranks is not None:
+        rb, rs = max(1, leader_ranks[0]), max(1, leader_ranks[1])
+        b = competitive_price(Side.BID, bids, buy_profile, rb)
+        s = competitive_price(Side.ASK, asks, sell_profile, rs)
+        m = cycle_margin(b, s, costs)
+        out.scenarios.append(Scenario(
+            name=LEADERS, target_rank=rb, target_margin=m,
+            buy=_place(Side.BID, bids, buy_profile, b, b, OrderSide.BUY, False),
+            sell=_place(Side.ASK, asks, sell_profile, s, s, OrderSide.SELL, False),
+            margin=m, margin_worst=cycle_margin(b, s, costs, costs.gmf_worst), net_per_unit=s * m,
         ))
     return out
 

@@ -51,6 +51,7 @@ from jmcambios.pricing.engine import (
     profile_for,
     tranche_opportunities,
 )
+from jmcambios.pricing.engine import LEADERS
 from jmcambios.pricing.engine import plan as pricing_plan
 from jmcambios.profitability.costs import CostConfig, fraction
 from jmcambios.storage.history import HistoryStore
@@ -427,6 +428,14 @@ def _hours_text(hours: tuple[int, ...]) -> str:
     return ", ".join(out)
 
 
+def _leader_ranks(store: HistoryStore, market: str, merchants_only: bool) -> tuple[int, int] | None:
+    """Puestos típicos (compra, venta) de los líderes activos en los dos lados, últimos 3 días."""
+    pattern = merchants.summarize(merchants.study(store, VENUE, market, days=3, merchants_only=merchants_only))
+    if not pattern or pattern.get("rank_buy") is None or pattern.get("rank_sell") is None:
+        return None
+    return round(pattern["rank_buy"]), round(pattern["rank_sell"])
+
+
 def cmd_comerciantes(store: HistoryStore, args: argparse.Namespace, settings: Settings) -> int:
     days = 3 if args.dias == 30 else args.dias  # por defecto, los últimos 3 días
     st = merchants.study(store, VENUE, f"{settings.asset}/{settings.fiat}", days=days, top=args.top,
@@ -538,6 +547,7 @@ def cmd_recomendar(store: HistoryStore, args: argparse.Namespace, settings: Sett
     my_buy = next((a for a in my_ads if a.side is OrderSide.BUY), None)
     my_sell = next((a for a in my_ads if a.side is OrderSide.SELL), None)
     press = pressure.analyze(store, VENUE, market, int(now.timestamp()))
+    leaders = _leader_ranks(store, market, settings.merchants_only)
     buy_prof, sell_prof = _profile(my_buy, cfg.gmf_by_account), _profile(my_sell, cfg.gmf_by_account)
     limits = _parse_limits(args.limites)
     if limits:
@@ -549,6 +559,7 @@ def cmd_recomendar(store: HistoryStore, args: argparse.Namespace, settings: Sett
         books[Side.ASK].ads, books[Side.BID].ads,
         buy_profile=buy_prof, sell_profile=sell_prof,
         costs=costs, pressure=press, exclude_users=my_users, merchants_only=settings.merchants_only,
+        leader_ranks=leaders,
     )
 
     print(f"Escenarios de precio {market} · {now.astimezone(BOGOTA):%Y-%m-%d %H:%M} (hora Colombia)")
@@ -567,11 +578,16 @@ def cmd_recomendar(store: HistoryStore, args: argparse.Namespace, settings: Sett
     print(f"\n  ESCENARIOS [cálculo] · se paga desde la cuenta exenta; entre paréntesis, margen pagando con 4x1000")
     names = {"conservador": "CONSERVADOR (más margen, menos órdenes)",
              "equilibrado": "EQUILIBRADO",
-             "agresivo": "AGRESIVO (primer puesto, menos margen)"}
+             "agresivo": "AGRESIVO (primer puesto, menos margen)",
+             LEADERS: "COMO LOS MEJORES (misma ubicación que los líderes, últimos 3 días)"}
     for sc in pp.scenarios:
         qty, rot = daily_goal(sc.net_per_unit, goal, sc.buy.price, cfg.capital)
-        print(f"\n    {names[sc.name]} · objetivo: puesto #{sc.target_rank} entre compatibles"
-              f" con margen ≥ {pct3(sc.target_margin)}")
+        if sc.name == LEADERS:
+            print(f"\n    {names[sc.name]} · puesto #{leaders[0]} compra / #{leaders[1]} venta"
+                  + ("" if sc.margin >= min_margin else f" · ⚠ hoy deja menos que tu mínimo ({pct3(min_margin)})"))
+        else:
+            print(f"\n    {names[sc.name]} · objetivo: puesto #{sc.target_rank} entre compatibles"
+                  f" con margen ≥ {pct3(sc.target_margin)}")
         print(f"      {_side_line(sc.buy, settings.asset)}")
         print(f"      {_side_line(sc.sell, settings.asset)}")
         print(f"      margen neto del ciclo: {pct3(sc.margin)} ({pct3(sc.margin_worst)})"

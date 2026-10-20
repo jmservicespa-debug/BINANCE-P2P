@@ -179,8 +179,9 @@ try { const v = JSON.parse(localStorage.getItem('jmc_limites') || 'null'); if (A
 let verified = null;  // true/false elegido en el panel (null = el de la configuración)
 try { const v = localStorage.getItem('jmc_verificados'); if (v === '1' || v === '0') verified = v === '1'; } catch (e) {}
 const MODES = {OBSERVATION: 'Modo: Observación', RECOMMENDATION: 'Modo: Recomendación', AUTOMATIC: 'Modo: Automático'};
-const NAMES = {conservador: 'Conservador', equilibrado: 'Equilibrado', agresivo: 'Agresivo'};
-const HINT = {conservador: 'más margen, menos órdenes', equilibrado: 'recomendado por defecto', agresivo: 'primer puesto, menos margen'};
+const NAMES = {conservador: 'Conservador', equilibrado: 'Equilibrado', agresivo: 'Agresivo', 'como los mejores': 'Como los mejores'};
+const HINT = {conservador: 'más margen, menos órdenes', equilibrado: 'recomendado por defecto', agresivo: 'primer puesto, menos margen',
+  'como los mejores': 'misma ubicación que los líderes'};
 
 function renderEstado(s) {
   if (!s.available) { $('updated').textContent = s.message; return; }
@@ -267,7 +268,6 @@ document.querySelectorAll('#vbtns button').forEach(b => b.classList.toggle('on',
   }
   renderTramos(v);
   if (!$('tab-precios').classList.contains('hidden')) renderMerchants(v);
-  if (Math.abs(m - cfg) < 1e-9 && v === cfgV && !limits) { renderPlan(s.plan ? {...s.plan, merchants_only: cfgV} : s.plan); return; }
   try {
     const r = await api('/api/escenarios?margen=' + m + '&verificados=' + (v ? 1 : 0)
       + (limits ? '&min=' + limits[0] + '&max=' + limits[1] : ''));
