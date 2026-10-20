@@ -197,6 +197,12 @@ tests/                     pruebas unitarias (sin red)
 - Incorporado a la estrategia: escenario **"como los mejores"** (`plan(..., leader_ranks=)`) que se ubica en el puesto típico (compra, venta) de los líderes activos en los dos lados (últimos 3 días) sin mover precios por margen; muestra el margen resultante y avisa si queda bajo el mínimo. En `recomendar` y en el panel (`/api/escenarios` devuelve `leader_ranks`).
 - Corregido (2026-10-20, visto con datos reales): aplicar el PUESTO de los líderes (medido en todo el libro verificado) entre los compatibles del usuario lo mandaba muy abajo (compra #141, margen 1,84 % inflado). Ahora copia la DISTANCIA en COP al mejor comprador/vendedor (`leader_gaps`, medianas `gap_buy`/`gap_sell` de los líderes activos), medida y aplicada sobre el mismo libro.
 
+## Plan de la prueba real (acordado 2026-10-20)
+- Capital 2–3 M COP, pago SIEMPRE desde Davivienda/Daviplata (con 4x1000 el margen cae a ~0,15 %).
+- Días A: precios de "Como los mejores" (hoy ≈ compra 3.130,18 #1 de 91 compatibles / venta 3.153,44 #1 de 175; ≈ 0,55 % libre). Días B: "Agresivo" con 1 % (compra #2 compatible / venta #15 compatible).
+- Registrar por día: órdenes, tiempos de llenado, ganancia real → primer dato duro para calibrar la Fase 7 (tasa de llenado por posición).
+- Antes de arrancar: `JMC_INICIO_COMERCIANTE=<fecha>` y reiniciar el monitor.
+
 ## Ideas registradas
 - Producto por suscripción (pedido del usuario 2026-10-19): multiusuario en servidor con IP fija, keys de terceros cifradas y solo lectura, configuración por usuario (bancos/4x1000, moneda, márgenes), registro y pagos, revisión legal (condiciones de Binance para terceros, Ley 1581 de 2012). Riesgo: suscriptores con la misma estrategia compiten entre sí. Primero validar con resultados reales del usuario. Mantener nada personal fijo en el código.
 
