@@ -59,7 +59,7 @@ function calc() {
   const o = ORIGINS[origin];
   if (!r) { $('r-get').hidden = true; $('r-free').hidden = true; $('r-break').hidden = true; $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
   const bcv = data.bcv?.value;
-  // "Que reciba en dólares BCV": solo hacia Venezuela y con el dólar BCV disponible.
+  // "Equivalente en dólares BCV" (llegan bolívares): solo hacia Venezuela y con el dólar BCV disponible.
   const bcvOk = r.to.includes('VE') && bcv > 0;
   $('mode-bcv').hidden = !bcvOk;
   if (mode === 'bcv' && !bcvOk) setMode('send');
@@ -93,7 +93,7 @@ function calc() {
     const ves = r.cur === 'VES';
     $('g-label').textContent = `Recibe en ${r.name}`;
     $('g-amount').textContent = `${fmt(get, r.dec)} ${ves ? 'Bs' : r.cur}`;
-    $('g-sub').textContent = mode === 'bcv' ? `= ${fmt(usd, 0)} USD al dólar BCV` : ves ? 'Bolívares (VES)' : r.unit;
+    $('g-sub').textContent = mode === 'bcv' ? `Equivalen a ${fmt(usd, 0)} USD al dólar BCV` : ves ? 'Bolívares (VES)' : r.unit;
   }
   $('r-rate').textContent = '';
   $('r-min').textContent = r.min ? `Envío mínimo: ${fmt(r.min, 0)} ${o.cur}` : '';
@@ -106,7 +106,7 @@ function calc() {
   $('dest-note').textContent = r.note || '';
   const ok = Number.isFinite(send) && Number.isFinite(get) && send > 0;
   const text = !ok ? '' : mode === 'bcv'
-    ? `Hola, necesito que lleguen ${fmt(usd, 0)} USD al dólar BCV (${fmt(get, 0)} ${r.cur}) en ${r.name}, enviando desde ${o.name}. Según el cotizador debo pagar ${fmt(send, 0)} ${o.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`
+    ? `Hola, necesito que lleguen ${fmt(get, 0)} Bs a ${r.name} (equivalentes a ${fmt(usd, 0)} USD al dólar BCV), enviando desde ${o.name}. Según el cotizador debo pagar ${fmt(send, 0)} ${o.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`
     : `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${r.name}. Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`;
   $('wa').innerHTML = waButtons(text);
 }
@@ -144,12 +144,12 @@ function unstable(r, o) {
   $('r-min').textContent = r.min ? `Envío mínimo: ${fmt(r.min, 0)} ${o.cur}` : '';
   if (mode === 'send' && belowMin(r, x)) { minimum(r, o, x); return; }
   const amount = !(Number.isFinite(x) && x > 0) ? 'hacer un envío'
-    : mode === 'send' ? `enviar ${fmt(x, 0)} ${o.cur}` : mode === 'bcv' ? `que lleguen ${fmt(x, 0)} USD al dólar BCV` : `que reciban ${fmt(x, r.dec)} ${r.cur}`;
+    : mode === 'send' ? `enviar ${fmt(x, 0)} ${o.cur}` : mode === 'bcv' ? `que lleguen bolívares equivalentes a ${fmt(x, 0)} USD al dólar BCV` : `que reciban ${fmt(x, r.dec)} ${r.cur}`;
   $('wa').innerHTML = waButtons(`Hola, quiero ${amount} desde ${o.name} a ${r.name}. ¿Me das la tasa de este momento?`, 'Pedir tasa');
 }
 
 function amountLabels(r, o) {
-  $('amount-label').textContent = { send: 'Monto que envías', get: 'Monto que debe recibir', bcv: 'Dólares BCV que deben llegar' }[mode];
+  $('amount-label').textContent = { send: 'Monto que envías', get: 'Monto que debe recibir', bcv: 'Los bolívares deben equivaler a' }[mode];
   $('amount-cur').textContent = mode === 'send' ? o.cur : mode === 'bcv' ? 'USD BCV' : r.cur;
 }
 
