@@ -155,7 +155,7 @@ tests/                     pruebas unitarias (sin red)
 ## Ganancia del día y tope exento (2026-10-19, pedido del usuario)
 - Tope exento informado por el usuario: **18.330.900 COP/mes** (`JMC_TOPE_EXENTO`). Se estima con las compras P2P pagadas por métodos de cuentas exentas (Davivienda/Daviplata); no ve otros débitos de esas cuentas (p. ej. remesas) → el usuario debe tenerlo en cuenta.
 - Alertas: 80 % (importante) y 100 % (urgente), una vez por mes y nivel. Pasado el tope, el motor usa 4x1000 = 0,4 % en los escenarios.
-- Monitor descarga órdenes de los últimos 2 días cada 15 ciclos y alimenta: tarjeta **Hoy** (realizado vs. `JMC_META_DIARIA`, inventario sin vender y desde cuándo; aviso si > 6 h), comisiones observadas y tope.
+- Monitor descarga órdenes de los últimos 2 días cada 5 ciclos y alimenta: tarjeta **Hoy** (realizado vs. `JMC_META_DIARIA`, inventario sin vender y desde cuándo; aviso si > 6 h), comisiones observadas y tope.
 - `JMC_INICIO_COMERCIANTE`: fecha desde la que se cuenta la rentabilidad COP (evita mezclar compras COP que salieron como remesas).
 - Siguientes ideas priorizadas: mapa de horas/días (verificados), TRM y premium P2P, vigilancia de competidores, precio por banco y monto, riesgo de contrapartes (triangulación).
 
@@ -202,6 +202,8 @@ tests/                     pruebas unitarias (sin red)
 - Días A: precios de "Como los mejores" (hoy ≈ compra 3.130,18 #1 de 91 compatibles / venta 3.153,44 #1 de 175; ≈ 0,55 % libre). Días B: "Agresivo" con 1 % (compra #2 compatible / venta #15 compatible).
 - Registrar por día: órdenes, tiempos de llenado, ganancia real → primer dato duro para calibrar la Fase 7 (tasa de llenado por posición).
 - Antes de arrancar: `JMC_INICIO_COMERCIANTE=<fecha>` y reiniciar el monitor.
+- Actualizado 2026-10-20: el usuario arranca el 2026-10-21 con 1–1,5 M (mitad COP / mitad USDT), montos 100.000–500.000. Duración ~2 semanas (incluye fin de semana y la quincena del 30–31 oct); pasar de fase con ≥ 30 órdenes, ≥ 8 días y margen real vs. calculado < 0,2 pp. Objetivo del usuario: insistir hasta encontrar la estrategia; primero que se llenen, luego subir margen.
+- **Bitácora + escalera de margen** (construida 2026-10-20, `analysis/ladder.py`): tabla `my_ad_log` (mis anuncios cada lectura, ~5 min); por orden MAKER no cancelada: espera desde el último reinicio (cambio de precio / vuelta a en línea / orden anterior del mismo lado), puesto y margen del par. Escalera por lado: llenó < 20 min → subir 0,1 pp; > 60 min quieto → bajar 0,1 pp; marca si queda bajo el mínimo. Panel (Resultados → Bitácora; Mis anuncios), alerta `escalera:*` (RECOMMENDATION) y línea en el resumen. Órdenes se descargan cada 5 ciclos. Estas reglas son el borrador de la lógica del agente en las Fases 8–9.
 
 ## Ideas registradas
 - Producto por suscripción (pedido del usuario 2026-10-19): multiusuario en servidor con IP fija, keys de terceros cifradas y solo lectura, configuración por usuario (bancos/4x1000, moneda, márgenes), registro y pagos, revisión legal (condiciones de Binance para terceros, Ley 1581 de 2012). Riesgo: suscriptores con la misma estrategia compiten entre sí. Primero validar con resultados reales del usuario. Mantener nada personal fijo en el código.

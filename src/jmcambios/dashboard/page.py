@@ -158,6 +158,9 @@ input{font:inherit;font-size:14px;width:118px;min-height:36px;padding:0 10px;bor
     <div class="kv"><span>Inventario sin vender</span><b id="t-inv">—</b></div>
     <div class="muted" id="t-since"></div><div class="muted" id="t-warn"></div>
   </section>
+  <section class="card"><div class="row"><h2>Bitácora de órdenes</h2><div class="btns" id="bbtns"><button data-d="1" class="on">Hoy</button><button data-d="7">7 días</button></div></div>
+    <span class="muted">Órdenes que entraron por tus anuncios: cuánto tardaron en llenarse, en qué puesto estabas y el margen de tu par compra/venta en ese momento.</span>
+    <div id="bitacora" class="muted">—</div></section>
   <section class="card" id="cap-card"><div class="row"><h2>Tope exento 4x1000</h2><span class="chip inf">Estimado</span></div>
     <div class="row"><span class="mid" id="c-used">—</span><span class="muted" id="c-cap"></span></div>
     <div class="bar"><span id="c-bar" style="left:0;width:0"></span></div>
@@ -258,7 +261,7 @@ function renderPlan(pl) {
   const bal = (pl?.scenarios || []).find(x => x.name === 'equilibrado');
   $('myads').innerHTML = !s.my_ads.length ? 'Sin anuncios leídos (necesita la API key y el monitor corriendo).' : s.my_ads.map(a => `
     <div class="kv"><span>${a.side === 'BUY' ? 'COMPRA' : 'VENTA'} ${esc(a.id)} · ${a.online ? '<span class="good">en línea</span>' : 'fuera de línea'}</span><b>${fmt(a.price)}</b></div>
-    <div class="muted">puesto #${a.rank} de ${a.total}${a.suggested !== null && bal ? ` · sugerido <b class="mono">${fmt(a.side === 'BUY' ? bal.buy.price : bal.sell.price)}</b>` : ''}${a.gap !== null && a.gap < 0 ? ` · <span class="neg">regalando ${fmt(-a.gap)} COP</span>` : ''}</div>`).join('');
+    <div class="muted">puesto #${a.rank} de ${a.total}${a.suggested !== null && bal ? ` · sugerido <b class="mono">${fmt(a.side === 'BUY' ? bal.buy.price : bal.sell.price)}</b>` : ''}${a.gap !== null && a.gap < 0 ? ` · <span class="neg">regalando ${fmt(-a.gap)} COP</span>` : ''}</div>${ladderLine(s, a)}`).join('');
   $('pwarn').innerHTML = (pl?.warnings || []).map(w => `<div class="warn" style="margin-top:10px">${esc(w)}</div>`).join('');
 }
 
@@ -279,6 +282,9 @@ async function renderPlanFor(s) {
   else if (a > 0 && b > a) setLimits([a, b]); else $('lhint').innerHTML = '<span class="neg">El mínimo debe ser menor que el máximo</span>';
 };
 $('lreset').onclick = () => setLimits(null);
+document.querySelectorAll('#bbtns button').forEach(b => b.onclick = () => {
+  bdays = +b.dataset.d; document.querySelectorAll('#bbtns button').forEach(o => o.classList.toggle('on', o === b)); renderBitacora();
+});
 document.querySelectorAll('#vbtns button').forEach(b => b.classList.toggle('on', (b.dataset.v === '1') === v));
   const prof = s.profiles?.buy;
   $('lhint').textContent = limits ? `Estrategia para ${fmt(limits[0], 0)}–${fmt(limits[1], 0)}`
@@ -293,6 +299,41 @@ document.querySelectorAll('#vbtns button').forEach(b => b.classList.toggle('on',
       + (limits ? '&min=' + limits[0] + '&max=' + limits[1] : ''));
     if (r.available) renderPlan(r);
   } catch (e) { renderPlan(s.plan); }
+}
+
+const dur = (x) => x === null || x === undefined ? '—' : x < 3600 ? Math.max(1, Math.round(x / 60)) + ' min' : Math.floor(x / 3600) + ' h ' + String(Math.round(x % 3600 / 60)).padStart(2, '0') + ' min';
+const LADDER = {subir: ['⬆', 'good', 'Sube el margen'], bajar: ['⬇', 'neg', 'Baja el margen'], mantener: ['•', '', 'Mantén el precio']};
+function ladderLine(s, a) {
+  const st = (s.ladder || []).find(x => x.side === a.side);
+  if (!st || !a.online) return '';
+  const [icon, cls, verb] = LADDER[st.action] || LADDER.mantener;
+  const to = st.suggested !== null ? ` a <b class="mono">${fmt(st.suggested)}</b>` : '';
+  const m = st.margin_after !== null && st.margin_now !== null ? ` · margen del par ${pct(st.margin_now, 2)} → ${pct(st.margin_after, 2)}`
+    : st.margin_now !== null ? ` · margen del par ${pct(st.margin_now, 2)}` : '';
+  const low = st.below_min ? ' · <span class="neg">queda por debajo de tu mínimo</span>' : '';
+  return `<div class="muted" style="margin:2px 0 8px">Escalera: <span class="${cls}">${icon} ${verb}</span>${to} · ${esc(st.reason)}${m}${low}</div>`;
+}
+
+let bdays = 1;
+async function renderBitacora() {
+  try {
+    const b = await api('/api/bitacora?dias=' + bdays);
+    const r = (lastState || {}).ladder_rules;
+    const rule = r ? `<span class="muted">Escalera: se llenó en menos de ${r.fast_min} min → subir ${fmt(r.step_pct, 1)} punto · más de ${r.slow_min} min sin órdenes → bajar.</span>` : '';
+    if (!b.fills.length) {
+      $('bitacora').innerHTML = (b.logged ? 'Todavía no entran órdenes por tus anuncios en este periodo.' : 'Aún no hay registro de tus anuncios: necesita la API key y el monitor corriendo.') + '<br>' + rule;
+      return;
+    }
+    const th = 'style="text-align:right"';
+    const sum = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;margin-top:8px">
+      <tr><th style="text-align:left">Lado</th><th style="text-align:left">Puesto</th><th ${th}>Órdenes</th><th ${th}>Espera</th><th ${th}>Margen</th></tr>
+      ${b.by_rank.map(x => `<tr><td>${x.side === 'BUY' ? 'Compra' : 'Venta'}</td><td>${esc(x.rank)}</td><td ${th}>${x.orders}</td>
+        <td ${th}>${dur(x.median_wait_s)}</td><td ${th} class="mono">${x.median_margin === null ? '—' : pct(x.median_margin, 2)}</td></tr>`).join('')}</table></div>
+      <span class="muted">Espera y margen: la mediana de cada grupo.</span>`;
+    const list = b.fills.map(f => `<div class="kv"><span>${dmy(f.ts)} · ${f.side === 'BUY' ? 'COMPRA' : 'VENTA'} · ${fmt(f.fiat, 0)} COP</span><b class="mono">${fmt(f.price)}</b></div>
+      <div class="muted" style="margin-bottom:6px">${f.rank ? 'puesto #' + f.rank : 'puesto —'} · tardó ${dur(f.wait_s)}${f.pair_margin !== null ? ' · margen del par ' + pct(f.pair_margin, 2) : ''}${f.status === 'COMPLETED' ? '' : ' · ' + esc(f.status)}</div>`).join('');
+    $('bitacora').innerHTML = sum + '<h3 style="margin:12px 0 4px;font-size:14px;color:var(--text)">Órdenes</h3>' + list + rule;
+  } catch (e) { $('bitacora').textContent = 'Sin datos de la bitácora todavía.'; }
 }
 
 async function renderTramos(v) {
@@ -429,7 +470,7 @@ async function refresh() {
     const [s, d] = await Promise.all([api('/api/estado'), api('/api/serie?horas=' + hours)]);
     renderEstado(s); renderSerie(d);
     if (shown('tab-resultados')) {
-      const [r, a] = await Promise.all([api('/api/rentabilidad'), api('/api/alertas')]); renderRent(r); renderAlerts(a);
+      const [r, a] = await Promise.all([api('/api/rentabilidad'), api('/api/alertas')]); renderRent(r); renderAlerts(a); renderBitacora();
     }
   } catch (e) {
     $('stale').innerHTML = `<div class="bad">No se pudo conectar con el computador (${esc(e.message)}). ¿Estás en la misma red Wi-Fi y el monitor sigue abierto?</div>`;

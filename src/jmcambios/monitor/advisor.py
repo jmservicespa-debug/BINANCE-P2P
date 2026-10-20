@@ -27,6 +27,7 @@ from jmcambios.domain.account import MyAd, Order, OrderSide
 from jmcambios.monitor.service import CycleResult
 from jmcambios.profitability import daily
 from jmcambios.profitability.costs import CostConfig
+from jmcambios.analysis import ladder
 from jmcambios.analysis.amounts import tranche_views
 from jmcambios.monitor.report import money
 from jmcambios.pricing.engine import tranche_opportunities
@@ -44,6 +45,7 @@ class AdvisorOutput:
     today: daily.TodaySummary | None = None
     opportunities: tuple | None = None  # (lista por tramo, índice sugerido)
     exempt: daily.ExemptUsage | None = None
+    ladder: list[ladder.Step] = field(default_factory=list)
 
 
 def _f(v: Decimal | None) -> float | None:
@@ -73,7 +75,14 @@ class Advisor:
         exempt_accounts: tuple[str, ...] | None = None,
         merchant_start: datetime | None = None,
         summary_hours: tuple[int, ...] = (),
+        store=None,
+        ladder_rules: ladder.LadderRules = ladder.LadderRules(),
     ) -> None:
+        self._store = store  # bitácora de mis anuncios (None = sin escalera)
+        self._ladder_rules = ladder_rules
+        self._ads_fresh = False
+        self._fills: list[ladder.Fill] = []
+        self._ladder_steps: list[ladder.Step] = []
         self._summary_hours = summary_hours
         self._merchants_only = merchants_only
         self._fetch_orders = fetch_orders
@@ -150,6 +159,15 @@ class Advisor:
         if out.today is not None:
             lines.append(f"Hoy: {money(out.today.realized, 0)} de {money(out.today.goal, 0)} COP"
                          f" · {out.today.buys} compras / {out.today.sells} ventas")
+        midnight = int(local.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+        today = [f for f in self._fills if f.ts >= midnight]
+        if today:
+            waits = sorted(f.wait_s for f in today if f.wait_s is not None)
+            lines.append(f"Bitácora: {len(today)} órdenes por tus anuncios"
+                         + (f" · espera mediana {ladder.duration(waits[len(waits) // 2])}" if waits else ""))
+        for st in (self._ladder_steps if self.mode is not Mode.OBSERVATION else []):
+            if st.action != "mantener":
+                lines.append(f"Escalera {'compra' if st.side == 'BUY' else 'venta'}: {st.action} → {money(st.suggested)}")
         if out.exempt is not None:
             lines.append(f"Tope exento: {money(out.exempt.ratio * 100, 0)} % usado · quedan {money(out.exempt.remaining, 0)} COP")
         return rules.summary_alert(f"resumen:{local:%Y-%m-%d}:{local.hour}", lines)
@@ -171,9 +189,28 @@ class Advisor:
             return
         try:
             self.my_ads = [a for a in self._fetch_my_ads() if a.fiat == self._fiat]
+            self._ads_fresh = True
             self.costs = self._build_costs()
         except MarketDataError as exc:
             out.notes.append(f"no se pudieron leer tus anuncios: {exc}")
+
+    def _ladder(self, out: AdvisorOutput, now_ts: int) -> None:
+        """Guarda mis anuncios recién leídos y calcula el escalón sugerido por lado."""
+        if self._store is None:
+            return
+        if self._ads_fresh and self.my_ads:
+            pos = {p.ad.ad_id: p for p in out.positions}
+            self._store.record_my_ads(now_ts, self._fiat, [
+                {"ad_id": a.ad_id, "side": a.side.value, "price": float(a.price), "online": a.online,
+                 "rank": pos[a.ad_id].estimated_rank if a.ad_id in pos else None,
+                 "total": pos[a.ad_id].total_competitors + 1 if a.ad_id in pos else None,
+                 "min_fiat": float(a.min_fiat), "max_fiat": float(a.max_fiat), "available": float(a.available_qty)}
+                for a in self.my_ads])
+        self._ads_fresh = False
+        since = now_ts - 2 * 86400
+        log = self._store.my_ad_log(self._fiat, since)
+        fills = self._fills = ladder.fills(self._orders, log, self.costs, since_ts=since)
+        out.ladder = self._ladder_steps = ladder.suggest(log, fills, now_ts, self.costs, self._ladder_rules)
 
     def process(self, result: CycleResult, consecutive_failures: int, now_ts: int) -> AdvisorOutput:
         self._cycle += 1
@@ -203,6 +240,7 @@ class Advisor:
                 for a in self.my_ads
             ]
             out.opportunities = self._opportunities(snaps, my_users)
+        self._ladder(out, now_ts)
 
         failing = bool(result.errors)
         alerts = [a for a in (rules.cross_alert(result.cross, self._cross_min), rules.pressure_alert(result.pressure)) if a]
@@ -210,6 +248,8 @@ class Advisor:
         if self.mode is not Mode.OBSERVATION:
             alerts += rules.my_ad_alerts(out.positions, out.plan)
         alerts += [a for a in (rules.exempt_alert(out.exempt), rules.goal_alert(out.today)) if a]
+        if self.mode is not Mode.OBSERVATION:
+            alerts += [a for a in map(rules.ladder_alert, out.ladder) if a]
         if out.opportunities is not None and self.mode is not Mode.OBSERVATION:  # sugiere precios
             alerts += [a for a in (rules.opportunity_alert(*out.opportunities),) if a]
         summary = self._summary(result, out, now_ts)
@@ -302,6 +342,13 @@ class Advisor:
             "merchants_only": self._merchants_only,
             "costs": {"maker_buy": _f(self.costs.maker_buy), "maker_sell": _f(self.costs.maker_sell),
                       "gmf": _f(self.costs.gmf), "gmf_worst": _f(self.costs.gmf_worst), "min_margin": _f(self.costs.min_margin)},
+            "ladder": [{"side": st.side, "action": st.action, "reason": st.reason, "price": _f(st.price),
+                        "suggested": _f(st.suggested) if self.mode is not Mode.OBSERVATION else None,
+                        "waiting_s": st.waiting_s, "last_wait_s": st.last_wait_s,
+                        "margin_now": _f(st.margin_now), "margin_after": _f(st.margin_after),
+                        "below_min": st.below_min} for st in out.ladder],
+            "ladder_rules": {"fast_min": self._ladder_rules.fast_s // 60, "slow_min": self._ladder_rules.slow_s // 60,
+                             "step_pct": _f(self._ladder_rules.step * 100)},
             "my_ads": my_ads, "errors": result.errors, "alerts": result.alerts + out.notes,
             "today": None if out.today is None else {
                 "day": out.today.day.isoformat(), "goal": _f(out.today.goal), "realized": _f(out.today.realized),

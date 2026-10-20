@@ -82,6 +82,15 @@ CREATE TABLE IF NOT EXISTS alerts (
     sent_to TEXT, suppressed INTEGER NOT NULL DEFAULT 0, errors TEXT
 );
 CREATE INDEX IF NOT EXISTS ix_alerts_key ON alerts (key, ts);
+
+-- Mis anuncios cada vez que el monitor los lee: base de la bitácora y la escalera de margen.
+CREATE TABLE IF NOT EXISTS my_ad_log (
+    id INTEGER PRIMARY KEY,
+    ts INTEGER NOT NULL, ad_id TEXT NOT NULL, side TEXT NOT NULL, fiat TEXT NOT NULL,
+    price REAL NOT NULL, online INTEGER NOT NULL, rank INTEGER, total INTEGER,
+    min_fiat REAL, max_fiat REAL, available REAL
+);
+CREATE INDEX IF NOT EXISTS ix_my_ad_log ON my_ad_log (fiat, ts);
 """
 
 
@@ -286,6 +295,19 @@ class HistoryStore:
             "SELECT * FROM alerts WHERE suppressed=0 ORDER BY ts DESC, id DESC LIMIT ?", (limit,)
         ).fetchall()
 
+    def record_my_ads(self, ts: int, fiat: str, rows: Iterable[dict]) -> None:
+        with self._tx() as c:
+            c.executemany(
+                "INSERT INTO my_ad_log (ts, ad_id, side, fiat, price, online, rank, total, min_fiat, max_fiat, available)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                [(ts, r["ad_id"], r["side"], fiat, r["price"], int(r["online"]), r.get("rank"), r.get("total"),
+                  r.get("min_fiat"), r.get("max_fiat"), r.get("available")) for r in rows],
+            )
+
+    def my_ad_log(self, fiat: str, since_ts: int) -> list[dict]:
+        rows = self.conn.execute("SELECT * FROM my_ad_log WHERE fiat=? AND ts>=? ORDER BY ts, id", (fiat, since_ts))
+        return [dict(r) for r in rows.fetchall()]
+
     # ------------------------------------------------------------------ lectura
     def snapshot_at(self, venue: str, market: str, side: Side, ts: int) -> sqlite3.Row | None:
         """Último snapshot tomado en o antes de `ts`."""
@@ -313,4 +335,4 @@ class HistoryStore:
         return self.conn.execute(sql, tuple(params)).fetchall()
 
     def counts(self) -> dict[str, int]:
-        return {t: self.conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("snapshots", "cycles", "ad_states", "orders", "alerts")}
+        return {t: self.conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("snapshots", "cycles", "ad_states", "orders", "alerts", "my_ad_log")}

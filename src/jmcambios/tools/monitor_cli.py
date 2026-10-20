@@ -27,6 +27,7 @@ from jmcambios.connectors.binance.client import BinanceP2PClient
 from jmcambios.connectors.binance.market import BinanceMarketSource
 from jmcambios.dashboard import server as panel
 from jmcambios.logging_utils import setup_logging
+from jmcambios.analysis.ladder import LadderRules
 from jmcambios.monitor.advisor import Advisor
 from jmcambios.monitor.recorder import SnapshotRecorder
 from jmcambios.monitor.report import BOGOTA, render
@@ -87,7 +88,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("--estado", default="data/estado.json", help="Archivo de estado que lee el panel")
     p.add_argument("--anuncios-cada", type=int, default=5, help="Leer mis anuncios cada N ciclos (0 = nunca)")
     p.add_argument("--margen-min", help="Margen mínimo del ciclo en %% (por defecto JMC_MARGEN_MIN de .env)")
-    p.add_argument("--ordenes-cada", type=int, default=15, help="Descargar mis órdenes cada N ciclos (0 = nunca)")
+    p.add_argument("--ordenes-cada", type=int, default=5, help="Descargar mis órdenes cada N ciclos (0 = nunca)")
     p.add_argument("--cruce-min", default="10.000", help="Ganancia total mínima en COP para alertar un cruce")
     p.add_argument("--sin-alertas", action="store_true", help="No enviar alertas por Telegram/correo")
     return p.parse_args(argv)
@@ -187,6 +188,9 @@ def main(argv: list[str] | None = None) -> int:
                 merchant_start=_start_dt(settings),
                 summary_hours=tuple(int(h) for h in settings.summary_hours.replace(" ", "").split(",")
                                     if h.isdigit() and 0 <= int(h) <= 23),
+                store=store,
+                ladder_rules=LadderRules(fast_s=settings.ladder_fast_min * 60, slow_s=settings.ladder_slow_min * 60,
+                                         step=settings.ladder_step_pct / 100),
             )
         if args.panel and store is not None:
             server = _start_panel(settings, args)

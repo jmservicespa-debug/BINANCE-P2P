@@ -89,6 +89,25 @@ def opportunity_alert(opps, best) -> Alert | None:
     )
 
 
+def ladder_alert(step) -> Alert | None:
+    """Escalera de margen: subir o bajar un escalón según lo rápido que se llenó el anuncio."""
+    if step.action not in ("subir", "bajar") or step.suggested is None:
+        return None
+    lado = "COMPRA" if step.side == "BUY" else "VENTA"
+    margin = ""
+    if step.margin_now is not None and step.margin_after is not None:
+        margin = f"\nMargen del par: {money(step.margin_now * 100, 2)} % → {money(step.margin_after * 100, 2)} %."
+        if step.below_min:
+            margin += " ⚠ Queda por debajo de tu margen mínimo."
+    verbo = "Sube el margen" if step.action == "subir" else "Baja el margen"
+    return Alert(
+        key=f"escalera:{step.side}:{step.action}:{step.since_ts}", severity=IMPORTANT, cooldown_s=3600,
+        title=f"Escalera: {verbo.lower()} de tu anuncio de {lado.lower()}",
+        body=(f"{step.reason[0].upper()}{step.reason[1:]}. {verbo}: {money(step.price)} → {money(step.suggested)}.{margin}\n"
+              "Es una sugerencia: cambia el precio tú en Binance si estás de acuerdo."),
+    )
+
+
 def summary_alert(key: str, lines: list[str]) -> Alert:
     return Alert(key=key, severity=INFO, cooldown_s=3 * 3600, title="Resumen del mercado", body="\n".join(lines))
 

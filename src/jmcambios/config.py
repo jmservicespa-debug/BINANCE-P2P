@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     exempt_accounts: str | None = Field(default=None, alias="JMC_CUENTAS_EXENTAS")
     merchant_start: date | None = Field(default=None, alias="JMC_INICIO_COMERCIANTE")
 
+    # Escalera de margen: se llenó en menos de RAPIDO min → subir PASO puntos; quieto más de LENTO min → bajar.
+    ladder_fast_min: int = Field(default=20, alias="JMC_ESCALERA_RAPIDO_MIN", ge=1, le=1440)
+    ladder_slow_min: int = Field(default=60, alias="JMC_ESCALERA_LENTO_MIN", ge=2, le=2880)
+    ladder_step_pct: Decimal = Field(default=Decimal("0.1"), alias="JMC_ESCALERA_PASO", gt=0, le=2)
+
     # Horas (Colombia) del resumen por Telegram, separadas por coma; vacío = sin resumen.
     summary_hours: str = Field(default="8,12,18", alias="JMC_RESUMEN_HORAS")
 
@@ -68,7 +73,7 @@ class Settings(BaseSettings):
     sapi_base_url: str = "https://api.binance.com"
     public_base_url: str = "https://www.binance.com"
 
-    @field_validator("daily_goal", "exempt_cap", "min_margin_pct", mode="before")
+    @field_validator("daily_goal", "exempt_cap", "min_margin_pct", "ladder_step_pct", mode="before")
     @classmethod
     def _co_number(cls, v):
         """Números escritos a la colombiana: 18.330.900 · 1,5 · vacío = sin valor."""

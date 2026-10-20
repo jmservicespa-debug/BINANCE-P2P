@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from jmcambios.analysis import merchants
+from jmcambios.analysis import ladder, merchants
 from jmcambios.analysis.amounts import tranche_views
 from jmcambios.analysis.pressure import PressureReport
 from jmcambios.dashboard.icon import ICON_PNG
@@ -29,6 +29,7 @@ from jmcambios.pricing.engine import DEFAULT_LIMITS, AdProfile, Costs, plan, tra
 from jmcambios.dashboard.page import PAGE
 from jmcambios.profitability.calculator import calculate
 from jmcambios.profitability.costs import CostConfig
+from jmcambios.profitability.daily import COT
 from jmcambios.storage.history import HistoryStore
 
 log = logging.getLogger(__name__)
@@ -262,6 +263,35 @@ class PanelData:
             self._cache[("comerciantes", ver)] = (now_ts, out)
         return out
 
+    def bitacora(self, days: int, now_ts: int) -> dict[str, Any]:
+        """Órdenes que entraron por mis anuncios: cuánto tardaron, en qué puesto y con qué margen."""
+        days = max(1, min(days, 14))
+        now = datetime.fromtimestamp(now_ts, UTC)
+        midnight = now.astimezone(COT).replace(hour=0, minute=0, second=0, microsecond=0)
+        since = midnight - timedelta(days=days - 1)
+        if self.start is not None:
+            since = max(since, self.start)
+        since_ts = int(since.timestamp())
+        state = self.estado(now_ts)
+        c = state.get("costs") if state.get("available") else None
+        D = lambda v: Decimal(str(v))  # noqa: E731
+        costs = None if not c else Costs(maker_buy=D(c["maker_buy"]), maker_sell=D(c["maker_sell"]), gmf=D(c["gmf"]),
+                                         gmf_worst=D(c["gmf_worst"]), min_margin=D(c["min_margin"]))
+        with self._store() as st:
+            # Un día más de historia: la espera de la primera orden puede empezar antes de la medianoche.
+            log = st.my_ad_log(self.fiat, since_ts - 86400)
+            orders = st.load_orders(fiat=self.fiat, asset=self.asset, since_ts=since_ts - 86400)
+        fills = ladder.fills(orders, log, costs, since_ts=since_ts)
+        f = lambda v: None if v is None else float(v)  # noqa: E731
+        return {
+            "days": days, "since_ts": since_ts, "logged": bool(log),
+            "fills": [{"ts": x.ts, "side": x.side, "price": f(x.price), "qty": f(x.qty), "fiat": f(x.total_fiat),
+                       "status": x.status, "wait_s": x.wait_s, "rank": x.rank, "total": x.total,
+                       "min_fiat": x.min_fiat, "max_fiat": x.max_fiat, "pair_margin": f(x.pair_margin)}
+                      for x in reversed(fills)][:60],
+            "by_rank": ladder.by_rank(fills),
+        }
+
     def alertas(self) -> list[dict[str, Any]]:
         with self._store() as st:
             return [{"ts": r["ts"], "severity": r["severity"], "title": r["title"], "body": r["body"]}
@@ -330,6 +360,9 @@ def make_handler(data: PanelData, token: str) -> type[BaseHTTPRequestHandler]:
                     self._json(data.tramos(ts, None if ver not in ("0", "1") else ver == "1"))
                 elif url.path == "/api/rentabilidad":
                     self._json(data.rentabilidad(now))
+                elif url.path == "/api/bitacora":
+                    d = (q.get("dias") or ["1"])[0]
+                    self._json(data.bitacora(int(d) if d.isdigit() else 1, ts))
                 elif url.path == "/api/alertas":
                     self._json(data.alertas())
                 else:
