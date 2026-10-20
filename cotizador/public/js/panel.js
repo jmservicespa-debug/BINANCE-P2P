@@ -200,15 +200,18 @@ start();
 
 let usdt = null;
 const USDT_SOURCES = { vita: 'Vita Wallet vía CriptoYa', binancep2p: 'Binance P2P vía CriptoYa', mediana: 'mediana de exchanges vía CriptoYa', manual: 'valor manual' };
-const usdtPrice = () => usdt?.ref?.value ? usdt.ref.value * (1 + (Number(String($('u-margin').value).replace(',', '.')) || 0) / 100) : NaN;
+const pctOf = (id) => Number(String($(id).value).replace(',', '.')) || 0;
+const usdtPrice = () => usdt?.ref?.value ? usdt.ref.value * (1 + pctOf('u-margin') / 100) : NaN;
+// Precio de compra: lo que paga el mercado por USDT (bid de Vita) menos la ganancia al comprar.
+const usdtBuyPrice = () => usdt?.ref?.bid ? Number((usdt.ref.bid * (1 - pctOf('u-buy') / 100)).toFixed(2)) : NaN;  // como lo ve el cliente
 
 async function loadUsdt(fillInputs) {
   const { status, body } = await api('/api/usdt');
   if (status !== 200) return;
   usdt = body;
-  if (fillInputs) { $('u-margin').value = body.margin_pct; $('u-manual').value = body.manual || ''; $('u-pub').checked = !!body.published; }
+  if (fillInputs) { $('u-margin').value = body.margin_pct; $('u-buy').value = body.buy_margin_pct ?? '8'; $('u-manual').value = body.manual || ''; $('u-pub').checked = !!body.published; }
   // Si el servidor no pudo leer CriptoYa, este navegador la consulta directamente (como al abrir su página).
-  if (!usdt.ref?.value || usdt.ref.source === 'manual') {
+  if (!usdt.ref?.value || !usdt.ref.bid || usdt.ref.source === 'manual') {
     try {
       const res = await fetch(USDT_URL, { cache: 'no-store' });
       const got = res.ok ? parseCriptoYa(await res.text()) : null;
@@ -237,15 +240,22 @@ function renderUsdt() {
   $('u-pay-d').textContent = okQ ? `por ${fmt(qty, 2)} USDT` : '';
   $('u-get').textContent = okC ? `${fmt(Math.floor((clp / price) * 100) / 100, 2)} USDT` : '—';
   $('u-get-d').textContent = okC ? `por ${fmt(clp, 0)} CLP` : '';
+  const buy = usdtBuyPrice(), sell = usdtNum($('u-sell').value);
+  $('u-bprice').textContent = buy > 0 ? fmt(buy, 2) : '—';
+  $('u-bref').textContent = r.bid ? `(compra de referencia ${fmt(r.bid, 2)})` : '(sin dato de compra)';
+  const okS = buy > 0 && sell > 0;  // pagarle = USDT × precio de compra (entero, hacia abajo)
+  $('u-bpay').textContent = okS ? `${fmt(Math.floor(Math.round(sell * buy * 100) / 100), 0)} CLP` : '—';
+  $('u-bpay-d').textContent = okS ? `por ${fmt(sell, 2)} USDT` : '';
 }
-['u-margin', 'u-qty', 'u-clp'].forEach((id) => { $(id).oninput = renderUsdt; });
+['u-margin', 'u-buy', 'u-qty', 'u-clp', 'u-sell'].forEach((id) => { $(id).oninput = renderUsdt; });
 
 async function saveUsdtCfg() {
-  const { status, body } = await api('/api/usdt', { method: 'PUT', body: JSON.stringify({ margin_pct: $('u-margin').value, manual: $('u-manual').value, published: $('u-pub').checked }) });
+  const { status, body } = await api('/api/usdt', { method: 'PUT', body: JSON.stringify({ margin_pct: $('u-margin').value, buy_margin_pct: $('u-buy').value, manual: $('u-manual').value, published: $('u-pub').checked }) });
   const msg = $('u-msg');
   msg.hidden = false;
   if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
-  usdt = body;
+  // Si la referencia se leyó desde este equipo, se conserva (el servidor no puede leer CriptoYa).
+  usdt = { ...body, ref: usdt?.ref?.via && !body.ref?.bid ? usdt.ref : body.ref };
   msg.className = 'msg';
   msg.textContent = body.published ? 'Guardado. USDT activo: los clientes lo ven en el cotizador.' : 'Guardado. USDT desactivado: no aparece en el cotizador.';
   renderUsdt();

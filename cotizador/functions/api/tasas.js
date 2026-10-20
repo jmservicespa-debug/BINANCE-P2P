@@ -6,7 +6,7 @@ export const onRequestGet = async ({ env }) => {
   const view = await publicView(env);
   delete view.bcv.errors;  // los motivos de falla solo se ven en el panel
   const cfg = await loadUsdtCfg(env);
-  if (cfg.published) view.usdt = { margin_pct: cfg.margin_pct };
+  if (cfg.published) view.usdt = { margin_pct: cfg.margin_pct, buy_margin_pct: cfg.buy_margin_pct };
   return json(view);
 };
 

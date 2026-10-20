@@ -234,8 +234,8 @@ export async function publicView(env, saved, now = Date.now()) {
 const USDT_TTL_S = 120;
 
 export async function loadUsdtCfg(env) {
-  try { return { margin_pct: '8', manual: null, published: false, ...JSON.parse((await env.TASAS.get('usdt_cfg')) || '{}') }; }
-  catch { return { margin_pct: '8', manual: null, published: false }; }
+  try { return { margin_pct: '8', buy_margin_pct: '8', manual: null, published: false, ...JSON.parse((await env.TASAS.get('usdt_cfg')) || '{}') }; }
+  catch { return { margin_pct: '8', buy_margin_pct: '8', manual: null, published: false }; }
 }
 
 export async function usdtRef(env, manual, now = Date.now()) {
@@ -274,12 +274,15 @@ export async function saveUsdtCfg(request, env, now = Date.now()) {
   if (!(await isAdmin(request, env, now))) return json({ error: 'Inicia sesión de nuevo.' }, 401);
   let body;
   try { body = await request.json(); } catch { return json({ error: 'datos inválidos' }, 400); }
-  const margin = String(body?.margin_pct ?? '').trim().replace(',', '.');
-  const m = Number(margin);
-  if (!(margin !== '' && m >= 0 && m <= 50)) return json({ error: 'La ganancia debe estar entre 0 y 50 %.' }, 400);
+  const pct = (v) => { const t = String(v ?? '').trim().replace(',', '.'); return t !== '' && Number(t) >= 0 && Number(t) <= 50 ? t : null; };
+  const margin = pct(body?.margin_pct);
+  if (margin === null) return json({ error: 'La ganancia debe estar entre 0 y 50 %.' }, 400);
+  // Ganancia al comprar USDT (precio de compra = bid − %). Si no viene, se mantiene la guardada.
+  const buy = body?.buy_margin_pct == null ? (await loadUsdtCfg(env)).buy_margin_pct : pct(body.buy_margin_pct);
+  if (buy === null) return json({ error: 'La ganancia al comprar debe estar entre 0 y 50 %.' }, 400);
   const manual = body?.manual == null || String(body.manual).trim() === '' ? null : String(body.manual).trim();
   if (manual !== null && !rateNum(manual)) return json({ error: 'El valor manual no es válido.' }, 400);
-  const cfg = { margin_pct: margin, manual, published: body?.published === true };
+  const cfg = { margin_pct: margin, buy_margin_pct: buy, manual, published: body?.published === true };
   await env.TASAS.put('usdt_cfg', JSON.stringify(cfg));
   return json({ ...cfg, ref: await usdtRef(env, manual, now) });
 }
