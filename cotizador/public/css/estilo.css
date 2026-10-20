@@ -56,6 +56,8 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-size: 14px; colo
 .result { background: var(--brand); color: var(--brand-ink); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 4px }
 .result .big { font-family: var(--display); font-weight: 800; font-size: 34px; line-height: 1.1; overflow-wrap: anywhere }
 .result .big.ask { font-size: 26px }
+.result .free { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 2px; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; background: color-mix(in srgb, var(--brand-ink) 16%, transparent) }
+.result .free svg { width: 14px; height: 14px; flex: none }
 .result .row { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; opacity: .9 }
 .bcv { border-top: 1px solid color-mix(in srgb, var(--brand-ink) 30%, transparent); margin-top: 8px; padding-top: 8px }
 .wa { display: flex; flex-direction: column; gap: 8px }

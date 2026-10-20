@@ -36,7 +36,7 @@ function renderDests() {
 function calc() {
   const r = ROUTES.find((x) => x.id === route);
   const o = ORIGINS[origin];
-  if (!r) { $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
+  if (!r) { $('r-free').hidden = true; $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
   if (statusOf(r.id) === 'ask') { unstable(r, o); return; }
   $('r-big').classList.remove('ask');
   const rate = rateOf(r.id).rate;
@@ -47,6 +47,7 @@ function calc() {
   const get = mode === 'send' ? convert(r, rate, x) : x;
   if (belowMin(r, send)) { minimum(r, o, send); return; }
   $('r-big').classList.remove('ask');
+  $('r-free').hidden = false;
   $('r-label').textContent = mode === 'send' ? `Recibe en ${r.name}` : 'Debes enviar';
   $('r-big').textContent = mode === 'send' ? `${fmt(get, r.dec)} ${r.cur}` : `${fmt(send, 0)} ${o.cur}`;
   $('r-send').textContent = mode === 'send' ? `Envías ${fmt(send, 0)} ${o.cur}` : `Recibe ${fmt(get, r.dec)} ${r.cur}`;
@@ -61,12 +62,13 @@ function calc() {
   }
   $('dest-note').textContent = r.note || '';
   const ok = Number.isFinite(send) && Number.isFinite(get) && send > 0;
-  const text = ok ? `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${r.name}. Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${rate}). ¿Me confirmas?` : '';
+  const text = ok ? `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${r.name}. Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?` : '';
   $('wa').innerHTML = waButtons(text);
 }
 
 // Monto por debajo del mínimo de la ruta: no se cotiza, se indica el mínimo.
 function minimum(r, o, send) {
+  $('r-free').hidden = true;
   $('r-label').textContent = `Envíos a ${r.name}`;
   $('r-big').textContent = `Mínimo ${fmt(r.min, 0)} ${o.cur}`;
   $('r-big').classList.add('ask');
@@ -80,6 +82,7 @@ function minimum(r, o, send) {
 
 // Mercado inestable: no se calcula; el cliente pide la tasa del momento con su monto ya escrito.
 function unstable(r, o) {
+  $('r-free').hidden = true;
   $('amount-label').textContent = mode === 'send' ? 'Monto que envías' : 'Monto que debe recibir';
   $('amount-cur').textContent = mode === 'send' ? o.cur : r.cur;
   const x = amountNum($('amount').value);
