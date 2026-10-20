@@ -70,15 +70,18 @@ test('login, guardar tasas y vista pública', async () => {
   assert.match(ok.headers.get('set-cookie'), /HttpOnly; Secure; SameSite=Strict/);
   // Desde otro sitio, aunque tenga la cookie: rechazado.
   assert.equal((await putRates({ request: req('/api/tasas', { method: 'PUT', body: { rates: RATES }, cookie, origin: 'https://otro.com' }), env: e })).status, 403);
-  const saved = await putRates({ request: req('/api/tasas', { method: 'PUT', body: { rates: RATES, status: { 'cl-br': 'off' }, bcv_manual: '250,5' }, cookie }), env: e });
+  const saved = await putRates({ request: req('/api/tasas', { method: 'PUT', body: { rates: RATES, status: { 'cl-br': 'off' }, bcv_manual: '250,5', brl: { prex: '495,62', margin_pct: '8' } }, cookie }), env: e });
   assert.equal(saved.status, 200);
   const view = await (await getRates({ request: req('/api/tasas'), env: e })).json();
   assert.equal(view.routes.find((r) => r.id === 'cl-ve').rate, '0.9320');
   assert.equal(view.routes.find((r) => r.id === 'cl-br').active, false);
   assert.deepEqual(view.bcv, { value: 250.5, date: null, source: 'manual' });  // el BCV no respondió
+  assert.equal(JSON.stringify(view).includes('495,62'), false);  // Prex y tu ganancia no se publican
   const ses = await getSession({ request: req('/api/sesion', { cookie }), env: e });
   assert.equal(ses.status, 200);
-  assert.equal((await ses.json()).saved.bcv_manual, '250,5');
+  const sv = (await ses.json()).saved;
+  assert.equal(sv.bcv_manual, '250,5');
+  assert.deepEqual(sv.brl, { prex: '495,62', margin_pct: '8' });
   assert.equal((await getSession({ request: req('/api/sesion'), env: e })).status, 401);
 });
 
