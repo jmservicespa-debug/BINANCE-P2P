@@ -11,6 +11,11 @@ no usa llaves de Binance ni toca la cuenta.
   último valor bueno o el valor manual del panel. Verificado en línea (2026-10-20): la página del BCV no
   responde desde Cloudflare; DolarApi sí (881,88 Bs/USD, igual al valor oficial del día). Publicado en https://jmcambios.pages.dev
 
+## Otros países
+
+- Botón de origen **Otro país** y recuadro **Otro destino** (en Chile y Colombia): el cliente escribe origen, destino y
+  monto aproximado, y el botón **Pedir tasa** abre WhatsApp con el mensaje armado. No se publica ninguna tasa.
+
 ## Estados de cada ruta (en el panel)
 
 - **Activa**: el cotizador calcula con la tasa; el flyer la muestra.

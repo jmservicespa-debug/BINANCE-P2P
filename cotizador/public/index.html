@@ -24,10 +24,27 @@
     <div>
       <h2 id="h-cot">Cotiza tu envío</h2>
       <span class="muted" id="updated">Cargando tasas…</span>
+      <p class="muted lead">Envíos desde Chile, Colombia y muchos otros países. Si tu país no aparece, elige <b>Otro país</b> y te damos la tasa por WhatsApp.</p>
     </div>
     <div class="msg bad" id="error" hidden></div>
+    <span class="muted">¿Desde dónde envías?</span>
     <div class="seg" id="origins"></div>
     <div class="dest" id="dests"></div>
+    <div class="other" id="other" hidden>
+      <p class="muted" id="other-intro">Cuéntanos desde dónde y hacia dónde envías y te damos la tasa del momento por WhatsApp.</p>
+      <label class="f" for="o-from">País desde donde envías
+        <span class="amount"><input id="o-from" list="paises" autocomplete="off" placeholder="Ej. Perú"></span></label>
+      <label class="f" for="o-to">País de destino
+        <span class="amount"><input id="o-to" list="paises" autocomplete="off" placeholder="Ej. Venezuela"></span></label>
+      <label class="f" for="o-amount">Monto aproximado (opcional)
+        <span class="amount"><input id="o-amount" autocomplete="off" placeholder="Ej. 500 soles"></span></label>
+      <datalist id="paises">
+        <option value="Argentina"><option value="Brasil"><option value="Chile"><option value="Colombia"><option value="Ecuador">
+        <option value="España"><option value="Estados Unidos"><option value="Europa"><option value="México"><option value="Panamá">
+        <option value="Perú"><option value="República Dominicana"><option value="Uruguay"><option value="Venezuela">
+      </datalist>
+    </div>
+    <div id="quote">
     <div class="mode" id="modes">
       <button data-mode="send" aria-pressed="true">Yo envío</button>
       <button data-mode="get" aria-pressed="false">Quiero que reciba</button>
@@ -46,6 +63,7 @@
         <div class="row"><span>Dólar BCV <span id="b-date"></span></span><span id="b-rate"></span></div>
         <div class="row"><span>Equivale a</span><b id="b-usd"></b></div>
       </div>
+    </div>
     </div>
     <div class="wa" id="wa"></div>
     <p class="fine">Tasa sujeta a cambios · Se confirma por WhatsApp antes de enviar<br>Atención de lunes a domingo, 10:00 a 22:00 h<br><span id="dest-note"></span></p>
