@@ -184,7 +184,7 @@ $('amount').oninput = calc;
 
 // USDT: el precio de Vita (CriptoYa) se lee desde el navegador del cliente y se le suma la ganancia.
 async function loadUsdt() {
-  if (!data?.usdt) return;
+  if (!data?.usdt) { data.routes = data.routes.filter((x) => x.id !== USDT_ROUTE.id); return; }
   let ref = null;
   try {
     const res = await fetch(USDT_URL, { cache: 'no-store' });
@@ -194,7 +194,6 @@ async function loadUsdt() {
   data.routes = data.routes.filter((x) => x.id !== USDT_ROUTE.id);
   // Sin precio de referencia: la opción queda como "Mercado inestable" (tasa por WhatsApp).
   data.routes.push({ id: USDT_ROUTE.id, status: Number.isFinite(price) ? 'on' : 'ask', rate: Number.isFinite(price) ? price.toFixed(2) : '' });
-  $('preview').hidden = !data.usdt.preview;
 }
 
 async function load() {

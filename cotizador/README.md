@@ -17,8 +17,8 @@ no usa llaves de Binance ni toca la cuenta.
   si no viene, Binance P2P; si tampoco, la mediana de los exchanges. Se guarda 2 minutos. Verificado (2026-10-20): CriptoYa rechaza (403) las consultas desde Cloudflare;
   el panel la consulta desde el navegador y funciona (Vita 982,14 CLP). Respaldo manual si la fuente falla. Rango aceptado 300–3.000 CLP.
 - Precio de venta = referencia × (1 + ganancia %), por defecto 8 %. Cobrar = USDT × precio (entero);
-  entregar = CLP ÷ precio (2 decimales, hacia abajo). En el cotizador público aparece **USDT** en Chile solo si está marcado
-  "Mostrar USDT en el cotizador público"; sin marcar, solo lo ve Jamer con la sesión del panel abierta (vista previa).
+  entregar = CLP ÷ precio (2 decimales, hacia abajo). En el cotizador público aparece **USDT** en Chile solo si está marcada la casilla
+  "USDT activo en el cotizador" (se guarda al instante); sin marcar no aparece para nadie.
   El precio lo lee el navegador del cliente desde CriptoYa (Vita + ganancia); si no puede, queda como "Mercado inestable".
 
 ## Otros países

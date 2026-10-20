@@ -199,14 +199,16 @@ function renderUsdt() {
 }
 ['u-margin', 'u-qty', 'u-clp'].forEach((id) => { $(id).oninput = renderUsdt; });
 
-$('u-save').onclick = async () => {
+async function saveUsdtCfg() {
   const { status, body } = await api('/api/usdt', { method: 'PUT', body: JSON.stringify({ margin_pct: $('u-margin').value, manual: $('u-manual').value, published: $('u-pub').checked }) });
   const msg = $('u-msg');
   msg.hidden = false;
   if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
   usdt = body;
   msg.className = 'msg';
-  msg.textContent = body.published ? 'Guardado. USDT visible para todos en el cotizador.' : 'Guardado. USDT solo en vista previa (no publicado).';
+  msg.textContent = body.published ? 'Guardado. USDT activo: los clientes lo ven en el cotizador.' : 'Guardado. USDT desactivado: no aparece en el cotizador.';
   renderUsdt();
-};
+}
+$('u-save').onclick = saveUsdtCfg;
+$('u-pub').onchange = saveUsdtCfg;  // activar o desactivar se guarda al instante
 setInterval(() => { if (!$('usdt').hidden) loadUsdt(false); }, 60 * 1000);

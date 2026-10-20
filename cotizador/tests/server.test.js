@@ -182,11 +182,11 @@ test('USDT/CLP: referencia de CriptoYa (Binance P2P), ganancia y respaldo manual
   assert.equal((await putUsdt({ request: req('/api/usdt', { method: 'PUT', cookie, body: { margin_pct: '80' } }), env: e })).status, 400);
   const s = await (await putUsdt({ request: req('/api/usdt', { method: 'PUT', cookie, body: { margin_pct: '7,5', manual: '950' } }), env: e })).json();
   assert.equal(s.margin_pct, '7.5');
-  // Vista previa: el público no ve USDT; Jamer con la sesión abierta sí; al publicar, todos.
+  // Desactivado: no aparece para nadie (tampoco con sesión). Activado: aparece para todos.
   assert.equal((await (await getRates({ request: req('/api/tasas'), env: e })).json()).usdt, undefined);
-  assert.deepEqual((await (await getRates({ request: req('/api/tasas', { cookie }), env: e })).json()).usdt, { margin_pct: '7.5', preview: true });
+  assert.equal((await (await getRates({ request: req('/api/tasas', { cookie }), env: e })).json()).usdt, undefined);
   await putUsdt({ request: req('/api/usdt', { method: 'PUT', cookie, body: { margin_pct: '8', published: true } }), env: e });
-  assert.deepEqual((await (await getRates({ request: req('/api/tasas'), env: e })).json()).usdt, { margin_pct: '8', preview: false });
+  assert.deepEqual((await (await getRates({ request: req('/api/tasas'), env: e })).json()).usdt, { margin_pct: '8' });
   globalThis.fetch = async () => new Response(body);
   // Fuente caída: usa el valor manual y dice por qué.
   globalThis.fetch = async () => new Response('caído', { status: 502 });
