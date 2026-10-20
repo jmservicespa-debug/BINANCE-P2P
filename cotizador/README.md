@@ -37,6 +37,8 @@ no usa llaves de Binance ni toca la cuenta.
 
 ## Otros países
 
+- Botón de origen **Brasil** (bandera): por ahora solo muestra el aviso **Próximamente** (envíos desde Brasil a Chile y Colombia, y cambio de USDT). Se configura en `SOON` de `public/js/cotizador.js`.
+
 - Botón de origen **Otro país** y recuadro **Otro destino** (en Chile y Colombia): el cliente escribe origen, destino y
   monto aproximado, y el botón **Pedir tasa** abre WhatsApp con el mensaje armado. No se publica ninguna tasa.
 

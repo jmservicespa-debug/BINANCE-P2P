@@ -38,9 +38,9 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .word small { display: block; font-size: 8px; letter-spacing: .2em; color: var(--muted); margin-top: 3px }
 
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 14px }
-.seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: -8px }
-.seg button { flex-direction: column; justify-content: center; text-align: center; gap: 4px; padding: 10px 4px; min-width: 0 }
+.seg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: -8px }
 .seg button, .dest button { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px; display: flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 600; font-size: 14px; text-align: left }
+.seg button { flex-direction: column; justify-content: center; text-align: center; gap: 4px; padding: 10px 4px; min-width: 0 }
 .seg button[aria-pressed="true"], .dest button[aria-pressed="true"] { border-color: var(--brand); background: var(--box) }
 .dest { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px }
 .dest button small { display: block; font-family: var(--body); font-weight: 400; color: var(--muted); font-size: 12px }
@@ -85,6 +85,9 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-size: 14px; colo
 .usdt-out b { font-family: var(--display); font-size: 20px; font-weight: 800; color: var(--accent); overflow-wrap: anywhere }
 .row2 > * { min-width: 0 } .row2 .amount { min-width: 0 } .row2 .amount input { font-size: 18px; width: 100% }
 .prov { display: flex; flex-direction: column; gap: 8px; margin: 2px 0 8px; padding: 10px 12px; border-radius: 12px; background: var(--sunken); border: 1px dashed var(--box-line) }
+.soon { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; padding: 22px 16px; border-radius: 16px; background: var(--box); border: 1px solid var(--box-line) }
+.soon b { font-family: var(--display); font-size: 26px; font-weight: 800; color: var(--brand) }
+.soon p { margin: 0; color: var(--muted) }
 .fine { font-size: 12px; color: var(--muted); text-align: center; margin: 0 }
 .msg { border-radius: 10px; padding: 10px 12px; font-size: 14px; background: var(--box); border: 1px solid var(--box-line) }
 .msg.bad { background: var(--bad-bg); color: var(--bad); border-color: transparent }

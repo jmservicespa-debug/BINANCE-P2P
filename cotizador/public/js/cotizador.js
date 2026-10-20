@@ -16,6 +16,7 @@ if (!ADVISORS[adv]) adv = null;
 
 let data = null, origin = 'CL', route = null, mode = 'send';
 const OTHER = 'OTHER';  // origen u otro destino fuera de las rutas principales: tasa por WhatsApp
+const SOON = { BR: 'Brasil' };  // orígenes que se muestran con su bandera y el aviso "Próximamente"
 const GLOBE = '<svg class="flag" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--box)" stroke="var(--box-line)"/><path d="M1 12h22M12 1c3 3.2 4.5 7 4.5 11S15 19.8 12 23c-3-3.2-4.5-7-4.5-11S9 4.2 12 1z" fill="none" stroke="var(--accent)" stroke-width="1.4"/></svg>';
 const rateOf = (id) => data?.routes.find((r) => r.id === id);
 const statusOf = (id) => rateOf(id)?.status ?? (rateOf(id)?.active ? 'on' : 'off');
@@ -26,9 +27,10 @@ const activeRoutes = (o) => ALL.filter((r) => r.from === o && ['on', 'ask'].incl
 function renderOrigins() {
   $('origins').innerHTML = Object.entries(ORIGINS).map(([k, o]) =>
     `<button data-o="${k}" aria-pressed="${k === origin}">${flag(k)} ${esc(o.name)}</button>`).join('')
+    + Object.entries(SOON).map(([k, n]) => `<button data-o="${k}" aria-pressed="${k === origin}">${flag(k)} ${esc(n)}</button>`).join('')
     + `<button data-o="${OTHER}" aria-pressed="${origin === OTHER}">${GLOBE} Otro país</button>`;
   $('origins').querySelectorAll('button').forEach((b) => b.onclick = () => {
-    origin = b.dataset.o; route = origin === OTHER ? null : activeRoutes(origin)[0]?.id ?? OTHER;
+    origin = b.dataset.o; route = origin === OTHER || SOON[origin] ? null : activeRoutes(origin)[0]?.id ?? OTHER;
     ['o-to', 'o-amount', ...(origin === OTHER ? ['o-from'] : [])].forEach((id) => { $(id).value = ''; });
     $('amount').value = '';
     render();
@@ -36,8 +38,8 @@ function renderOrigins() {
 }
 
 function renderDests() {
-  $('dests').hidden = origin === OTHER;
-  if (origin === OTHER) return;
+  $('dests').hidden = origin === OTHER || Boolean(SOON[origin]);
+  if ($('dests').hidden) return;
   const list = activeRoutes(origin);
   $('dests').innerHTML = list.map((r) => `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${esc(r.unit)} (${r.cur})${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`).join('')
     + `<button data-r="${OTHER}" aria-pressed="${route === OTHER}">${GLOBE}<span>Otro destino<small>Tasa por WhatsApp</small></span></button>`;
@@ -58,6 +60,10 @@ function otherQuote() {
 }
 
 function calc() {
+  const soon = Boolean(SOON[origin]);
+  $('soon').hidden = !soon;
+  $('wa').hidden = soon;
+  if (soon) { $('other').hidden = true; $('quote').hidden = true; $('dest-note').textContent = ''; return; }
   const isOther = origin === OTHER || route === OTHER;
   $('other').hidden = !isOther;
   $('quote').hidden = isOther;
@@ -301,7 +307,7 @@ async function load() {
   $('updated').textContent = data.updated
     ? 'Tasas del ' + new Date(data.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
     : 'Tasas aún no publicadas';
-  if (origin !== OTHER && route !== OTHER && (!route || !activeRoutes(origin).some((r) => r.id === route))) route = activeRoutes(origin)[0]?.id ?? null;
+  if (origin !== OTHER && !SOON[origin] && route !== OTHER && (!route || !activeRoutes(origin).some((r) => r.id === route))) route = activeRoutes(origin)[0]?.id ?? null;
   render();
 }
 load();
