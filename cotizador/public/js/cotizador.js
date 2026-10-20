@@ -2,6 +2,7 @@ import { ADVISORS, ORIGINS, ROUTES, amountNum, convert, fmt, invert } from './ru
 import { esc, flag, flags } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
+const MAIN_LINE = 'jamer';  // a quién escribe quien llega sin enlace de asesor
 
 // Asesor: viene en el enlace (?a=jamer) y se recuerda en este celular para la próxima visita.
 let adv = new URLSearchParams(location.search).get('a');
@@ -58,10 +59,12 @@ function calc() {
 }
 
 function waButtons(text) {
-  const people = adv ? [ADVISORS[adv]] : Object.values(ADVISORS);
+  // Enlace de un asesor: su nombre y número. Enlace general: un solo botón sin nombre a la línea principal.
+  const p = ADVISORS[adv] || ADVISORS[MAIN_LINE];
   const msg = text || 'Hola, quiero cotizar un envío.';
-  return people.map((p) => `<a href="https://wa.me/${p.phone}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Escribir a ${esc(p.name.split(' ')[0])} por WhatsApp</a>`).join('')
-    + `<span class="fine">${people.map((p) => `${esc(p.name)} · ${p.show}`).join(' · ')}</span>`;
+  const label = adv ? `Escribir a ${esc(p.name.split(' ')[0])} por WhatsApp` : 'Escribir por WhatsApp';
+  return `<a href="https://wa.me/${p.phone}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${label}</a>`
+    + `<span class="fine">${adv ? esc(p.name) + ' · ' : ''}${p.show}</span>`;
 }
 
 function render() { renderOrigins(); renderDests(); calc(); }

@@ -4,7 +4,7 @@ Panel privado de tasas + cotizador público + flyers automáticos. Independiente
 no usa llaves de Binance ni toca la cuenta.
 
 - `/` — cotizador para clientes. `/?a=jamer` y `/?a=miladys` llevan el WhatsApp de cada asesor
-  (el celular del cliente lo recuerda). Sin `?a=` muestra los dos.
+  (el celular del cliente lo recuerda). Sin `?a=` muestra un solo botón sin nombre (línea de Jamer).
 - `/panel/` — panel de Jamer (con contraseña): tasas del día, dólar BCV manual de respaldo y flyers
   listos para descargar o compartir a WhatsApp.
 - Dólar BCV: se lee de https://www.bcv.org.ve/ (máx. una vez por hora). Si no se puede leer, usa el

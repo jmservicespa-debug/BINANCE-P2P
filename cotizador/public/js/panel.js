@@ -73,7 +73,7 @@ function renderBcv(b) {
 
 function renderLinks() {
   const base = location.origin;
-  $('advisors').innerHTML = [['General (los dos)', base + '/'], ...Object.entries(ADVISORS).map(([k, a]) => [`${a.name} · ${a.show}`, `${base}/?a=${k}`])]
+  $('advisors').innerHTML = [['General (botón sin nombre, a tu número)', base + '/'], ...Object.entries(ADVISORS).map(([k, a]) => [`${a.name} · ${a.show}`, `${base}/?a=${k}`])]
     .map(([who, url]) => `<div class="adv"><span>${esc(who)}</span><code>${esc(url)}</code></div>`).join('');
 }
 
