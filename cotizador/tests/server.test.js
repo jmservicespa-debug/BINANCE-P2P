@@ -38,6 +38,10 @@ test('cálculos con las tasas del flyer', () => {
   assert.equal(amountNum('100.000'), 100000);
   assert.ok(Number.isNaN(rateNum('1.0.5')) && Number.isNaN(rateNum('')) && Number.isNaN(rateNum('-3')));
   assert.equal(ROUTES.length, 7);
+  // Sin decimales en ninguna ruta (montos completos para pagar por P2P).
+  assert.ok(ROUTES.every((x) => x.dec === 0));
+  assert.equal(Math.round(convert(r('co-ve'), '3.75', 100000)), 26667);  // 26.666,67 → sube
+  assert.equal(Math.round(convert(r('cl-us'), '1085', 100000)), 92);     // 92,17 → baja
   // Mínimos por ruta (moneda de origen).
   assert.ok(belowMin(r('cl-ve'), 9999) && !belowMin(r('cl-ve'), 10000));
   assert.ok(belowMin(r('cl-us'), 39999) && !belowMin(r('cl-us'), 40000));

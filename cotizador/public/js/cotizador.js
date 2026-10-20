@@ -64,8 +64,9 @@ function calc() {
   $('amount-label').textContent = mode === 'send' ? 'Monto que envías' : 'Monto que debe recibir';
   $('amount-cur').textContent = mode === 'send' ? o.cur : r.cur;
   const x = amountNum($('amount').value);
-  const send = mode === 'send' ? x : Math.round(invert(r, rate, x));
-  const get = mode === 'send' ? convert(r, rate, x) : x;
+  // Montos completos, sin decimales: desde ,50 se redondea hacia arriba; por debajo, hacia abajo.
+  const send = Math.round(mode === 'send' ? x : invert(r, rate, x));
+  const get = Math.round(mode === 'send' ? convert(r, rate, send) : x);
   if (belowMin(r, send)) { minimum(r, o, send); return; }
   $('r-big').classList.remove('ask');
   $('r-free').hidden = false;
@@ -86,7 +87,7 @@ function calc() {
   $('r-bcv').hidden = !(r.to.includes('VE') && bcv > 0);
   if (!$('r-bcv').hidden) {
     $('b-rate').textContent = `${fmt(bcv, 2)} Bs/USD`;
-    $('b-usd').textContent = `${fmt(get / bcv, 2)} USD`;
+    $('b-usd').textContent = `${fmt(Math.round(get / bcv), 0)} USD`;
     $('b-date').textContent = data.bcv.date ? `(${data.bcv.date.split('-').reverse().join('/')})` : '';
   }
   $('dest-note').textContent = r.note || '';

@@ -33,6 +33,8 @@ La tasa queda guardada en los tres estados: al volver a Activa no hay que escrib
 | Chile | EE. UU. · Panamá/Ecuador | CLP ÷ tasa |
 | Colombia | Venezuela | COP ÷ tasa |
 
+Montos sin decimales (redondeo normal: desde ,50 sube; por debajo, baja).
+
 Mínimos de envío (moneda de origen, campo `min`): Chile → VE/PE/CO/BR 10.000 CLP · EE. UU. 40.000 CLP · Panamá/Ecuador 15.000 CLP; Colombia → VE 20.000 COP.
 
 Para un país nuevo: una fila en `ROUTES` (y su casilla en la plantilla del flyer si va en el flyer).
