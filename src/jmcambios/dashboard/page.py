@@ -16,7 +16,7 @@ PAGE = r"""<!doctype html>
 <style>
 :root{
   --bg:#0E161E;--card:#17222D;--line:#24313D;--border:#2C3A47;--text:#E8EDF2;--muted:#9AA7B4;--soft:#C3CCD5;
-  --accent:#7FD4C1;--accent-bg:#1E3A34;--real:#8DB8F2;--real-bg:#1B2C44;--calc-bg:#252F39;--inf:#F2B66D;--inf-bg:#3A2A16;
+  --accent:#D3A6E8;--accent-bg:#35193F;--real:#8DB8F2;--real-bg:#1B2C44;--calc-bg:#252F39;--inf:#F2B66D;--inf-bg:#3A2A16;
   --up:#7FD4C1;--down:#F28B82;--down-bg:#3A1E1E;--ask:#F2B66D;--bid:#7FB3F2;
   --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;--sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
 }
@@ -81,7 +81,7 @@ th{color:var(--muted);font-weight:500;padding:4px 2px;border-bottom:1px solid va
 input{font:inherit;font-size:14px;width:118px;min-height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text)}
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){--bg:#F4F6F8;--card:#FFFFFF;--line:#E3E8ED;--border:#D5DCE3;--text:#14202B;--muted:#5D6B78;--soft:#3B4955;
-  --accent:#0F7A66;--accent-bg:#DDF3EE;--real:#2558A8;--real-bg:#E3ECFA;--calc-bg:#ECEFF2;--inf:#9A5B0C;--inf-bg:#FBEBD5;--up:#0F7A66;--down:#B3261E;--down-bg:#FBE4E2;--ask:#C77A12;--bid:#2F6FD0}
+  --accent:#531463;--accent-bg:#F1E4F5;--real:#2558A8;--real-bg:#E3ECFA;--calc-bg:#ECEFF2;--inf:#9A5B0C;--inf-bg:#FBEBD5;--up:#0F7A66;--down:#B3261E;--down-bg:#FBE4E2;--ask:#C77A12;--bid:#2F6FD0}
   :root:not([data-theme="dark"]) nav{background:#FFFFFF}
 }
 </style>
