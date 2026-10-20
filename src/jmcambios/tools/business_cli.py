@@ -40,7 +40,16 @@ from jmcambios.domain.account import MyAd, OrderSide
 from jmcambios.logging_utils import setup_logging
 from jmcambios.monitor.report import BOGOTA, money, pct
 from jmcambios.profitability.calculator import ProfitReport, calculate
-from jmcambios.pricing.engine import DEFAULT_LIMITS, AdProfile, Costs, SidePrice, daily_goal, maker_fees, profile_for
+from jmcambios.pricing.engine import (
+    DEFAULT_LIMITS,
+    AdProfile,
+    Costs,
+    SidePrice,
+    daily_goal,
+    maker_fees,
+    profile_for,
+    tranche_opportunities,
+)
 from jmcambios.pricing.engine import plan as pricing_plan
 from jmcambios.profitability.costs import CostConfig, fraction
 from jmcambios.storage.history import HistoryStore
@@ -267,10 +276,11 @@ def _parse_limits(text: str | None) -> tuple[Decimal, Decimal] | None:
     return lo, hi
 
 
-def _print_tranches(books, my_ads, my_users, methods_cfg, merchants_only: bool) -> None:
+def _print_tranches(books, my_ads, my_users, methods_cfg, merchants_only: bool, costs: Costs | None = None) -> None:
     """Competencia por tramo de monto en cada lado, con el puesto de tu anuncio en cada tramo."""
     who = "verificados" if merchants_only else "todos"
     print(f"\n  COMPETENCIA POR MONTO [Binance + cálculo] · {who} · que comparten tus métodos")
+    views = {}
     for side, kind, order_side in ((Side.BID, "COMPRA (compradores)", OrderSide.BUY), (Side.ASK, "VENTA (vendedores)", OrderSide.SELL)):
         ads = [a for a in books[side].ads if a.advertiser.user_id not in my_users]
         if merchants_only:
@@ -279,9 +289,32 @@ def _print_tranches(books, my_ads, my_users, methods_cfg, merchants_only: bool) 
         methods = mine.payment_methods if mine else tuple(methods_cfg)
         print(f"    {kind}" + (f" · tu precio {money(mine.price)}" if mine else ""))
         print(f"      {'Tramo':<16}{'Anuncios':>9}{'Mejor precio':>15}{'USDT':>12}" + ("  Tu puesto" if mine else ""))
-        for v in tranche_views(side, ads, methods, mine.price if mine else None):
+        rows = tranche_views(side, ads, methods, mine.price if mine else None)
+        views[order_side] = rows
+        for v in rows:
             print(f"      {v.label:<16}{v.ads:>9}{money(v.best_price):>15}{money(v.qty, 0):>12}"
                   + (f"  #{v.my_rank}" if mine and v.ads else ""))
+    if costs is not None:
+        _print_tranche_suggestion(views[OrderSide.BUY], views[OrderSide.SELL], costs)
+
+
+def _print_tranche_suggestion(buy_views, sell_views, costs: Costs) -> None:
+    opps, best = tranche_opportunities(buy_views, sell_views, costs)
+    print(f"\n  ¿EN QUÉ TRAMO OPERAR? [cálculo] · estando de primero en compra y venta · margen mínimo {pct3(costs.min_margin)}")
+    print(f"      {'Tramo':<16}{'Diferencia':>12}{'Margen libre':>14}{'Competidores':>14}")
+    for i, o in enumerate(opps):
+        mark = "  ← sugerido" if i == best else ""
+        print(f"      {o.label:<16}{money(o.gap):>12}{pct3(o.margin):>14}{o.competitors_buy + o.competitors_sell:>14}{mark}")
+    if best is None:
+        print("    Sin datos suficientes por tramo.")
+        return
+    o = opps[best]
+    print(f"    Sugerido: {o.label} · comprar a {money(o.best_bid + Decimal('0.01'))} y vender a {money(o.best_ask - Decimal('0.01'))}"
+          f" → {pct3(o.margin)} libre con {o.competitors_buy + o.competitors_sell} competidores.")
+    if not o.meets_min:
+        print("    ⚠ Ningún tramo da tu margen mínimo estando de primero en los dos lados: hay que esperar que el precio"
+              " se mueva o ceder puesto en un lado (ver escenarios).")
+    print("    Ojo: los tramos grandes piden más capital por orden y suelen tener menos clientes (volumen real no verificable).")
 
 
 def cmd_competencia(store: HistoryStore, args: argparse.Namespace, settings: Settings) -> int:
@@ -341,7 +374,8 @@ def cmd_competencia(store: HistoryStore, args: argparse.Namespace, settings: Set
     fees_cycle = maker_buy + maker_sell
     print(f"    Costos de un ciclo compra+venta: comisión ≈ {pct3(fees_cycle)} + 4x1000 {pct3(gmf_low)}–{pct3(gmf_high)}"
           f" → diferencia mínima entre compra y venta ≈ {pct3(fees_cycle + min_margin + gmf_low)}–{pct3(fees_cycle + min_margin + gmf_high)}")
-    _print_tranches(books, my_ads, my_users, cfg.gmf_by_account, settings.merchants_only)
+    _print_tranches(books, my_ads, my_users, cfg.gmf_by_account, settings.merchants_only,
+                    Costs(maker_buy, maker_sell, gmf_low, gmf_high, min_margin))
     print("\n  Posición = estimación por precio; Binance también ordena por otros criterios.")
     return 0
 

@@ -293,3 +293,17 @@ def test_partial_range_overlap_is_not_direct_competition():
     assert views["< 500 mil"].ads == 1 and views["< 500 mil"].best_price == D("3161")
     assert views["5 – 10 M"].ads == 1 and views["5 – 10 M"].best_price == D("3160")
     assert views["2 – 5 M"].ads == 2 and views["2 – 5 M"].my_rank == 3
+
+
+def test_tranche_opportunities_prefers_widest_margin():
+    from jmcambios.analysis.amounts import tranche_views
+    from jmcambios.pricing.engine import Costs, tranche_opportunities
+
+    asks = [make_ad("a1", "3155", "1000", lo="50000", hi="2000000"),          # pequeños: vendedor barato
+            make_ad("a2", "3175", "20000", lo="5000000", hi="40000000")]      # grandes: vendedor caro
+    bids = [make_ad("b1", "3150", "1000", side=Side.BID, lo="50000", hi="2000000"),
+            make_ad("b2", "3140", "20000", side=Side.BID, lo="5000000", hi="40000000")]
+    costs = Costs(D("0.00181"), D("0.00008"), D("0"), D("0.004"), D("0.003"))
+    opps, best = tranche_opportunities(tranche_views(Side.BID, bids), tranche_views(Side.ASK, asks), costs)
+    assert opps[best].label in ("5 – 10 M", "> 10 M") and opps[best].gap == D("35") and opps[best].meets_min
+    assert opps[0].gap == D("5") and not opps[0].meets_min

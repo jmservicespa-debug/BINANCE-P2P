@@ -277,7 +277,24 @@ async function renderTramos(v) {
       <tr><th style="text-align:left">Tramo</th><th style="text-align:right">Anuncios</th><th style="text-align:right">Mejor</th><th style="text-align:right">Tu puesto</th></tr>
       ${rows.map(x => `<tr><td>${esc(x.label)}</td><td style="text-align:right">${x.ads}</td><td style="text-align:right" class="mono">${fmt(x.best)}</td>
         <td style="text-align:right">${x.my_rank && x.ads ? '#' + x.my_rank : '—'}</td></tr>`).join('')}</table></div>`;
-    $('tramos').innerHTML = table(t.buy || [], 'Compra (compiten con tu anuncio de compra)') + table(t.sell || [], 'Venta (compiten con tu anuncio de venta)');
+    let sug = '';
+    if (t.opportunities) {
+      const best = t.suggested;
+      sug = `<h3 style="margin:14px 0 4px;font-size:14px;color:var(--text)">¿En qué tramo operar?</h3>
+        <span class="muted">Margen libre si quedas de primero comprando y vendiendo en ese tramo (mínimo ${pct(t.min_margin, 2)}).</span>
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums">
+        <tr><th style="text-align:left">Tramo</th><th style="text-align:right">Diferencia</th><th style="text-align:right">Margen libre</th><th style="text-align:right">Compet.</th></tr>
+        ${t.opportunities.map((o, i) => `<tr style="${i === best ? 'background:var(--accent-bg);color:var(--accent);font-weight:600' : ''}">
+          <td>${esc(o.label)}${i === best ? ' ★' : ''}</td><td style="text-align:right" class="mono">${fmt(o.gap)}</td>
+          <td style="text-align:right" class="mono ${o.margin !== null && o.margin < 0 ? 'neg' : ''}">${pct(o.margin)}</td><td style="text-align:right">${o.competitors}</td></tr>`).join('')}</table></div>`;
+      if (best !== null && best !== undefined) {
+        const o = t.opportunities[best];
+        sug += `<div class="${o.meets_min ? 'warn' : 'bad'}" style="margin-top:8px">Sugerido: <b>${esc(o.label)}</b> · comprar a ${fmt(o.buy_at)} y vender a ${fmt(o.sell_at)} → ${pct(o.margin)} libre con ${o.competitors} competidores.`
+          + (o.meets_min ? '' : '<br>Ningún tramo da tu margen mínimo estando de primero en los dos lados: espera que el precio se mueva o cede puesto en un lado.')
+          + '</div><span class="muted">Los tramos grandes piden más capital por orden y suelen tener menos clientes (el volumen real no es verificable).</span>';
+      }
+    }
+    $('tramos').innerHTML = table(t.buy || [], 'Compra (compiten con tu anuncio de compra)') + table(t.sell || [], 'Venta (compiten con tu anuncio de venta)') + sug;
   } catch (e) { $('tramos').textContent = 'Sin datos de tramos todavía.'; }
 }
 

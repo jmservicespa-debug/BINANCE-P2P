@@ -24,7 +24,7 @@ from jmcambios.analysis.amounts import tranche_views
 from jmcambios.analysis.pressure import PressureReport
 from jmcambios.dashboard.icon import ICON_PNG
 from jmcambios.domain import Ad, Advertiser, Side
-from jmcambios.pricing.engine import DEFAULT_LIMITS, AdProfile, Costs, plan
+from jmcambios.pricing.engine import DEFAULT_LIMITS, AdProfile, Costs, plan, tranche_opportunities
 from jmcambios.dashboard.page import PAGE
 from jmcambios.profitability.calculator import calculate
 from jmcambios.profitability.costs import CostConfig
@@ -198,15 +198,30 @@ class PanelData:
         methods = {k: tuple((state.get("profiles") or {}).get(k, {}).get("methods") or self.cost_config.gmf_by_account)
                    for k in ("buy", "sell")}
         out: dict[str, Any] = {"merchants_only": ver}
+        views: dict[str, list] = {}
         with self._store() as st:
             for side, key, my_key in ((Side.BID, "buy", "BUY"), (Side.ASK, "sell", "SELL")):
                 ads = [a for a in self._book(st, side) if a.advertiser.user_id not in set(state.get("my_users") or [])]
                 if ver:
                     ads = [a for a in ads if a.advertiser.is_merchant] or ads
                 price = mine.get(my_key)
+                views[key] = tranche_views(side, ads, methods[key])
                 out[key] = [{"label": v.label, "ads": v.ads, "best": None if v.best_price is None else float(v.best_price),
                              "qty": float(v.qty), "my_rank": v.my_rank}
                             for v in tranche_views(side, ads, methods[key], None if price is None else Decimal(str(price)))]
+        c = state.get("costs")
+        if c:
+            D = lambda v: Decimal(str(v))  # noqa: E731
+            costs = Costs(D(c["maker_buy"]), D(c["maker_sell"]), D(c["gmf"]), D(c["gmf_worst"]), D(c["min_margin"]))
+            opps, best = tranche_opportunities(views["buy"], views["sell"], costs)
+            out["opportunities"] = [{"label": o.label, "gap": None if o.gap is None else float(o.gap),
+                                     "margin": None if o.margin is None else float(o.margin),
+                                     "buy_at": None if o.best_bid is None else float(o.best_bid + Decimal("0.01")),
+                                     "sell_at": None if o.best_ask is None else float(o.best_ask - Decimal("0.01")),
+                                     "competitors": o.competitors_buy + o.competitors_sell, "meets_min": o.meets_min}
+                                    for o in opps]
+            out["suggested"] = best
+            out["min_margin"] = float(c["min_margin"])
         return out
 
     def alertas(self) -> list[dict[str, Any]]:

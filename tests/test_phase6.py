@@ -426,6 +426,9 @@ def test_panel_scenarios_with_chosen_margin(tmp_path):
         assert e.value.code == 400
         tr = json.loads(_get(base + "/api/tramos?verificados=1&t=clave")[2])
         assert [x["label"] for x in tr["buy"]][0] == "< 500 mil" and tr["sell"][1]["ads"] == 10
+        assert len(tr["opportunities"]) == 5 and tr["suggested"] is not None
+        o = tr["opportunities"][tr["suggested"]]
+        assert o["sell_at"] > o["buy_at"] and o["margin"] is not None
         for bad in ("abc", "-1", "50"):
             with pytest.raises(urllib.error.HTTPError) as e:
                 _get(base + f"/api/escenarios?margen={bad}&t=clave")

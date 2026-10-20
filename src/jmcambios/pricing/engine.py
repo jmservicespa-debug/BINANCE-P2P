@@ -242,3 +242,32 @@ def daily_goal(net_per_unit: Decimal, goal_fiat: Decimal, buy_price: Decimal, ca
         return Decimal("Infinity"), None
     qty = goal_fiat / net_per_unit
     return qty, (qty * buy_price / capital) if capital else None
+
+
+@dataclass(frozen=True)
+class TrancheOpportunity:
+    label: str
+    best_bid: Decimal | None  # mejor comprador del tramo (precio al que compro de primero, −0,01)
+    best_ask: Decimal | None  # mejor vendedor del tramo
+    gap: Decimal | None  # diferencia vendedor − comprador
+    margin: Decimal | None  # margen libre del ciclo estando de primero en los dos lados
+    competitors_buy: int
+    competitors_sell: int
+    meets_min: bool
+
+
+def tranche_opportunities(buy_views, sell_views, costs: Costs) -> tuple[list[TrancheOpportunity], int | None]:
+    """Margen libre por tramo si quedo de primero comprando y vendiendo; devuelve también el índice sugerido."""
+    out = []
+    for b, s in zip(buy_views, sell_views):
+        margin = gap = None
+        if b.best_price is not None and s.best_price is not None:
+            gap = s.best_price - b.best_price
+            margin = cycle_margin(b.best_price + TICK, s.best_price - TICK, costs)
+        out.append(TrancheOpportunity(b.label, b.best_price, s.best_price, gap, margin, b.ads, s.ads,
+                                      margin is not None and margin >= costs.min_margin))
+    ranked = [i for i, o in enumerate(out) if o.margin is not None]
+    if not ranked:
+        return out, None
+    best = max(ranked, key=lambda i: (out[i].margin, -(out[i].competitors_buy + out[i].competitors_sell)))
+    return out, best
