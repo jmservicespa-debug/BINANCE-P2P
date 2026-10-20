@@ -5,7 +5,8 @@ import { onRequestGet as getRates, onRequestPut as putRates } from '../functions
 import { onRequestPost as postLogin } from '../functions/api/login.js';
 import { onRequestGet as getSession } from '../functions/api/sesion.js';
 import { amountNum, belowMin, convert, invert, rateNum, routeById, ROUTES } from '../public/js/rutas.js';
-import { bcv, hashPassword, parseBcv, parseCriptoYa, parseDolarApi, usdtRef, validate } from '../lib/server.js';
+import { bcv, brlAuto, hashPassword, parseBcv, parseCriptoYa, parseDolarApi, usdtRef, validate } from '../lib/server.js';
+import { brlPerClp, parseBrl } from '../public/js/criptoya.js';
 import { onRequestGet as getUsdt, onRequestPut as putUsdt } from '../functions/api/usdt.js';
 
 const ORIGIN = 'https://jmcambios.com';
@@ -81,7 +82,7 @@ test('login, guardar tasas y vista pública', async () => {
   assert.equal(ses.status, 200);
   const sv = (await ses.json()).saved;
   assert.equal(sv.bcv_manual, '250,5');
-  assert.deepEqual(sv.brl, { ref: '495,62', margin_pct: '8' });
+  assert.deepEqual(sv.brl, { ref: '495,62', margin_pct: '8', auto: false, cal_cross: null });
   assert.equal((await getSession({ request: req('/api/sesion'), env: e })).status, 401);
 });
 
@@ -196,4 +197,16 @@ test('USDT/CLP: referencia de CriptoYa (Binance P2P), ganancia y respaldo manual
   globalThis.fetch = async () => new Response('caído', { status: 502 });
   const r = await usdtRef(e, '950', Date.now() + 10 * 60 * 1000);
   assert.deepEqual([r.value, r.source, r.error], [950, 'manual', 'respondió 502']);
+});
+
+test('Brasil automático: mercado cripto, calibración con el proveedor y factor combinado', async () => {
+  assert.equal(parseBrl(JSON.stringify({ a: { ask: 5.04 }, b: { ask: 5.05 }, c: { ask: 5.03 }, raro: { ask: 0.5 } })), 5.04);
+  const fake = async (u) => new Response(u.includes('/brl/') ? '{"binance":{"ask":5.04},"bybit":{"ask":5.04}}' : '{"vitawallet":{"ask":982.14}}');
+  const cross = await brlPerClp(fake);
+  assert.ok(Math.abs(cross - 5.04 / 982.14) < 1e-12);  // 0,005132 reales por peso (Google decía 0,005119)
+  assert.equal(brlAuto({ auto: false, cal_cross: cross, ref: '495,62', margin_pct: '8' }), null);
+  const a = brlAuto({ auto: true, cal_cross: cross, ref: '495,62', margin_pct: '8' });
+  // En el momento de calibrar, la tasa automática = la que da el proveedor + 8 % (0,004589).
+  assert.ok(Math.abs(cross * a.k - 0.004589) < 0.000002);
+  assert.deepEqual(Object.keys(a).sort(), ['cal', 'k']);  // no se publican ni el proveedor ni la ganancia
 });

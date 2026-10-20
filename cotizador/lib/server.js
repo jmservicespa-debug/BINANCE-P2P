@@ -119,7 +119,8 @@ export function validate(body) {
   if (bcv !== null && !rateNum(bcv)) errors.push('bcv');
   // Datos del proveedor para calcular Brasil: solo se guardan para el panel, nunca se publican.
   const brl = body?.brl && typeof body.brl === 'object'
-    ? { ref: String(body.brl.ref ?? '').slice(0, 20), margin_pct: String(body.brl.margin_pct ?? '').slice(0, 10) } : null;
+    ? { ref: String(body.brl.ref ?? '').slice(0, 20), margin_pct: String(body.brl.margin_pct ?? '').slice(0, 10),
+        auto: body.brl.auto === true, cal_cross: Number(body.brl.cal_cross) > 0 ? Number(body.brl.cal_cross) : null } : null;
   return { errors, data: { rates, status, bcv_manual: bcv, ...(brl ? { brl } : {}) } };
 }
 
@@ -200,6 +201,17 @@ export async function bcv(env, manual, now = Date.now()) {
   return { value: null, date: null, source: null, errors: why };
 }
 
+// Brasil automático: solo se publica un factor combinado (proveedor y ganancia no se pueden separar)
+// y el valor del mercado al calibrar. Tasa = (reales por peso del mercado ahora) × k.
+export function brlAuto(b) {
+  if (!b?.auto || !(b.cal_cross > 0)) return null;
+  const ref = Number(String(b.ref || '').replace(/\./g, '').replace(',', '.'));
+  const m = Number(String(b.margin_pct || '').replace(',', '.'));
+  if (!(ref > 0) || !(m >= 0 && m <= 50)) return null;
+  const gap = (ref / 100000) / b.cal_cross;  // cuánto da el proveedor frente al mercado (ej. 0,968)
+  return { k: Number((gap / (1 + m / 100)).toFixed(6)), cal: b.cal_cross };
+}
+
 export async function publicView(env, saved, now = Date.now()) {
   const s = saved || (await loadRates(env));
   return {
@@ -208,7 +220,9 @@ export async function publicView(env, saved, now = Date.now()) {
     routes: ROUTES.map((r) => {
       let status = statusOf(s, r.id);
       if (status === 'on' && !rateNum(s.rates[r.id])) status = 'off';
-      return { id: r.id, status, rate: status === 'on' ? s.rates[r.id] : '', active: status === 'on' };
+      const out = { id: r.id, status, rate: status === 'on' ? s.rates[r.id] : '', active: status === 'on' };
+      if (r.id === 'cl-br' && status === 'on') { const a = brlAuto(s.brl); if (a) out.auto = a; }
+      return out;
     }),
     bcv: await bcv(env, s.bcv_manual, now),
   };

@@ -16,6 +16,10 @@ no usa llaves de Binance ni toca la cuenta.
 - Debajo de Chile → Brasil: escribes cuántos reales da el proveedor por 100.000 CLP y tu ganancia (8 % por defecto).
   Precio del real = (100.000 ÷ BRL del proveedor) × (1 + ganancia); la tasa del flyer = 1 ÷ ese precio (6 decimales),
   se pone sola en la casilla de Brasil. El proveedor y la ganancia se guardan solo para el panel; el público ve la tasa final.
+- **Brasil automático** (casilla, apagada por defecto): la tasa sigue al mercado cripto de CriptoYa
+  (BRL por USDT ÷ CLP por USDT de Vita), leído desde el navegador. Al guardar se calibra: se anota el mercado de ese
+  momento junto al número del proveedor. Público: solo un factor combinado `k` y el mercado de calibración.
+  Si no hay dato o el mercado se movió más de 2 % desde la calibración → "Mercado inestable" hasta recalibrar.
 
 ## Calculadora USDT (solo panel)
 

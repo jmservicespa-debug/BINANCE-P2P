@@ -1,6 +1,6 @@
 import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js';
 import { esc, flag, flags } from './ui.js';
-import { USDT_URL, parseCriptoYa } from './criptoya.js';
+import { BRL_BRAKE, USDT_URL, brlPerClp, parseCriptoYa } from './criptoya.js';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -68,7 +68,9 @@ function renderRoutes() {
   $('bcv').value = saved.bcv_manual || '';
   $('bcv-flag').innerHTML = flag('VE');
   ['prov-brl', 'prov-m'].forEach((id) => { $(id).oninput = () => provCalc(true); });
+  $('prov-auto').onchange = () => brlLive();
   provCalc(false);
+  brlLive();
 }
 
 // Brasil: la tasa sale de lo que da el proveedor por 100.000 CLP más tu ganancia (el cliente solo ve la tasa final).
@@ -77,12 +79,14 @@ function provBox() {
   return `<div class="prov">
     <span class="muted">Calcular desde tu proveedor (solo lo ves tú)</span>
     <div class="row2">
-      <label class="f" for="prov-brl">Proveedor por 100 mil (BRL)
+      <label class="f" for="prov-brl">BRL por 100 mil
         <span class="amount"><input id="prov-brl" inputmode="decimal" autocomplete="off" placeholder="Ej. 495,62" value="${esc(b.ref ?? '')}"></span></label>
       <label class="f" for="prov-m">Tu ganancia (%)
         <span class="amount"><input id="prov-m" inputmode="decimal" autocomplete="off" value="${esc(b.margin_pct || '8')}"></span></label>
     </div>
     <span class="muted" id="prov-out"></span>
+    <label class="switch"><input type="checkbox" id="prov-auto" ${b.auto ? 'checked' : ''}> <b>Brasil automático</b></label>
+    <span class="muted" id="prov-live">La tasa sigue sola al mercado. Al guardar, se calibra con el número de tu proveedor.</span>
   </div>`;
 }
 
@@ -115,7 +119,13 @@ function renderLinks() {
 $('save').onclick = async () => {
   const body = { rates: {}, status: {}, bcv_manual: $('bcv').value.trim() || null };
   for (const r of ROUTES) { body.rates[r.id] = $('in-' + r.id).value.trim(); body.status[r.id] = $('st-' + r.id).value; }
-  body.brl = { ref: $('prov-brl').value.trim(), margin_pct: $('prov-m').value.trim() };
+  body.brl = { ref: $('prov-brl').value.trim(), margin_pct: $('prov-m').value.trim(), auto: $('prov-auto').checked,
+    cal_cross: brlCross };  // calibración: el mercado en el momento en que anotaste a tu proveedor
+  if (body.brl.auto && !brlCross) {
+    $('save-msg').hidden = false; $('save-msg').className = 'msg bad';
+    $('save-msg').textContent = 'Brasil automático necesita el precio del mercado y no se pudo leer. Desmarca la casilla o inténtalo de nuevo.';
+    return;
+  }
   const bad = ROUTES.filter((r) => body.status[r.id] === 'on' && !rateNum(body.rates[r.id]));
   bad.forEach((r) => $('in-' + r.id).classList.add('bad'));
   const msg = $('save-msg');
@@ -243,3 +253,22 @@ async function saveUsdtCfg() {
 $('u-save').onclick = saveUsdtCfg;
 $('u-pub').onchange = saveUsdtCfg;  // activar o desactivar se guarda al instante
 setInterval(() => { if (!$('usdt').hidden) loadUsdt(false); }, 60 * 1000);
+
+// ------------------------------------------------------------------ Brasil automático
+
+let brlCross = null;  // reales por peso según el mercado, leído ahora desde este navegador
+
+async function brlLive() {
+  brlCross = await brlPerClp();
+  const box = $('prov-live');
+  if (!box) return;
+  if (!brlCross) { box.textContent = 'No se pudo leer el precio del mercado ahora (CriptoYa). Brasil automático no está disponible en este momento.'; return; }
+  const b = saved.brl || {};
+  let txt = `Mercado ahora: ${brlCross.toFixed(6)} reales por peso.`;
+  if (b.auto && b.cal_cross) {
+    const move = (brlCross / b.cal_cross - 1) * 100;
+    txt += ` Cambio desde la última calibración: ${move >= 0 ? '+' : ''}${fmt(move, 2)} %` + (Math.abs(move) > BRL_BRAKE * 100 ? ' → en el cotizador sale "Mercado inestable" hasta que vuelvas a calibrar.' : '.');
+  }
+  box.textContent = txt + ' Al guardar, se calibra con el número de tu proveedor.';
+}
+setInterval(() => { if (!$('editor').hidden && $('prov-auto')?.checked) brlLive(); }, 60 * 1000);

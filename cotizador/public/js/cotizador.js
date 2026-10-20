@@ -1,5 +1,5 @@
 import { ADVISORS, ORIGINS, ROUTES, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js';
-import { USDT_URL, parseCriptoYa } from './criptoya.js';
+import { BRL_BRAKE, USDT_URL, brlPerClp, parseCriptoYa } from './criptoya.js';
 import { esc, flag, flags } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
@@ -196,6 +196,16 @@ async function loadUsdt() {
   data.routes.push({ id: USDT_ROUTE.id, status: Number.isFinite(price) ? 'on' : 'ask', rate: Number.isFinite(price) ? price.toFixed(2) : '' });
 }
 
+// Brasil automático: la tasa sigue al mercado (CriptoYa, leído desde este navegador).
+// Si no hay dato o el mercado se movió más de 2 % desde la calibración: "Mercado inestable".
+async function loadBrl() {
+  const r = data?.routes.find((x) => x.id === 'cl-br' && x.auto);
+  if (!r) return;
+  const cross = await brlPerClp();
+  if (!cross || Math.abs(cross / r.auto.cal - 1) > BRL_BRAKE) { r.status = 'ask'; r.rate = ''; r.active = false; return; }
+  r.rate = (cross * r.auto.k).toFixed(6);
+}
+
 async function load() {
   try {
     const res = await fetch('/api/tasas', { cache: 'no-store' });
@@ -205,7 +215,7 @@ async function load() {
   } catch {
     if (!data) { $('error').hidden = false; $('error').textContent = 'No pudimos cargar las tasas. Revisa tu conexión o escríbenos por WhatsApp.'; data = { routes: [], bcv: null }; }
   }
-  await loadUsdt();
+  await Promise.all([loadUsdt(), loadBrl()]);
   $('updated').textContent = data.updated
     ? 'Tasas del ' + new Date(data.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
     : 'Tasas aún no publicadas';
