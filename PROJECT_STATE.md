@@ -205,6 +205,13 @@ tests/                     pruebas unitarias (sin red)
 - Actualizado 2026-10-20: el usuario arranca el 2026-10-21 con 1–1,5 M (mitad COP / mitad USDT), montos 100.000–500.000. Duración ~2 semanas (incluye fin de semana y la quincena del 30–31 oct); pasar de fase con ≥ 30 órdenes, ≥ 8 días y margen real vs. calculado < 0,2 pp. Objetivo del usuario: insistir hasta encontrar la estrategia; primero que se llenen, luego subir margen.
 - **Bitácora + escalera de margen** (construida 2026-10-20, `analysis/ladder.py`): tabla `my_ad_log` (mis anuncios cada lectura, ~5 min); por orden MAKER no cancelada: espera desde el último reinicio (cambio de precio / vuelta a en línea / orden anterior del mismo lado), puesto y margen del par. Escalera por lado: llenó < 20 min → subir 0,1 pp; > 60 min quieto → bajar 0,1 pp; marca si queda bajo el mínimo. Panel (Resultados → Bitácora; Mis anuncios), alerta `escalera:*` (RECOMMENDATION) y línea en el resumen. Órdenes se descargan cada 5 ciclos. Estas reglas son el borrador de la lógica del agente en las Fases 8–9.
 
+## Cotizador de envíos (construido y publicado 2026-10-20, carpeta `cotizador/`)
+- Pedido del usuario: panel central donde escribe las tasas del día → actualiza el cotizador público y llena los 2 flyers (Chile / Colombia). Independiente del agente P2P.
+- Rutas: Chile → VE (×), PE (×), CO (×), US (÷), BR (×), PA·EC (÷); Colombia → VE (÷). Estados por ruta: Activa / Inestable (tasa por WhatsApp, flyer "CONSULTAR") / Apagada.
+- Asesores: Jamer Restrepo +56 9 3352 9706 (`?a=jamer`), Miladys Gaviria +56 9 3363 8659 (`?a=miladys`); enlace general = un botón sin nombre a Jamer. Panel: solo Jamer.
+- Cloudflare Pages (cuenta jmservicespa@gmail.com), proyecto `jmcambios` → https://jmcambios.pages.dev, rama de producción `claude/binance-p2p-trading-agent-madi2s`, raíz `cotizador`, salida `public`; KV `TASAS` → `jmcambios-tasas`; secretos ADMIN_PASSWORD_HASH y SESSION_SECRET (creados por el usuario en su PC).
+- Dólar BCV: bcv.org.ve no responde desde Cloudflare; DolarApi sí (verificado 881,88); valor manual de respaldo. Pendiente: dominio propio (opcional).
+
 ## Ideas registradas
 - Producto por suscripción (pedido del usuario 2026-10-19): multiusuario en servidor con IP fija, keys de terceros cifradas y solo lectura, configuración por usuario (bancos/4x1000, moneda, márgenes), registro y pagos, revisión legal (condiciones de Binance para terceros, Ley 1581 de 2012). Riesgo: suscriptores con la misma estrategia compiten entre sí. Primero validar con resultados reales del usuario. Mantener nada personal fijo en el código.
 

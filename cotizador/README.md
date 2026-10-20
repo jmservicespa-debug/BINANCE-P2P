@@ -8,8 +8,8 @@ no usa llaves de Binance ni toca la cuenta.
 - `/panel/` — panel de Jamer (con contraseña): tasas del día, dólar BCV manual de respaldo y flyers
   listos para descargar o compartir a WhatsApp.
 - Dólar BCV: se lee de https://www.bcv.org.ve/ y, si falla, de la copia de DolarApi (no oficial); máx. una vez por hora. Si no se puede leer, usa el
-  último valor bueno o el valor manual del panel. **Pendiente de verificar en línea** (desde el entorno
-  de desarrollo no hay acceso a esa página).
+  último valor bueno o el valor manual del panel. Verificado en línea (2026-10-20): la página del BCV no
+  responde desde Cloudflare; DolarApi sí (881,88 Bs/USD, igual al valor oficial del día). Publicado en https://jmcambios.pages.dev
 
 ## Estados de cada ruta (en el panel)
 
