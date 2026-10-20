@@ -283,7 +283,7 @@ def test_panel_icon_is_public(running_panel):
 
 def test_panel_pages_and_api(running_panel):
     code, ctype, body = _get(running_panel + "/?t=clave")
-    assert code == 200 and ctype.startswith("text/html") and "JM CAMBIOS" in body
+    assert code == 200 and ctype.startswith("text/html") and "JMCAMBIOS" in body and "SPEED AND TRUST" in body
     _, ctype, body = _get(running_panel + "/api/estado?t=clave")
     est = json.loads(body)
     assert ctype.startswith("application/json") and est["available"] and est["age_s"] < 60

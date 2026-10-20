@@ -12,7 +12,7 @@ PAGE = r"""<!doctype html>
 <title>JM Cambios</title>
 <link rel="icon" type="image/png" href="/icon.png">
 <link rel="apple-touch-icon" href="/icon.png">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Michroma&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#0E161E;--card:#17222D;--line:#24313D;--border:#2C3A47;--text:#E8EDF2;--muted:#9AA7B4;--soft:#C3CCD5;
@@ -25,7 +25,11 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);-we
 main{max-width:520px;margin:0 auto;padding:0 16px 96px}
 header{padding:20px 4px 12px;display:flex;flex-direction:column;gap:10px}
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.brand{font-size:13px;color:var(--muted);letter-spacing:.04em}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.brand .mark{width:34px;height:34px;flex:none;border-radius:8px;background:#F7F7F7;display:grid;place-items:center}
+.brand .mark svg{width:24px;height:28px}
+.brand .word{font-family:'Michroma',var(--sans);font-size:15px;letter-spacing:.06em;line-height:1.1;color:var(--text)}
+.brand .tag{display:block;font-family:'Michroma',var(--sans);font-size:7.5px;letter-spacing:.18em;color:var(--muted);margin-top:3px}
 h1{font-size:22px;margin:2px 0 0;font-weight:700}
 .pill{font-size:12px;font-weight:600;padding:6px 10px;border-radius:999px;background:var(--accent-bg);color:var(--accent);white-space:nowrap}
 .chips{display:flex;gap:8px;flex-wrap:wrap;font-size:11px}
@@ -86,7 +90,7 @@ input{font:inherit;font-size:14px;width:118px;min-height:36px;padding:0 10px;bor
 <main>
 <header>
   <div class="row">
-    <div><div class="brand">JM CAMBIOS</div><h1 id="title">Mercado USDT/COP</h1></div>
+    <div><div class="brand"><span class="mark"><svg xmlns="http://www.w3.org/2000/svg" viewBox="20 14 450 522" aria-hidden="true"><clipPath id="jmhex"><polygon points="245,22 462,148 462,402 245,528 28,402 28,148"/></clipPath><g clip-path="url(#jmhex)" fill="#531463"><rect x="0" y="0" width="250" height="365"/><rect x="283" y="0" width="77" height="550"/><rect x="0" y="395" width="360" height="155"/><rect x="385" y="0" width="165" height="550"/></g></svg></span><span class="word">JMCAMBIOS<span class="tag">SPEED AND TRUST</span></span></div><h1 id="title">Mercado USDT/COP</h1></div>
     <span class="pill" id="mode">…</span>
   </div>
   <div class="chips"><span class="chip real">Binance = dato real</span><span class="chip calc">Cálculo = sistema</span><span class="chip inf">Inferido = estimación</span></div>
