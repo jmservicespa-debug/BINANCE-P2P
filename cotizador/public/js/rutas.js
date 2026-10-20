@@ -13,7 +13,7 @@ export const ROUTES = [
   { id: 'cl-pe', from: 'CL', to: ['PE'], name: 'Perú', cur: 'PEN', unit: 'Soles', op: 'mul', dec: 2, min: 10000 },
   { id: 'cl-co', from: 'CL', to: ['CO'], name: 'Colombia', cur: 'COP', unit: 'Pesos colombianos', op: 'mul', dec: 0, min: 10000 },
   { id: 'cl-us', from: 'CL', to: ['US'], name: 'EE. UU.', cur: 'USD', unit: 'Dólares', op: 'div', dec: 2, min: 40000 },
-  { id: 'cl-br', from: 'CL', to: ['BR'], name: 'Brasil', cur: 'BRL', unit: 'Reales', op: 'mul', dec: 2 },
+  { id: 'cl-br', from: 'CL', to: ['BR'], name: 'Brasil', cur: 'BRL', unit: 'Reales', op: 'mul', dec: 2, min: 10000 },
   { id: 'cl-pa', from: 'CL', to: ['PA', 'EC'], name: 'Panamá · Ecuador', cur: 'USD', unit: 'Dólares', op: 'div', dec: 2, min: 15000 },
   { id: 'co-ve', from: 'CO', to: ['VE'], name: 'Venezuela', cur: 'VES', unit: 'Bolívares', op: 'div', dec: 2, min: 20000,
     note: 'Pago en bolívares a cuenta bancaria o pago móvil · Su pago llega en minutos' },

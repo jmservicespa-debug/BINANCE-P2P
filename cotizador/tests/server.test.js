@@ -42,7 +42,7 @@ test('cálculos con las tasas del flyer', () => {
   assert.ok(belowMin(r('cl-ve'), 9999) && !belowMin(r('cl-ve'), 10000));
   assert.ok(belowMin(r('cl-us'), 39999) && !belowMin(r('cl-us'), 40000));
   assert.ok(belowMin(r('cl-pa'), 14999) && belowMin(r('co-ve'), 19999) && !belowMin(r('co-ve'), 20000));
-  assert.ok(!belowMin(r('cl-br'), 1));  // Brasil: sin mínimo definido
+  assert.ok(belowMin(r('cl-br'), 9999) && !belowMin(r('cl-br'), 10000));
 });
 
 test('validación: tasa vacía o inválida en una ruta activa', () => {
