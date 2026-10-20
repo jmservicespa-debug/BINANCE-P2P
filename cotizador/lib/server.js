@@ -89,23 +89,32 @@ export async function login(request, env) {
 // ------------------------------------------------------------------ tasas
 
 export async function loadRates(env) {
-  try { return JSON.parse((await env.TASAS.get('tasas')) || 'null') || { rates: {}, active: {}, bcv_manual: null, updated: null }; }
-  catch { return { rates: {}, active: {}, bcv_manual: null, updated: null }; }
+  try { return JSON.parse((await env.TASAS.get('tasas')) || 'null') || { rates: {}, status: {}, bcv_manual: null, updated: null }; }
+  catch { return { rates: {}, status: {}, bcv_manual: null, updated: null }; }
+}
+
+// Estado de cada ruta: 'on' calcula con la tasa · 'ask' mercado inestable, tasa por WhatsApp · 'off' no se muestra.
+export const STATUSES = ['on', 'ask', 'off'];
+
+export function statusOf(saved, id) {
+  const s = saved?.status?.[id];
+  if (STATUSES.includes(s)) return s;
+  return saved?.active?.[id] === false ? 'off' : 'on';  // datos guardados antes de existir los estados
 }
 
 export function validate(body) {
   const errors = [];
-  const rates = {}, active = {};
+  const rates = {}, status = {};
   for (const r of ROUTES) {
     const raw = String(body?.rates?.[r.id] ?? '').trim();
-    const on = body?.active?.[r.id] !== false;
-    if (on && !rateNum(raw)) errors.push(r.id);
+    const st = statusOf(body, r.id);
+    if (st === 'on' && !rateNum(raw)) errors.push(r.id);  // la tasa se guarda aunque esté en pausa
     rates[r.id] = raw;
-    active[r.id] = on;
+    status[r.id] = st;
   }
   const bcv = body?.bcv_manual == null || String(body.bcv_manual).trim() === '' ? null : String(body.bcv_manual).trim();
   if (bcv !== null && !rateNum(bcv)) errors.push('bcv');
-  return { errors, data: { rates, active, bcv_manual: bcv } };
+  return { errors, data: { rates, status, bcv_manual: bcv } };
 }
 
 export async function saveRates(request, env, now = Date.now()) {
@@ -153,7 +162,12 @@ export async function publicView(env, saved, now = Date.now()) {
   const s = saved || (await loadRates(env));
   return {
     updated: s.updated,
-    routes: ROUTES.map((r) => ({ id: r.id, rate: s.rates[r.id] || '', active: s.active[r.id] !== false && !!rateNum(s.rates[r.id]) })),
+    // Con mercado inestable no se publica la tasa guardada: el cliente la pide por WhatsApp.
+    routes: ROUTES.map((r) => {
+      let status = statusOf(s, r.id);
+      if (status === 'on' && !rateNum(s.rates[r.id])) status = 'off';
+      return { id: r.id, status, rate: status === 'on' ? s.rates[r.id] : '', active: status === 'on' };
+    }),
     bcv: await bcv(env, s.bcv_manual, now),
   };
 }

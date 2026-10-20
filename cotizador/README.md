@@ -11,6 +11,15 @@ no usa llaves de Binance ni toca la cuenta.
   último valor bueno o el valor manual del panel. **Pendiente de verificar en línea** (desde el entorno
   de desarrollo no hay acceso a esa página).
 
+## Estados de cada ruta (en el panel)
+
+- **Activa**: el cotizador calcula con la tasa; el flyer la muestra.
+- **Inestable · tasa por WhatsApp**: el país sigue en el cotizador con "Mercado inestable" y el botón
+  "Pedir tasa por WhatsApp" (mensaje con el monto ya escrito); la tasa guardada NO se publica; el flyer dice CONSULTAR.
+- **Apagada**: no aparece en el cotizador; el flyer muestra "—".
+
+La tasa queda guardada en los tres estados: al volver a Activa no hay que escribirla de nuevo.
+
 ## Rutas (`public/js/rutas.js`)
 
 | Desde | Hacia | Operación |

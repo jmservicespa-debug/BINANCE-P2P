@@ -14,7 +14,9 @@ if (!ADVISORS[adv]) adv = null;
 
 let data = null, origin = 'CL', route = null, mode = 'send';
 const rateOf = (id) => data?.routes.find((r) => r.id === id);
-const activeRoutes = (o) => ROUTES.filter((r) => r.from === o && rateOf(r.id)?.active);
+const statusOf = (id) => rateOf(id)?.status ?? (rateOf(id)?.active ? 'on' : 'off');
+// Se muestran las rutas activas y las de mercado inestable (estas sin tasa: se pide por WhatsApp).
+const activeRoutes = (o) => ROUTES.filter((r) => r.from === o && ['on', 'ask'].includes(statusOf(r.id)));
 
 function renderOrigins() {
   $('origins').innerHTML = Object.entries(ORIGINS).map(([k, o]) =>
@@ -26,7 +28,7 @@ function renderOrigins() {
 
 function renderDests() {
   const list = activeRoutes(origin);
-  $('dests').innerHTML = list.map((r) => `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${esc(r.unit)} (${r.cur})</small></span></button>`).join('')
+  $('dests').innerHTML = list.map((r) => `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${statusOf(r.id) === 'ask' ? 'Mercado inestable' : `${esc(r.unit)} (${r.cur})`}</small></span></button>`).join('')
     || '<span class="muted">Por ahora no hay envíos disponibles desde este país.</span>';
   $('dests').querySelectorAll('button').forEach((b) => b.onclick = () => { route = b.dataset.r; render(); });
 }
@@ -35,6 +37,8 @@ function calc() {
   const r = ROUTES.find((x) => x.id === route);
   const o = ORIGINS[origin];
   if (!r) { $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
+  if (statusOf(r.id) === 'ask') { unstable(r, o); return; }
+  $('r-big').classList.remove('ask');
   const rate = rateOf(r.id).rate;
   $('amount-label').textContent = mode === 'send' ? 'Monto que envías' : 'Monto que debe recibir';
   $('amount-cur').textContent = mode === 'send' ? o.cur : r.cur;
@@ -58,11 +62,28 @@ function calc() {
   $('wa').innerHTML = waButtons(text);
 }
 
-function waButtons(text) {
+// Mercado inestable: no se calcula; el cliente pide la tasa del momento con su monto ya escrito.
+function unstable(r, o) {
+  $('amount-label').textContent = mode === 'send' ? 'Monto que envías' : 'Monto que debe recibir';
+  $('amount-cur').textContent = mode === 'send' ? o.cur : r.cur;
+  const x = amountNum($('amount').value);
+  $('r-label').textContent = `Envíos a ${r.name}`;
+  $('r-big').textContent = 'Mercado inestable';
+  $('r-big').classList.add('ask');
+  $('r-send').textContent = 'La tasa de este envío se confirma por WhatsApp.';
+  $('r-rate').textContent = '';
+  $('r-bcv').hidden = true;
+  $('dest-note').textContent = r.note || '';
+  const amount = Number.isFinite(x) && x > 0 ? (mode === 'send' ? `enviar ${fmt(x, 0)} ${o.cur}` : `que reciban ${fmt(x, r.dec)} ${r.cur}`) : 'hacer un envío';
+  $('wa').innerHTML = waButtons(`Hola, quiero ${amount} desde ${o.name} a ${r.name}. ¿Me das la tasa de este momento?`, 'Pedir tasa por WhatsApp');
+}
+
+function waButtons(text, action) {
   // Enlace de un asesor: su nombre y número. Enlace general: un solo botón sin nombre a la línea principal.
   const p = ADVISORS[adv] || ADVISORS[MAIN_LINE];
   const msg = text || 'Hola, quiero cotizar un envío.';
-  const label = adv ? `Escribir a ${esc(p.name.split(' ')[0])} por WhatsApp` : 'Escribir por WhatsApp';
+  const label = action ? (adv ? `${action} a ${esc(p.name.split(' ')[0])}` : action)
+    : adv ? `Escribir a ${esc(p.name.split(' ')[0])} por WhatsApp` : 'Escribir por WhatsApp';
   return `<a href="https://wa.me/${p.phone}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${label}</a>`
     + `<span class="fine">${adv ? esc(p.name) + ' · ' : ''}${p.show}</span>`;
 }
@@ -90,7 +111,7 @@ async function load() {
   $('updated').textContent = data.updated
     ? 'Tasas del ' + new Date(data.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
     : 'Tasas aún no publicadas';
-  if (!route || !rateOf(route)?.active) route = activeRoutes(origin)[0]?.id ?? null;
+  if (!route || !activeRoutes(origin).some((r) => r.id === route)) route = activeRoutes(origin)[0]?.id ?? null;
   render();
 }
 load();

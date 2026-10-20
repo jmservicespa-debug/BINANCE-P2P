@@ -43,7 +43,7 @@ test('cálculos con las tasas del flyer', () => {
 test('validación: tasa vacía o inválida en una ruta activa', () => {
   const { errors } = validate({ rates: { ...RATES, 'cl-pe': 'abc' }, active: {} });
   assert.deepEqual(errors, ['cl-pe']);
-  const off = validate({ rates: { ...RATES, 'cl-pe': '' }, active: { 'cl-pe': false } });
+  const off = validate({ rates: { ...RATES, 'cl-pe': '' }, status: { 'cl-pe': 'off' } });
   assert.deepEqual(off.errors, []);
 });
 
@@ -60,7 +60,7 @@ test('login, guardar tasas y vista pública', async () => {
   assert.match(ok.headers.get('set-cookie'), /HttpOnly; Secure; SameSite=Strict/);
   // Desde otro sitio, aunque tenga la cookie: rechazado.
   assert.equal((await putRates({ request: req('/api/tasas', { method: 'PUT', body: { rates: RATES }, cookie, origin: 'https://otro.com' }), env: e })).status, 403);
-  const saved = await putRates({ request: req('/api/tasas', { method: 'PUT', body: { rates: RATES, active: { 'cl-br': false }, bcv_manual: '250,5' }, cookie }), env: e });
+  const saved = await putRates({ request: req('/api/tasas', { method: 'PUT', body: { rates: RATES, status: { 'cl-br': 'off' }, bcv_manual: '250,5' }, cookie }), env: e });
   assert.equal(saved.status, 200);
   const view = await (await getRates({ env: e })).json();
   assert.equal(view.routes.find((r) => r.id === 'cl-ve').rate, '0.9320');
@@ -70,6 +70,29 @@ test('login, guardar tasas y vista pública', async () => {
   assert.equal(ses.status, 200);
   assert.equal((await ses.json()).saved.bcv_manual, '250,5');
   assert.equal((await getSession({ request: req('/api/sesion'), env: e })).status, 401);
+});
+
+test('mercado inestable: no publica la tasa y el cliente la pide por WhatsApp', async () => {
+  noBcv();
+  const e = await env();
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  // La tasa de Venezuela queda guardada (0.9320) pero no se publica; Perú en pausa sin tasa no da error.
+  const r = await putRates({ request: req('/api/tasas', { method: 'PUT', cookie,
+    body: { rates: { ...RATES, 'cl-pe': '' }, status: { 'cl-ve': 'ask', 'cl-pe': 'ask', 'cl-br': 'off' } } }), env: e });
+  assert.equal(r.status, 200);
+  const view = await (await getRates({ env: e })).json();
+  const ve = view.routes.find((x) => x.id === 'cl-ve');
+  assert.deepEqual([ve.status, ve.rate, ve.active], ['ask', '', false]);
+  assert.equal(view.routes.find((x) => x.id === 'cl-br').status, 'off');
+  assert.equal(view.routes.find((x) => x.id === 'cl-co').status, 'on');
+  const ses = await (await getSession({ request: req('/api/sesion', { cookie }), env: e })).json();
+  assert.equal(ses.saved.rates['cl-ve'], '0.9320');  // al volver a Activa no hay que escribirla de nuevo
+  // Datos guardados con el formato anterior (active: false) siguen funcionando.
+  await e.TASAS.put('tasas', JSON.stringify({ rates: RATES, active: { 'cl-us': false }, updated: 1 }));
+  const old = await (await getRates({ env: e })).json();
+  assert.equal(old.routes.find((x) => x.id === 'cl-us').status, 'off');
+  assert.equal(old.routes.find((x) => x.id === 'cl-ve').status, 'on');
 });
 
 test('bloqueo tras 5 intentos fallidos', async () => {

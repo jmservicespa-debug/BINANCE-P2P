@@ -55,6 +55,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-size: 14px; colo
 
 .result { background: var(--brand); color: var(--brand-ink); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 4px }
 .result .big { font-family: var(--display); font-weight: 800; font-size: 34px; line-height: 1.1; overflow-wrap: anywhere }
+.result .big.ask { font-size: 26px }
 .result .row { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; opacity: .9 }
 .bcv { border-top: 1px solid color-mix(in srgb, var(--brand-ink) 30%, transparent); margin-top: 8px; padding-top: 8px }
 .wa { display: flex; flex-direction: column; gap: 8px }
@@ -73,6 +74,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-size: 14px; colo
 .route input.bad { border-color: var(--bad) }
 .route .ex { grid-column: 2 / 4; font-size: 12px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap }
 .route.off { opacity: .55 }
+.route select { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 2px 6px; font-size: 12px; color: var(--ink) }
 .switch { display: inline-flex; align-items: center; gap: 6px }
 .flyer img { width: 100%; max-width: 100%; border-radius: 12px; display: block; border: 1px solid var(--line) }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }

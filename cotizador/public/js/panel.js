@@ -5,6 +5,8 @@ const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', 'bcv-anterior': 'último valor leído del BCV', manual: 'valor manual' };
 let saved = null;
 const flyerBlobs = {};
+const STATUS = [['on', 'Activa'], ['ask', 'Inestable · tasa por WhatsApp'], ['off', 'Apagada']];
+const statusOf = (id) => saved.status?.[id] ?? (saved.active?.[id] === false ? 'off' : 'on');
 
 async function api(path, opts = {}) {
   const res = await fetch(path, { ...opts, headers: { 'content-type': 'application/json' }, credentials: 'same-origin', cache: 'no-store' });
@@ -43,12 +45,12 @@ function renderRoutes() {
   $('last').textContent = saved.updated ? `Última publicación: ${new Date(saved.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}` : '';
   $('routes').innerHTML = Object.entries(ORIGINS).map(([k, o]) => `<h3 style="margin-top:8px">Desde ${esc(o.name)}</h3>`
     + ROUTES.filter((r) => r.from === k).map((r) => {
-      const on = saved.active[r.id] !== false;
-      return `<div class="route${on ? '' : ' off'}" id="row-${r.id}">
+      const st = statusOf(r.id);
+      return `<div class="route${st === 'on' ? '' : ' off'}" id="row-${r.id}">
         ${flags(r.to)}
         <div><h3>${esc(o.name)} → ${esc(r.name)}</h3><span class="op">${esc(r.unit)} · ${o.cur} ${r.op === 'mul' ? '× tasa' : '÷ tasa'}</span></div>
         <input type="text" id="in-${r.id}" value="${esc(saved.rates[r.id] || '')}" inputmode="decimal" aria-label="Tasa ${esc(o.name)} a ${esc(r.name)}">
-        <span class="ex"><span id="ex-${r.id}"></span><label class="switch"><input type="checkbox" id="on-${r.id}" ${on ? 'checked' : ''}> activa</label></span>
+        <span class="ex"><span id="ex-${r.id}"></span><select id="st-${r.id}" aria-label="Estado ${esc(o.name)} a ${esc(r.name)}">${STATUS.map(([v, t]) => `<option value="${v}"${v === st ? ' selected' : ''}>${t}</option>`).join('')}</select></span>
       </div>`;
     }).join('')).join('');
   for (const r of ROUTES) {
@@ -59,7 +61,7 @@ function renderRoutes() {
     };
     $('in-' + r.id).oninput = upd;
     upd();
-    $('on-' + r.id).onchange = (e) => $('row-' + r.id).classList.toggle('off', !e.target.checked);
+    $('st-' + r.id).onchange = (e) => $('row-' + r.id).classList.toggle('off', e.target.value !== 'on');
   }
   $('bcv').value = saved.bcv_manual || '';
   $('bcv-flag').innerHTML = flag('VE');
@@ -78,9 +80,9 @@ function renderLinks() {
 }
 
 $('save').onclick = async () => {
-  const body = { rates: {}, active: {}, bcv_manual: $('bcv').value.trim() || null };
-  for (const r of ROUTES) { body.rates[r.id] = $('in-' + r.id).value.trim(); body.active[r.id] = $('on-' + r.id).checked; }
-  const bad = ROUTES.filter((r) => body.active[r.id] && !rateNum(body.rates[r.id]));
+  const body = { rates: {}, status: {}, bcv_manual: $('bcv').value.trim() || null };
+  for (const r of ROUTES) { body.rates[r.id] = $('in-' + r.id).value.trim(); body.status[r.id] = $('st-' + r.id).value; }
+  const bad = ROUTES.filter((r) => body.status[r.id] === 'on' && !rateNum(body.rates[r.id]));
   bad.forEach((r) => $('in-' + r.id).classList.add('bad'));
   const msg = $('save-msg');
   msg.hidden = false;
@@ -117,7 +119,8 @@ async function drawFlyers() {
     g.drawImage(img, 0, 0, 1080, 1080);
     g.fillStyle = '#3D1A5E'; g.textAlign = 'center'; g.textBaseline = 'middle';
     for (const [id, cx, cy] of f.slots) {
-      const text = saved.active[id] !== false && rateNum(saved.rates[id]) ? saved.rates[id] : '—';
+      const st = statusOf(id);
+      const text = st === 'ask' ? 'CONSULTAR' : st === 'on' && rateNum(saved.rates[id]) ? saved.rates[id] : '—';
       let size = f.size;
       do { g.font = `800 ${size}px Montserrat, sans-serif`; size -= 2; } while (g.measureText(text).width > f.maxW && size > 20);
       g.fillText(text, cx, cy + 3);
