@@ -35,6 +35,8 @@ La tasa queda guardada en los tres estados: al volver a Activa no hay que escrib
 
 Montos sin decimales (redondeo normal: desde ,50 sube; por debajo, baja).
 
+Hacia Venezuela hay un tercer modo, **Que reciba en dólares BCV**: el cliente escribe los USD que deben llegar; se convierten a Bs al dólar BCV del día y se calcula cuánto pagar en CLP/COP.
+
 Mínimos de envío (moneda de origen, campo `min`): Chile → VE/PE/CO/BR 10.000 CLP · EE. UU. 40.000 CLP · Panamá/Ecuador 15.000 CLP; Colombia → VE 20.000 COP.
 
 Para un país nuevo: una fila en `ROUTES` (y su casilla en la plantilla del flyer si va en el flyer).

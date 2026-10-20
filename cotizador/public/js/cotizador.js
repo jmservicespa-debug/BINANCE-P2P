@@ -58,15 +58,21 @@ function calc() {
   const r = ROUTES.find((x) => x.id === route);
   const o = ORIGINS[origin];
   if (!r) { $('r-free').hidden = true; $('r-break').hidden = true; $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
+  const bcv = data.bcv?.value;
+  // "Que reciba en dólares BCV": solo hacia Venezuela y con el dólar BCV disponible.
+  const bcvOk = r.to.includes('VE') && bcv > 0;
+  $('mode-bcv').hidden = !bcvOk;
+  if (mode === 'bcv' && !bcvOk) setMode('send');
   if (statusOf(r.id) === 'ask') { unstable(r, o); return; }
   $('r-big').classList.remove('ask');
   const rate = rateOf(r.id).rate;
-  $('amount-label').textContent = mode === 'send' ? 'Monto que envías' : 'Monto que debe recibir';
-  $('amount-cur').textContent = mode === 'send' ? o.cur : r.cur;
+  amountLabels(r, o);
   const x = amountNum($('amount').value);
+  const usd = mode === 'bcv' ? x : null;
   // Montos completos, sin decimales: desde ,50 se redondea hacia arriba; por debajo, hacia abajo.
-  const send = Math.round(mode === 'send' ? x : invert(r, rate, x));
-  const get = Math.round(mode === 'send' ? convert(r, rate, send) : x);
+  const target = mode === 'bcv' ? Math.round(x * bcv) : x;  // bolívares que deben llegar
+  const send = Math.round(mode === 'send' ? x : invert(r, rate, target));
+  const get = Math.round(mode === 'send' ? convert(r, rate, send) : target);
   if (belowMin(r, send)) { minimum(r, o, send); return; }
   $('r-big').classList.remove('ask');
   $('r-free').hidden = false;
@@ -80,11 +86,11 @@ function calc() {
     + `<dt class="total">Total a pagar</dt><dd class="total">${fmt(send, 0)} ${o.cur}</dd>`;
   $('r-label').textContent = mode === 'send' ? `Recibe en ${r.name}` : 'Debes enviar';
   $('r-big').textContent = mode === 'send' ? `${fmt(get, r.dec)} ${r.cur}` : `${fmt(send, 0)} ${o.cur}`;
-  $('r-send').textContent = mode === 'send' ? '' : `Recibe ${fmt(get, r.dec)} ${r.cur}`;
+  $('r-send').textContent = mode === 'send' ? ''
+    : mode === 'bcv' ? `Recibe ${fmt(get, 0)} ${r.cur} = ${fmt(usd, 0)} USD al dólar BCV` : `Recibe ${fmt(get, r.dec)} ${r.cur}`;
   $('r-rate').textContent = '';
   $('r-min').textContent = r.min ? `Envío mínimo: ${fmt(r.min, 0)} ${o.cur}` : '';
-  const bcv = data.bcv?.value;
-  $('r-bcv').hidden = !(r.to.includes('VE') && bcv > 0);
+  $('r-bcv').hidden = !bcvOk;
   if (!$('r-bcv').hidden) {
     $('b-rate').textContent = `${fmt(bcv, 2)} Bs/USD`;
     $('b-usd').textContent = `${fmt(Math.round(get / bcv), 0)} USD`;
@@ -92,7 +98,9 @@ function calc() {
   }
   $('dest-note').textContent = r.note || '';
   const ok = Number.isFinite(send) && Number.isFinite(get) && send > 0;
-  const text = ok ? `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${r.name}. Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?` : '';
+  const text = !ok ? '' : mode === 'bcv'
+    ? `Hola, necesito que lleguen ${fmt(usd, 0)} USD al dólar BCV (${fmt(get, 0)} ${r.cur}) en ${r.name}, enviando desde ${o.name}. Según el cotizador debo pagar ${fmt(send, 0)} ${o.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`
+    : `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${r.name}. Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`;
   $('wa').innerHTML = waButtons(text);
 }
 
@@ -115,8 +123,7 @@ function minimum(r, o, send) {
 function unstable(r, o) {
   $('r-free').hidden = true;
   $('r-break').hidden = true;
-  $('amount-label').textContent = mode === 'send' ? 'Monto que envías' : 'Monto que debe recibir';
-  $('amount-cur').textContent = mode === 'send' ? o.cur : r.cur;
+  amountLabels(r, o);
   const x = amountNum($('amount').value);
   $('r-label').textContent = `Envíos a ${r.name}`;
   $('r-big').textContent = 'Mercado inestable';
@@ -127,8 +134,21 @@ function unstable(r, o) {
   $('dest-note').textContent = r.note || '';
   $('r-min').textContent = r.min ? `Envío mínimo: ${fmt(r.min, 0)} ${o.cur}` : '';
   if (mode === 'send' && belowMin(r, x)) { minimum(r, o, x); return; }
-  const amount = Number.isFinite(x) && x > 0 ? (mode === 'send' ? `enviar ${fmt(x, 0)} ${o.cur}` : `que reciban ${fmt(x, r.dec)} ${r.cur}`) : 'hacer un envío';
+  const amount = !(Number.isFinite(x) && x > 0) ? 'hacer un envío'
+    : mode === 'send' ? `enviar ${fmt(x, 0)} ${o.cur}` : mode === 'bcv' ? `que lleguen ${fmt(x, 0)} USD al dólar BCV` : `que reciban ${fmt(x, r.dec)} ${r.cur}`;
   $('wa').innerHTML = waButtons(`Hola, quiero ${amount} desde ${o.name} a ${r.name}. ¿Me das la tasa de este momento?`, 'Pedir tasa');
+}
+
+function amountLabels(r, o) {
+  $('amount-label').textContent = { send: 'Monto que envías', get: 'Monto que debe recibir', bcv: 'Dólares BCV que deben llegar' }[mode];
+  $('amount-cur').textContent = mode === 'send' ? o.cur : mode === 'bcv' ? 'USD BCV' : r.cur;
+}
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('#modes button').forEach((o) => o.setAttribute('aria-pressed', String(o.dataset.mode === m)));
+  const r = ROUTES.find((x) => x.id === route);
+  $('amount').value = m === 'bcv' ? '20' : m === 'send' || r?.cur !== 'USD' ? '100.000' : '100';
 }
 
 function waButtons(text, action) {
@@ -143,13 +163,7 @@ function waButtons(text, action) {
 
 function render() { renderOrigins(); renderDests(); calc(); }
 
-document.querySelectorAll('#modes button').forEach((b) => b.onclick = () => {
-  mode = b.dataset.mode;
-  document.querySelectorAll('#modes button').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
-  const r = ROUTES.find((x) => x.id === route);
-  $('amount').value = mode === 'send' || r?.cur !== 'USD' ? '100.000' : '100';
-  calc();
-});
+document.querySelectorAll('#modes button').forEach((b) => b.onclick = () => { setMode(b.dataset.mode); calc(); });
 $('amount').oninput = calc;
 ['o-from', 'o-to', 'o-amount'].forEach((id) => { $(id).oninput = otherQuote; });
 
