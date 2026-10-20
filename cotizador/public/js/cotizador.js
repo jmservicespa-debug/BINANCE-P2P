@@ -37,7 +37,7 @@ function renderDests() {
   $('dests').hidden = origin === OTHER;
   if (origin === OTHER) return;
   const list = activeRoutes(origin);
-  $('dests').innerHTML = list.map((r) => `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${statusOf(r.id) === 'ask' ? 'Mercado inestable' : `${esc(r.unit)} (${r.cur})`}</small></span></button>`).join('')
+  $('dests').innerHTML = list.map((r) => `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${esc(r.unit)} (${r.cur})${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`).join('')
     + `<button data-r="${OTHER}" aria-pressed="${route === OTHER}">${GLOBE}<span>Otro destino<small>Tasa por WhatsApp</small></span></button>`;
   $('dests').querySelectorAll('button').forEach((b) => b.onclick = () => { route = b.dataset.r; render(); });
 }
