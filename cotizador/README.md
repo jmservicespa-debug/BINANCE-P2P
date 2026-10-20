@@ -48,7 +48,7 @@ DEV_PASSWORD=una-clave-larga node scripts/dev-server.mjs   # http://localhost:87
 3. **Workers & Pages → KV → Create namespace**: nombre `jmcambios-tasas`.
    En el proyecto: **Settings → Bindings → Add → KV namespace**: variable `TASAS` → `jmcambios-tasas`.
 4. Contraseña del panel, en TU computador (no la escribas en ningún chat):
-   `node cotizador/scripts/hash-password.mjs` → copia los dos valores que imprime.
+   `python cotizador\scripts\hash_password.py` (o `node cotizador/scripts/hash-password.mjs`) → copia los dos valores que imprime.
    En el proyecto: **Settings → Variables and secrets → Add** (tipo *Secret*):
    `ADMIN_PASSWORD_HASH` y `SESSION_SECRET`.
 5. **Deployments → Retry deployment** para que tome los secretos.
