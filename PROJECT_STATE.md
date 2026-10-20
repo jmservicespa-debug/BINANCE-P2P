@@ -192,6 +192,8 @@ tests/                     pruebas unitarias (sin red)
 - Comando `comerciantes` y tarjeta "Cómo trabajan los mejores" (`/api/comerciantes`, caché 10 min). Rendimiento: ~4 s con 3 días (~120 mil filas en ad_states).
 - Cuidados: la diferencia propia puede no ser su margen (remesas/otros mercados; costos desconocidos). Necesita días de historial.
 - Usar estos patrones para calibrar la Fase 7.
+- Primer resultado real (2026-10-20): INITIUM_CO 72.621 órdenes/30d, compra y venta, diferencia propia 38,14 COP (1,21 %), puestos #10 compra / #9 venta (NO #1), 24 h, ~100 cambios de precio/h (bot), 150 mil–12,3 M. TradeUSDTExpress 16.157 órd., 31,9 COP (1,02 %), compra #69 / venta #7, montos 80 mil–1 M, 12–24 h, 1,1 cambios/h (manual). Otros con un lado en puestos #120–150 inflaban el patrón (1,84 %) → el patrón ahora usa solo puestos ≤ #20 en los dos lados; precios (compra, venta) tomados del mismo momento.
+- Conclusión preliminar: el líder gana ~1,2 % bruto sin estar de #1, presente todo el día y repreciando con bot. Apoya la meta de ~1 % libre con presencia continua y automatización.
 
 ## Ideas registradas
 - Producto por suscripción (pedido del usuario 2026-10-19): multiusuario en servidor con IP fija, keys de terceros cifradas y solo lectura, configuración por usuario (bancos/4x1000, moneda, márgenes), registro y pagos, revisión legal (condiciones de Binance para terceros, Ley 1581 de 2012). Riesgo: suscriptores con la misma estrategia compiten entre sí. Primero validar con resultados reales del usuario. Mantener nada personal fijo en el código.

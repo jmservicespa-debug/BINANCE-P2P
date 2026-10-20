@@ -26,6 +26,7 @@ from jmcambios.storage.history import HistoryStore
 COT = timezone(timedelta(hours=-5), "COT")
 MAX_SAMPLES = 240
 MIN_PRESENCE = 0.10  # aparecer en al menos el 10 % de los ciclos muestreados
+ACTIVE_RANK = 20  # para el patrón: puesto mediano ≤ 20 en compra y en venta (si no, el anuncio casi no se llena)
 
 
 @dataclass
@@ -180,7 +181,7 @@ def study(store: HistoryStore, venue: str, market: str, *, days: float = 3, now_
             presence=m.any_present / n, rank_buy=med(m.ranks["BID"]), rank_sell=med(m.ranks["ASK"]),
             gap_buy=med(m.gaps["BID"]), gap_sell=med(m.gaps["ASK"]),
             own_spread=med(m.own_spread) if both else None, own_spread_pct=med(m.own_spread_pct) if both else None,
-            both_prices=(med([b for b, _ in m.both_prices]), med([a for _, a in m.both_prices])) if both else None,
+            both_prices=_median_pair(m.both_prices) if both else None,
             min_fiat=med(m.mins), max_fiat=med(m.maxs),
             methods=tuple(k for k, _ in m.methods.most_common(3) if k),
             active_hours=active,
@@ -191,9 +192,23 @@ def study(store: HistoryStore, venue: str, market: str, *, days: float = 3, now_
     return out
 
 
+def _median_pair(pairs: list[tuple[float, float]]) -> tuple[float, float]:
+    """El par (compra, venta) de un mismo momento cuya diferencia es la mediana: precios coherentes entre sí."""
+    ordered = sorted(pairs, key=lambda p: p[1] - p[0])
+    return ordered[len(ordered) // 2]
+
+
+def is_active_both(m: MerchantProfile) -> bool:
+    return (m.own_spread is not None and m.rank_buy is not None and m.rank_sell is not None
+            and m.rank_buy <= ACTIVE_RANK and m.rank_sell <= ACTIVE_RANK)
+
+
 def summarize(st: MerchantStudy) -> dict:
-    """Patrones comunes de los comerciantes que anuncian en los dos lados."""
-    two = st.two_sided
+    """Patrón de los que compran y venden CERCA DE LOS PRIMEROS PUESTOS en los dos lados.
+
+    Un anuncio en el puesto #150 casi nunca se llena: su "diferencia propia" no es margen y se excluye.
+    """
+    two = [m for m in st.two_sided if is_active_both(m)]
     if not two:
         return {}
     med = lambda xs: float(median(xs)) if xs else None  # noqa: E731
@@ -207,6 +222,8 @@ def summarize(st: MerchantStudy) -> dict:
         "max_fiat": med([m.max_fiat for m in two if m.max_fiat]),
         "reprices_per_hour": med([m.reprices_per_hour for m in two if m.reprices_per_hour is not None]),
         "presence": med([m.presence for m in two]),
+        "excluded": len(st.two_sided) - len(two),
+        "active_rank": ACTIVE_RANK,
     }
 
 

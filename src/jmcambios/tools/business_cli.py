@@ -462,7 +462,8 @@ def cmd_comerciantes(store: HistoryStore, args: argparse.Namespace, settings: Se
               + (f" · cambia el precio {m.reprices_per_hour:.1f} veces/hora" if m.reprices_per_hour is not None else ""))
     s = merchants.summarize(st)
     if s:
-        print(f"\n  PATRÓN de los {s['two_sided']} que anuncian en compra y venta [cálculo]:")
+        print(f"\n  PATRÓN de los {s['two_sided']} que compran y venden cerca de los primeros puestos"
+              f" (≤ #{s['active_rank']} en los dos lados; se excluyen {s['excluded']} con un lado casi inactivo) [cálculo]:")
         print(f"    diferencia propia típica: {money(Decimal(str(s['own_spread'])))} COP ({money(Decimal(str(s['own_spread_pct'])), 3)} %)"
               f" · puesto típico: compra #{s['rank_buy']:g}, venta #{s['rank_sell']:g}")
         print(f"    montos típicos {money(Decimal(str(s['min_fiat'])), 0)}–{money(Decimal(str(s['max_fiat'])), 0)} COP"

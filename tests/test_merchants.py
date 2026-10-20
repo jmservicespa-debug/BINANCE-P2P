@@ -52,14 +52,14 @@ def test_study_profiles_top_merchants(store):
     assert names[0] == "Grande" and "NoVer" not in names  # ordenado por órdenes; no verificados fuera
     g = st.merchants[0]
     assert g.sides == "compra y venta" and g.presence == 1.0
-    assert g.own_spread == pytest.approx(20.5) and g.both_prices == (3134.5, 3155.0)
+    assert g.own_spread == pytest.approx(20.5) and g.both_prices in ((3134.0, 3155.0), (3135.0, 3155.0))
     assert g.rank_buy == 2 and g.rank_sell == 2 and g.gap_sell == pytest.approx(3)
     assert g.min_fiat == 200000 and g.max_fiat == 3000000 and g.active_hours == (8, 9)
     assert g.reprices_per_hour == pytest.approx(1.5, abs=0.6)  # 3 cambios en ~2 h
     v = next(m for m in st.merchants if m.nickname == "Vendedor")
     assert v.sides == "solo venta" and v.own_spread is None and v.rank_sell == 1
     s = merchants.summarize(st)
-    assert s["two_sided"] == 1 and s["own_spread"] == pytest.approx(20.5)
+    assert s["two_sided"] == 1 and s["own_spread"] == pytest.approx(20.5) and s["excluded"] == 0
     costs = Costs(D("0.00181"), D("0.00008"), D("0"), D("0.004"), D("0.01"))
     net = merchants.net_margin_with_costs(3135, 3155, costs)
     assert D("0.004") < net < D("0.005")
@@ -111,3 +111,15 @@ def test_panel_comerciantes_api(tmp_path):
     assert out["merchants"][0]["nickname"] == "Grande" and out["pattern"]["two_sided"] == 1
     assert 0.004 < out["merchants"][0]["net_with_my_costs"] < 0.005
     assert data.comerciantes(int(datetime.now(UTC).timestamp())) is out  # caché
+
+
+
+def test_pattern_excludes_inactive_side():
+    from jmcambios.analysis.merchants import MerchantProfile, MerchantStudy, summarize
+
+    def mp(name, spread, rb, rs):
+        return MerchantProfile(name, name, 100, None, "compra y venta", 1.0, rb, rs, 0, 0, spread, spread / 31.5,
+                               (3135.0, 3135.0 + spread), 1e5, 1e6, (), (), 1.0)
+    st = MerchantStudy(0, 1, 100, [mp("a", 38, 10, 9), mp("b", 32, 15, 7), mp("c", 187, 45, 152)])
+    s = summarize(st)
+    assert s["two_sided"] == 2 and s["excluded"] == 1 and s["own_spread"] == pytest.approx(35)

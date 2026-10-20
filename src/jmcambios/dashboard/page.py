@@ -314,7 +314,7 @@ async function renderMerchants(v) {
       for (const x of h.slice(1).concat([null])) { if (x === b + 1) { b = x; continue; } out.push(a === b ? a + ' h' : `${a}–${b + 1} h`); if (x !== null) a = b = x; }
       return out.join(', '); };
     const p = c.pattern;
-    $('pattern').innerHTML = p && p.two_sided ? `<div class="warn" style="margin:6px 0">Patrón de los ${p.two_sided} que compran y venden: diferencia propia típica
+    $('pattern').innerHTML = p && p.two_sided ? `<div class="warn" style="margin:6px 0">Patrón de los ${p.two_sided} que compran y venden cerca de los primeros puestos (≤ #${p.active_rank}; se excluyen ${p.excluded} con un lado casi inactivo): diferencia propia típica
       <b>${fmt(p.own_spread)} COP (${fmt(p.own_spread_pct, 3)} %)</b> · puesto compra #${fmt(p.rank_buy, 0)}, venta #${fmt(p.rank_sell, 0)}
       · montos ${fmt(p.min_fiat, 0)}–${fmt(p.max_fiat, 0)}${p.reprices_per_hour !== null ? ` · cambian el precio ${fmt(p.reprices_per_hour, 1)} veces/hora` : ''}</div>` : '';
     $('comerciantes').innerHTML = (c.notes || []).map(n => `<div>⚠ ${esc(n)}</div>`).join('') + c.merchants.map((m, i) => `
