@@ -1,4 +1,4 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, convert, fmt, rateNum } from './rutas.js';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum } from './rutas.js';
 import { esc, flag, flags } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
@@ -17,7 +17,7 @@ async function api(path, opts = {}) {
 
 function showEditor(on) {
   $('login').hidden = on;
-  ['editor', 'flyers', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  ['editor', 'usdt', 'flyers', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
 }
 
 async function start() {
@@ -29,6 +29,7 @@ async function start() {
   renderBcv(body.view.bcv);
   renderLinks();
   drawFlyers();
+  loadUsdt(true);
 }
 
 $('login').onsubmit = async (e) => {
@@ -152,3 +153,56 @@ document.querySelectorAll('[data-share]').forEach((b) => b.onclick = async () =>
 });
 
 start();
+
+// ------------------------------------------------------------------ calculadora USDT
+
+let usdt = null;
+const USDT_SOURCES = { binancep2p: 'Binance P2P vía CriptoYa', mediana: 'mediana de exchanges vía CriptoYa', manual: 'valor manual' };
+const usdtPrice = () => usdt?.ref?.value ? usdt.ref.value * (1 + (Number(String($('u-margin').value).replace(',', '.')) || 0) / 100) : NaN;
+
+async function loadUsdt(fillInputs) {
+  const { status, body } = await api('/api/usdt');
+  if (status !== 200) return;
+  usdt = body;
+  if (fillInputs) { $('u-margin').value = body.margin_pct; $('u-manual').value = body.manual || ''; }
+  renderUsdt();
+}
+
+// USDT admite decimales: "100,5" o "100.5" = cien y medio; "1.000" o "1.000,25" = mil.
+function usdtNum(v) {
+  let t = String(v || '').trim().replace(/\s/g, '');
+  if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
+  return /^\d+(\.\d+)?$/.test(t) ? parseFloat(t) : NaN;
+}
+
+function renderUsdt() {
+  const r = usdt?.ref || {};
+  $('u-ref').textContent = r.value ? `${fmt(r.value, 2)} CLP` : 'sin dato';
+  const age = r.age_s == null ? '' : r.age_s < 90 ? ' · recién actualizado' : ` · hace ${Math.round(r.age_s / 60)} min`;
+  $('u-src').textContent = r.value ? `${USDT_SOURCES[r.source] || r.source}${age}${r.error ? ` · la fuente falló (${r.error})` : ''}`
+    : `No se pudo leer la referencia${r.error ? ` (${r.error})` : ''}. Escribe un valor manual.`;
+  const price = usdtPrice();
+  $('u-price').textContent = Number.isFinite(price) ? fmt(price, 2) : '—';
+  const qty = usdtNum($('u-qty').value);
+  const clp = amountNum($('u-clp').value);
+  // Mismo precio en los dos sentidos: cobrar = USDT × precio (redondeado) · entregar = CLP ÷ precio (2 decimales, hacia abajo).
+  const okQ = Number.isFinite(price) && qty > 0, okC = Number.isFinite(price) && clp > 0;
+  $('u-pay').textContent = okQ ? `${fmt(Math.round(qty * price), 0)} CLP` : '—';
+  $('u-pay-d').textContent = okQ ? `por ${fmt(qty, 2)} USDT` : '';
+  $('u-get').textContent = okC ? `${fmt(Math.floor((clp / price) * 100) / 100, 2)} USDT` : '—';
+  $('u-get-d').textContent = okC ? `por ${fmt(clp, 0)} CLP` : '';
+}
+['u-margin', 'u-qty', 'u-clp'].forEach((id) => { $(id).oninput = renderUsdt; });
+
+$('u-save').onclick = async () => {
+  const { status, body } = await api('/api/usdt', { method: 'PUT', body: JSON.stringify({ margin_pct: $('u-margin').value, manual: $('u-manual').value }) });
+  const msg = $('u-msg');
+  msg.hidden = false;
+  if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
+  usdt = body;
+  msg.className = 'msg';
+  msg.textContent = 'Guardado.';
+  renderUsdt();
+};
+setInterval(() => { if (!$('usdt').hidden) loadUsdt(false); }, 60 * 1000);

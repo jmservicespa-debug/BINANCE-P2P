@@ -5,7 +5,8 @@ import { onRequestGet as getRates, onRequestPut as putRates } from '../functions
 import { onRequestPost as postLogin } from '../functions/api/login.js';
 import { onRequestGet as getSession } from '../functions/api/sesion.js';
 import { amountNum, belowMin, convert, invert, rateNum, routeById, ROUTES } from '../public/js/rutas.js';
-import { bcv, hashPassword, parseBcv, parseDolarApi, validate } from '../lib/server.js';
+import { bcv, hashPassword, parseBcv, parseCriptoYa, parseDolarApi, usdtRef, validate } from '../lib/server.js';
+import { onRequestGet as getUsdt, onRequestPut as putUsdt } from '../functions/api/usdt.js';
 
 const ORIGIN = 'https://jmcambios.com';
 
@@ -158,4 +159,30 @@ test('dólar BCV: si la página del BCV falla usa DolarApi; si todo falla, el ma
   await e2.TASAS.put('tasas', JSON.stringify({ rates: RATES, bcv_manual: '881,88', updated: 1 }));
   const pub = await (await getRates({ env: e2 })).json();
   assert.equal(pub.bcv.errors, undefined);
+});
+
+test('USDT/CLP: referencia de CriptoYa (Binance P2P), ganancia y respaldo manual', async () => {
+  const body = JSON.stringify({ binancep2p: { ask: 948.5, bid: 940 }, buda: { ask: 951, bid: 939 }, raro: { ask: 5 } });
+  assert.deepEqual(parseCriptoYa(body), { value: 948.5, source: 'binancep2p' });
+  assert.deepEqual(parseCriptoYa(JSON.stringify({ a: { ask: 950 }, b: { ask: 960 }, c: { ask: 10 } })), { value: 960, source: 'mediana' });
+  assert.equal(parseCriptoYa('Invalid pair'), null);
+  let calls = 0;
+  globalThis.fetch = async () => { calls++; return new Response(body); };
+  const e = await env();
+  // Sin sesión no se ve ni se guarda.
+  assert.equal((await getUsdt({ request: req('/api/usdt'), env: e })).status, 401);
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  const v = await (await getUsdt({ request: req('/api/usdt', { cookie }), env: e })).json();
+  assert.equal(v.margin_pct, '8');
+  assert.equal(v.ref.value, 948.5);
+  await getUsdt({ request: req('/api/usdt', { cookie }), env: e });
+  assert.equal(calls, 1);  // guardado 2 minutos
+  assert.equal((await putUsdt({ request: req('/api/usdt', { method: 'PUT', cookie, body: { margin_pct: '80' } }), env: e })).status, 400);
+  const s = await (await putUsdt({ request: req('/api/usdt', { method: 'PUT', cookie, body: { margin_pct: '7,5', manual: '950' } }), env: e })).json();
+  assert.equal(s.margin_pct, '7.5');
+  // Fuente caída: usa el valor manual y dice por qué.
+  globalThis.fetch = async () => new Response('caído', { status: 502 });
+  const r = await usdtRef(e, '950', Date.now() + 10 * 60 * 1000);
+  assert.deepEqual([r.value, r.source, r.error], [950, 'manual', 'respondió 502']);
 });

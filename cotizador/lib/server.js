@@ -207,3 +207,72 @@ export async function publicView(env, saved, now = Date.now()) {
     bcv: await bcv(env, s.bcv_manual, now),
   };
 }
+
+// ------------------------------------------------------------------ USDT/CLP (solo panel)
+
+// Referencia del precio del USDT en pesos chilenos para la calculadora del panel.
+// CriptoYa agrupa precios de varios exchanges (API pública, sin clave). Se usa el precio de venta
+// ("ask": lo que cuesta comprar USDT) de Binance P2P; si no viene, la mediana de los demás.
+const USDT_URL = 'https://criptoya.com/api/usdt/clp/1';
+const USDT_TTL_S = 120;
+const USDT_RANGE = [300, 3000];  // CLP por USDT fuera de este rango = dato absurdo, se ignora
+
+export function parseCriptoYa(text) {
+  let d;
+  try { d = JSON.parse(text); } catch { return null; }
+  if (!d || typeof d !== 'object') return null;
+  const ok = (v) => Number.isFinite(v) && v >= USDT_RANGE[0] && v <= USDT_RANGE[1];
+  const b = Number(d.binancep2p?.ask);
+  if (ok(b)) return { value: b, source: 'binancep2p' };
+  const asks = Object.values(d).map((x) => Number(x?.ask)).filter(ok).sort((a, z) => a - z);
+  if (!asks.length) return null;
+  return { value: asks[Math.floor(asks.length / 2)], source: 'mediana' };
+}
+
+export async function loadUsdtCfg(env) {
+  try { return { margin_pct: '8', manual: null, ...JSON.parse((await env.TASAS.get('usdt_cfg')) || '{}') }; }
+  catch { return { margin_pct: '8', manual: null }; }
+}
+
+export async function usdtRef(env, manual, now = Date.now()) {
+  let cached = null;
+  try { cached = JSON.parse((await env.TASAS.get('usdt')) || 'null'); } catch { cached = null; }
+  if (cached && now - cached.ts < USDT_TTL_S * 1000) return { ...cached, age_s: Math.round((now - cached.ts) / 1000) };
+  let error;
+  try {
+    const res = await fetch(USDT_URL, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(6000) });
+    const got = res.ok ? parseCriptoYa(await res.text()) : null;
+    if (got) {
+      const fresh = { ...got, ts: now };
+      await env.TASAS.put('usdt', JSON.stringify(fresh));
+      return { ...fresh, age_s: 0 };
+    }
+    error = res.ok ? 'respuesta sin precio válido' : `respondió ${res.status}`;
+  } catch (e) {
+    error = e?.name === 'TimeoutError' ? 'no respondió a tiempo' : (e?.message || 'error de conexión');
+  }
+  if (manual && rateNum(manual)) return { value: rateNum(manual), source: 'manual', ts: now, age_s: 0, error };
+  if (cached) return { ...cached, age_s: Math.round((now - cached.ts) / 1000), error };
+  return { value: null, source: null, ts: null, age_s: null, error };
+}
+
+export async function usdtView(request, env, now = Date.now()) {
+  if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
+  const cfg = await loadUsdtCfg(env);
+  return json({ ...cfg, ref: await usdtRef(env, cfg.manual, now) });
+}
+
+export async function saveUsdtCfg(request, env, now = Date.now()) {
+  if (!sameOrigin(request)) return json({ error: 'origen no permitido' }, 403);
+  if (!(await isAdmin(request, env, now))) return json({ error: 'Inicia sesión de nuevo.' }, 401);
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'datos inválidos' }, 400); }
+  const margin = String(body?.margin_pct ?? '').trim().replace(',', '.');
+  const m = Number(margin);
+  if (!(margin !== '' && m >= 0 && m <= 50)) return json({ error: 'La ganancia debe estar entre 0 y 50 %.' }, 400);
+  const manual = body?.manual == null || String(body.manual).trim() === '' ? null : String(body.manual).trim();
+  if (manual !== null && !rateNum(manual)) return json({ error: 'El valor manual no es válido.' }, 400);
+  const cfg = { margin_pct: margin, manual };
+  await env.TASAS.put('usdt_cfg', JSON.stringify(cfg));
+  return json({ ...cfg, ref: await usdtRef(env, manual, now) });
+}

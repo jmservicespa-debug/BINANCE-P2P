@@ -48,6 +48,32 @@
     <button class="btn" id="save">Guardar y publicar</button>
   </section>
 
+  <section class="card" id="usdt" hidden aria-labelledby="h-usdt">
+    <div>
+      <h2 id="h-usdt">Calculadora USDT (Chile)</h2>
+      <span class="muted">Solo la ves tú. Toma el precio de referencia del USDT en pesos chilenos y le suma tu ganancia.</span>
+    </div>
+    <div class="usdt-ref">
+      <span class="muted">Referencia</span><b class="num" id="u-ref">—</b><span class="muted" id="u-src"></span>
+    </div>
+    <div class="row2">
+      <label class="f" for="u-margin">Tu ganancia (%)
+        <span class="amount"><input id="u-margin" inputmode="decimal" autocomplete="off"></span></label>
+      <label class="f" for="u-manual">Respaldo manual
+        <span class="amount"><input id="u-manual" inputmode="decimal" autocomplete="off" placeholder="—"></span></label>
+    </div>
+    <div class="usdt-price">Tu precio de venta: <b class="num" id="u-price">—</b> CLP por USDT</div>
+    <div class="row2">
+      <label class="f" for="u-qty">El cliente quiere (USDT)
+        <span class="amount"><input id="u-qty" inputmode="decimal" autocomplete="off" value="100"></span></label>
+      <label class="f" for="u-clp">El cliente paga (CLP)
+        <span class="amount"><input id="u-clp" inputmode="decimal" autocomplete="off" value="100.000"></span></label>
+    </div>
+    <div class="usdt-out num"><div><span class="muted">Cobrar</span><b id="u-pay">—</b><span class="muted" id="u-pay-d"></span></div><div><span class="muted">Entregar</span><b id="u-get">—</b><span class="muted" id="u-get-d"></span></div></div>
+    <div class="msg" id="u-msg" hidden></div>
+    <button class="btn ghost" id="u-save">Guardar ganancia y valor manual</button>
+  </section>
+
   <section class="card" id="flyers" hidden aria-labelledby="h-fly">
     <div>
       <h2 id="h-fly">Flyers del día</h2>

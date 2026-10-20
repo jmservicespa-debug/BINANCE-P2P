@@ -11,6 +11,13 @@ no usa llaves de Binance ni toca la cuenta.
   último valor bueno o el valor manual del panel. Verificado en línea (2026-10-20): la página del BCV no
   responde desde Cloudflare; DolarApi sí (881,88 Bs/USD, igual al valor oficial del día). Publicado en https://jmcambios.pages.dev
 
+## Calculadora USDT (solo panel)
+
+- Referencia USDT/CLP de CriptoYa (API pública, sin clave): precio de venta (`ask`) de Binance P2P; si no viene,
+  la mediana de los exchanges. Se guarda 2 minutos. Respaldo manual si la fuente falla. Rango aceptado 300–3.000 CLP.
+- Precio de venta = referencia × (1 + ganancia %), por defecto 8 %. Cobrar = USDT × precio (entero);
+  entregar = CLP ÷ precio (2 decimales, hacia abajo). No se muestra en el cotizador público.
+
 ## Otros países
 
 - Botón de origen **Otro país** y recuadro **Otro destino** (en Chile y Colombia): el cliente escribe origen, destino y
