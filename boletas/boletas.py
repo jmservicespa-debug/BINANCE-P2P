@@ -64,14 +64,18 @@ def read_rows(path: Path, first: int, last: int, sheet: str = SHEET, column: str
 
     if path.suffix.lower() != ".xlsx":
         raise SystemExit("El libro debe ser .xlsx (en Excel: Archivo → Guardar como → Libro de Excel).")
+    print(f"Leyendo {path.name}… (un libro grande puede tardar unos segundos)", flush=True)
     wb = load_workbook(path, data_only=True, read_only=True)
     if sheet not in wb.sheetnames:
         raise SystemExit(f'No encuentro la hoja "{sheet}". Hojas del libro: {", ".join(wb.sheetnames)}')
     ws = wb[sheet]
+    from openpyxl.utils import column_index_from_string
+    col = column_index_from_string(column)
+    # Se leen solo las filas pedidas, de una pasada (leer celda por celda recorre el libro entero cada vez).
     out = []
-    for r in range(first, last + 1):
-        raw = ws[f"{column}{r}"].value
+    for r, (raw,) in zip(range(first, last + 1), ws.iter_rows(min_row=first, max_row=last, min_col=col, max_col=col, values_only=True)):
         out.append((r, to_amount(raw), raw))
+    out += [(r, None, None) for r in range(first + len(out), last + 1)]  # filas más allá del final del libro
     wb.close()
     return out
 
@@ -350,7 +354,11 @@ def cmd_run(args, really_emit: bool) -> None:
     for n in notes:
         print("  ·", n)
     if not todo:
+        empty = [r for r, amount, raw in rows if raw in (None, "")]
         print("No hay boletas pendientes en ese rango.")
+        if empty:
+            print(f"  La columna {args.columna} está vacía en: {', '.join(map(str, empty[:20]))}{'…' if len(empty) > 20 else ''}"
+                  f" (hoja \"{args.hoja}\"). Revisa el número de fila en Excel.")
         return
     total = sum(p.amount for p in todo)
     print(f"\n{len(todo)} boletas exentas, total ${fmt(total)}:")
