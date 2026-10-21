@@ -140,35 +140,54 @@ def first_visible(locators, timeout: int = 1500):
     return None
 
 
-def choose_exenta(page) -> None:
+def choose_exenta(page) -> bool:
+    """Marca "Exenta" si la pantalla tiene esa opción. En eboleta (oct. 2026) no aparece en la pantalla de emitir:
+    el tipo lo confirma la boleta emitida, que debe decir BOLETA EXENTA (si no, el programa se detiene)."""
     re_ex = re.compile(r"exent", re.I)
     for sel in page.locator("select").all():
         options = sel.locator("option").all_inner_texts()
         match = next((o for o in options if re_ex.search(o)), None)
         if match:
             sel.select_option(label=match)
-            return
+            return True
     el = first_visible([page.get_by_role("radio", name=re_ex), page.get_by_label(re_ex), page.get_by_role("tab", name=re_ex),
-                        page.get_by_role("button", name=re_ex), page.get_by_text(re_ex)])
+                        page.get_by_role("button", name=re_ex)], timeout=800)
     if el is None:
-        raise RuntimeError('no encontré la opción "Exenta" en la página')
+        return False
     if el.get_attribute("type") in ("radio", "checkbox"):
         el.check()
     else:
         el.click()
+    return True
+
+
+def shown_amount(page) -> str:
+    """Dígitos que muestra la casilla del monto (la casilla de texto de la pantalla de emitir)."""
+    box = page.locator("input[type=text]").first
+    return re.sub(r"\D", "", box.input_value()) if box.count() else ""
 
 
 def fill_amount(page, amount: int) -> None:
-    re_m = re.compile(r"monto|valor|total|precio", re.I)
-    el = first_visible([page.get_by_label(re_m), page.get_by_placeholder(re_m), page.get_by_role("spinbutton"),
-                        page.locator("input[type=number]"), page.locator("input[type=tel]")])
-    if el is None:
-        raise RuntimeError("no encontré la casilla del monto")
-    el.fill(str(amount))
+    """eboleta usa un teclado en pantalla (0–9, delete, backspace): se borra y se marcan los dígitos.
+    Después se comprueba que la casilla muestre exactamente el monto; si no, no se emite."""
+    key = lambda name: page.get_by_role("button", name=name, exact=True)
+    if key("0").count():
+        if key("delete").count():
+            key("delete").first.click()
+        for ch in str(amount):
+            key(ch).first.click()
+    else:
+        box = page.locator("input[type=text]").first
+        if not box.count():
+            raise RuntimeError("no encontré dónde escribir el monto")
+        box.fill(str(amount))
+    got = shown_amount(page)
+    if got != str(amount):
+        raise RuntimeError(f"la pantalla muestra {got or 'nada'} en vez de {amount}")
 
 
 def emit(page) -> None:
-    btn = first_visible([page.get_by_role("button", name=re.compile(r"^\s*emitir", re.I)), page.get_by_text(re.compile(r"^\s*emitir\s*$", re.I))])
+    btn = first_visible([page.get_by_role("button", name=re.compile(r"^\s*emitir\s*$", re.I)), page.get_by_text(re.compile(r"^\s*emitir\s*$", re.I))])
     if btn is None:
         raise RuntimeError('no encontré el botón "Emitir"')
     btn.click()
@@ -247,10 +266,11 @@ def cmd_run(args, really_emit: bool) -> None:
             try:
                 page.goto(EMITIR_URL)
                 page.wait_for_load_state("domcontentloaded")
-                choose_exenta(page)
+                exenta = choose_exenta(page)
                 fill_amount(page, p.amount)
                 if not really_emit:
-                    input(f"fila {p.row}: ${fmt(p.amount)} escrito como exenta. Revisa la pantalla y presiona Enter para la siguiente… ")
+                    note = "marqué Exenta" if exenta else "no hay opción Exenta en esta pantalla: revisa que tu e-Boleta emita exentas"
+                    input(f"fila {p.row}: ${fmt(p.amount)} escrito ({note}). Revisa la pantalla y presiona Enter para la siguiente… ")
                     continue
                 emit(page)
                 folio = read_folio(page, p.amount)

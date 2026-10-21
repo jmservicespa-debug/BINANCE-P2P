@@ -51,13 +51,21 @@ def test_folio():
 
 # Página de prueba que imita eboleta (la real puede ser distinta: por eso existe el modo diagnóstico).
 FAKE = """<!doctype html><meta charset=utf-8><h1>Emitir e-Boleta</h1>
-<label><input type=radio name=t value=afecta checked> Afecta</label><label><input type=radio name=t value=exenta id=ex> Exenta</label>
-<label for=m>Monto</label><input id=m type=text>
-<button id=e>Emitir</button><div id=out></div>
-<script>document.getElementById('e').onclick = () => {
-  const ex = document.getElementById('ex').checked, m = Number(document.getElementById('m').value);
-  document.getElementById('out').innerText = ex ? 'BOLETA EXENTA ELECTRÓNICA NUMERO:\\n' + (21938 + m % 7).toLocaleString('es-CL') + '\\nMonto Total $ ' + m.toLocaleString('es-CL') : 'BOLETA AFECTA';
-};</script>"""
+<input type=text id=input-33 readonly><label><input type=checkbox id=input-48> Calculadora</label>
+<button type=button>delete</button><button type=button>backspace</button>
+<button type=button>7</button><button type=button>8</button><button type=button>9</button><button type=button>4</button>
+<button type=button>5</button><button type=button>6</button><button type=button>1</button><button type=button>2</button>
+<button type=button>3</button><button type=button>0</button><button type=button id=e>EMITIR</button><div id=out></div>
+<script>
+const box = document.getElementById('input-33');
+document.querySelectorAll('button').forEach((b) => b.onclick = () => {
+  const t = b.innerText;
+  if (/^\\d$/.test(t)) box.value = Number((box.value.replace(/\\D/g, '') || '') + t).toLocaleString('es-CL');
+  if (t === 'delete') box.value = '';
+  if (t === 'EMITIR') { const m = Number(box.value.replace(/\\D/g, ''));
+    document.getElementById('out').innerText = 'BOLETA EXENTA ELECTRÓNICA NUMERO:\\n' + (21938 + m % 7).toLocaleString('es-CL') + '\\nMonto Total $ ' + m.toLocaleString('es-CL'); }
+});
+</script>"""
 
 
 def test_emite_en_pagina_de_prueba(tmp_path, monkeypatch):
