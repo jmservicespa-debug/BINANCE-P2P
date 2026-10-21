@@ -281,8 +281,8 @@ def cmd_diagnostico(args) -> None:
         if problem:
             print(f"Ojo: {problem}. No se apretó EMITIR.")
         print("Mándale a Claude una foto o el texto de ese archivo (no contiene tu clave).")
-        if args.tras_emitir:
-            input("\nNO elijas nada en la ventana de Chrome: ciérrala o cancela, y luego presiona Enter aquí para cerrar… ")
+        msg = "NO elijas nada en la ventana de Chrome; sácale foto. " if args.tras_emitir else ""
+        input(f"\n{msg}Chrome queda abierto: presiona Enter aquí para cerrarlo… ")
         ctx.close()
 
 
