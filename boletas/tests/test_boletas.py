@@ -126,3 +126,25 @@ def test_monto_mostrado_como_texto(tmp_path, monkeypatch):
             page.evaluate("document.querySelectorAll('button').forEach((x) => { if (/^\\d$/.test(x.innerText)) x.onclick = null; })")
             b.fill_amount(page, 2000)
         br.close()
+
+
+def test_practica_no_emite(tmp_path, monkeypatch, capsys):
+    from playwright.sync_api import sync_playwright  # noqa: F401
+
+    page_file = tmp_path / "emitir.html"
+    page_file.write_text(FAKE, encoding="utf-8")
+    monkeypatch.setattr(b, "EMITIR_URL", page_file.as_uri())
+    log = tmp_path / "log.csv"
+    monkeypatch.setattr(b, "LOG", log)
+    monkeypatch.setattr(builtins, "input", lambda *_: "")
+    monkeypatch.setattr(b, "ensure_logged_in", lambda page: None)
+
+    def fake_open(pw):
+        ctx = pw.chromium.launch(executable_path=_chromium()).new_context()
+        return ctx, ctx.new_page()
+
+    monkeypatch.setattr(b, "open_browser", fake_open)
+    b.main(["practica", "--excel", str(libro(tmp_path)), "--desde", "10026", "--hasta", "10026"])
+    out = capsys.readouterr().out
+    assert "ventana en Boleta exenta" in out and "Aceptar" in out
+    assert not log.exists()  # nada emitido

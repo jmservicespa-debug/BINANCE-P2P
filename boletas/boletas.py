@@ -217,12 +217,22 @@ def pick_exenta_after_emit(page) -> None:
     pick_option(page, re.compile(r"boleta\s+(afecta|exenta)", re.I), re.compile(r"boleta\s+exenta", re.I), "tipo de boleta")
 
 
-def emit(page) -> None:
+def open_dialog(page) -> None:
+    """Aprieta EMITIR de la pantalla y deja la ventana del tipo en "Boleta exenta" (sin confirmar)."""
     btn = first_visible([page.get_by_role("button", name=re.compile(r"^\s*emitir\s*$", re.I)), page.get_by_text(re.compile(r"^\s*emitir\s*$", re.I))])
     if btn is None:
         raise RuntimeError('no encontré el botón "Emitir"')
     btn.click()
     pick_exenta_after_emit(page)
+
+
+def dialog_buttons(page) -> list[str]:
+    scope = first_visible([page.locator(".v-dialog--active"), page.locator("[role=dialog]"), page.locator(".v-dialog"), page.locator(".v-overlay__content")], timeout=1000) or page
+    return [t.strip() for t in scope.get_by_role("button").all_inner_texts() if t.strip()]
+
+
+def emit(page) -> None:
+    open_dialog(page)
     # El botón final está dentro de la ventana (no el EMITIR de la pantalla de atrás).
     dialog = first_visible([page.locator(".v-dialog--active"), page.locator("[role=dialog]"), page.locator(".v-dialog"), page.locator(".v-overlay__content")], timeout=1000)
     scope = dialog or page
@@ -316,7 +326,7 @@ def cmd_run(args, really_emit: bool) -> None:
             print("Cancelado. No se emitió nada.")
             return
     else:
-        print("\nMODO PRÁCTICA: llena cada boleta pero NO aprieta Emitir.")
+        print("\nMODO PRÁCTICA: marca el monto, abre la ventana y elige Boleta exenta, pero NO aprieta el botón final.")
 
     with sync_playwright() as pw:
         ctx, page = open_browser(pw)
@@ -329,8 +339,12 @@ def cmd_run(args, really_emit: bool) -> None:
                 exenta = choose_exenta(page)
                 fill_amount(page, p.amount)
                 if not really_emit:
-                    note = "marqué Exenta" if exenta else "no hay opción Exenta en esta pantalla: revisa que tu e-Boleta emita exentas"
-                    input(f"fila {p.row}: ${fmt(p.amount)} escrito ({note}). Revisa la pantalla y presiona Enter para la siguiente… ")
+                    open_dialog(page)  # abre la ventana y deja "Boleta exenta", pero NO aprieta el botón final
+                    print(f"fila {p.row}: ${fmt(p.amount)} marcado y ventana en Boleta exenta. Botones de la ventana: {', '.join(dialog_buttons(page))}")
+                    input("  Revisa Chrome (NO apretes nada en la ventana) y presiona Enter aquí para seguir… ")
+                    close = first_visible([page.get_by_role("button", name=re.compile(r"^\s*(close|cerrar|cancelar)\s*$", re.I))], timeout=1000)
+                    if close is not None:
+                        close.click()
                     continue
                 emit(page)
                 folio = read_folio(page, p.amount)
