@@ -58,6 +58,15 @@ def to_amount(value: object) -> int | None:
     return int(d)
 
 
+def to_number(value: object) -> Decimal | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return Decimal(str(value).strip().replace(".", "").replace(",", ".") if isinstance(value, str) else str(value))
+    except InvalidOperation:
+        return None
+
+
 def read_rows(path: Path, first: int, last: int, sheet: str = SHEET, column: str = COLUMN) -> list[tuple[int, int | None, object]]:
     """(fila, monto, valor original) de la columna indicada. Lee el valor calculado de las fórmulas (=B-C)."""
     from openpyxl import load_workbook
@@ -72,12 +81,30 @@ def read_rows(path: Path, first: int, last: int, sheet: str = SHEET, column: str
     from openpyxl.utils import column_index_from_string
     col = column_index_from_string(column)
     # Se leen solo las filas pedidas, de una pasada (leer celda por celda recorre el libro entero cada vez).
+    # Columnas B..D: si D viene sin valor guardado, se calcula con su fórmula =B-C.
     out = []
-    for r, (raw,) in zip(range(first, last + 1), ws.iter_rows(min_row=first, max_row=last, min_col=col, max_col=col, values_only=True)):
-        out.append((r, to_amount(raw), raw))
-    out += [(r, None, None) for r in range(first + len(out), last + 1)]  # filas más allá del final del libro
+    first_col = min(col, 2)
+    cells = ws.iter_rows(min_row=first, max_row=last, min_col=first_col, max_col=col, values_only=True)
+    for r, vals in zip(range(first, last + 1), cells):
+        raw = vals[col - first_col]
+        out.append([r, to_amount(raw), raw, vals[2 - first_col] if col > 2 else None, vals[3 - first_col] if col > 3 else None])
+    out += [[r, None, None, None, None] for r in range(first + len(out), last + 1)]  # filas más allá del final del libro
     wb.close()
-    return out
+    missing = [x for x in out if x[2] in (None, "")]
+    if missing:
+        # Fórmula sin resultado guardado (pasa si el libro no lo calculó al guardar): se resuelve =B{n}-C{n}.
+        wf = load_workbook(path, data_only=False, read_only=True)
+        rows_f = wf[sheet].iter_rows(min_row=first, max_row=last, min_col=col, max_col=col, values_only=True)
+        formulas = {r: (f or "") for r, (f,) in zip(range(first, last + 1), rows_f)}
+        wf.close()
+        for x in missing:
+            m = re.fullmatch(r"=\s*B(\d+)\s*-\s*C(\d+)\s*", str(formulas.get(x[0], "")), re.I)
+            if m and int(m.group(1)) == int(m.group(2)) == x[0]:
+                bv, cv = to_number(x[3]), to_number(x[4])
+                if bv is not None and cv is not None:
+                    x[2] = f"=B{x[0]}-C{x[0]} → {bv - cv}"
+                    x[1] = to_amount(bv - cv)
+    return [(r, amount, raw) for r, amount, raw, _, _ in out]
 
 
 def pick_excel(given: str | None) -> Path:

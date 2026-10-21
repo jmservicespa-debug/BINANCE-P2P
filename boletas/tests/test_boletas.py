@@ -148,3 +148,16 @@ def test_practica_no_emite(tmp_path, monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "ventana en Boleta exenta" in out and "EMITIR" in out
     assert not log.exists()  # nada emitido
+
+
+def test_formula_sin_valor_guardado(tmp_path):
+    """Libro guardado sin el resultado de =B-C (pasa con algunos programas): se calcula la resta."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "SEGUNDA HOJA"
+    ws["B10039"], ws["C10039"], ws["D10039"] = 10000, 10, "=B10039-C10039"
+    ws["B10040"], ws["C10040"], ws["D10040"] = 5000, 5, "=B10039-C10040"  # fórmula rara: no se adivina
+    p = tmp_path / "f.xlsx"
+    wb.save(p)  # openpyxl no guarda resultados de fórmulas
+    rows = b.read_rows(p, 10039, 10040)
+    assert [(r, a) for r, a, _ in rows] == [(10039, 9990), (10040, None)]
