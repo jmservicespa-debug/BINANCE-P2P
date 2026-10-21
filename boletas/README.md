@@ -32,13 +32,14 @@ Usa el Chrome que ya tienes instalado. El libro debe ser `.xlsx`.
    ```
 2. **Práctica**: llena cada boleta (exenta + monto) pero NO aprieta Emitir. Revisas la pantalla y Enter.
    ```
-   python boletas.py practica --excel "C:\ruta\JM SERVICES SPA.xlsx" --desde 10026 --hasta 10028
+   python boletas.py practica --desde 10026 --hasta 10028
    ```
 3. **Emitir**:
    ```
-   python boletas.py emitir --excel "C:\ruta\JM SERVICES SPA.xlsx" --desde 10026 --hasta 10040
+   python boletas.py emitir --desde 10026 --hasta 10040
    ```
-   `--desde` y `--hasta` son los números de fila del Excel (máximo 500 por tanda).
+   `--desde` y `--hasta` son los números de fila del Excel (máximo 500 por tanda). La primera vez se abre una ventana
+   para elegir el libro; después pregunta si usar el mismo (o `--excel "C:\ruta\libro.xlsx"`).
 
 Guarda el Excel antes de correrlo: el programa lee el último valor guardado de la columna D (resultado de `=B-C`).
 

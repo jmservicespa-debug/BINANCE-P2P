@@ -24,6 +24,7 @@ HERE = Path(__file__).resolve().parent
 EMITIR_URL = "https://eboleta.sii.cl/emitir/"
 PROFILE_DIR = HERE / ".perfil-chrome"  # sesión de Chrome solo para este programa (no se sube a GitHub)
 LOG = HERE / "boletas_emitidas.csv"
+LAST_EXCEL = HERE / "ultimo_excel.txt"  # ruta del último libro usado (solo en este computador)
 SHEET = "SEGUNDA HOJA"
 COLUMN = "D"
 FOLIO_RE = re.compile(r"BOLETA\s+EXENTA\s+ELECTR[OÓ]NICA\s+N[UÚ]MERO\s*:?\s*([\d.]+)", re.I)
@@ -73,6 +74,34 @@ def read_rows(path: Path, first: int, last: int, sheet: str = SHEET, column: str
         out.append((r, to_amount(raw), raw))
     wb.close()
     return out
+
+
+def pick_excel(given: str | None) -> Path:
+    """Ruta del libro: la que se escribió, o se elige en una ventana (y se recuerda para la próxima vez)."""
+    if given and given.strip().upper() != "RUTA":
+        path = Path(given.strip().strip('"'))
+    else:
+        last = LAST_EXCEL.read_text(encoding="utf-8").strip() if LAST_EXCEL.exists() else ""
+        if last and Path(last).exists() and input(f'Usar el libro "{last}"? (Enter = sí, N = elegir otro): ').strip().upper() != "N":
+            path = Path(last)
+        else:
+            try:
+                import tkinter as tk
+                from tkinter import filedialog
+                root = tk.Tk()
+                root.withdraw()
+                root.attributes("-topmost", True)
+                chosen = filedialog.askopenfilename(title="Elige tu libro de Excel", filetypes=[("Excel", "*.xlsx"), ("Todos", "*.*")])
+                root.destroy()
+            except Exception:
+                chosen = input("Pega la ruta del Excel (clic derecho en el archivo → Copiar como ruta de acceso): ")
+            if not chosen:
+                raise SystemExit("No elegiste ningún archivo.")
+            path = Path(chosen.strip().strip('"'))
+    if not path.exists():
+        raise SystemExit(f"No encuentro el archivo: {path}")
+    LAST_EXCEL.write_text(str(path), encoding="utf-8")
+    return path
 
 
 def done_rows(log: Path | None = None) -> dict[int, dict]:
@@ -316,7 +345,7 @@ def cmd_diagnostico(args) -> None:
 def cmd_run(args, really_emit: bool) -> None:
     from playwright.sync_api import sync_playwright
 
-    rows = read_rows(Path(args.excel), args.desde, args.hasta, args.hoja, args.columna)
+    rows = read_rows(pick_excel(args.excel), args.desde, args.hasta, args.hoja, args.columna)
     todo, notes = plan(rows, done_rows())
     for n in notes:
         print("  ·", n)
@@ -373,7 +402,7 @@ def main(argv=None) -> None:
     d.add_argument("--tras-emitir", action="store_true", help="marca $1.000, aprieta EMITIR y anota la ventana del tipo de boleta (sin elegir)")
     for name in ("practica", "emitir"):
         p = sub.add_parser(name)
-        p.add_argument("--excel", required=True)
+        p.add_argument("--excel", help="ruta del libro .xlsx (si no se pone, se elige en una ventana)")
         p.add_argument("--desde", type=int, required=True, help="primera fila del Excel")
         p.add_argument("--hasta", type=int, required=True, help="última fila del Excel")
         p.add_argument("--hoja", default=SHEET)
