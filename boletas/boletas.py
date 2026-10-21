@@ -161,16 +161,25 @@ def choose_exenta(page) -> bool:
     return True
 
 
-def shown_amount(page) -> str:
-    """Dígitos que muestra la casilla del monto (la casilla de texto de la pantalla de emitir)."""
-    box = page.locator("input[type=text]").first
-    return re.sub(r"\D", "", box.input_value()) if box.count() else ""
+def amount_on_screen(page, amount: int, before: str) -> bool:
+    """¿La pantalla muestra el monto? Sirve una casilla con ese número, o que "14.985" aparezca en el texto
+    de la página después de marcarlo (y no estuviera antes)."""
+    for box in page.locator("input[type=text], input[type=tel], input[type=number]").all():
+        try:
+            if re.sub(r"\D", "", box.input_value()) == str(amount):
+                return True
+        except Exception:
+            continue
+    pat = re.compile(r"(?<![\d.])" + re.escape(fmt(amount)) + r"(?![\d.])") if amount >= 1000 else re.compile(r"\$\s*" + str(amount) + r"(?!\d)")
+    after = page.locator("body").inner_text()
+    return len(pat.findall(after)) > len(pat.findall(before))
 
 
 def fill_amount(page, amount: int) -> None:
     """eboleta usa un teclado en pantalla (0–9, delete, backspace): se borra y se marcan los dígitos.
     Después se comprueba que la casilla muestre exactamente el monto; si no, no se emite."""
     key = lambda name: page.get_by_role("button", name=name, exact=True)
+    before = page.locator("body").inner_text()
     if key("0").count():
         if key("delete").count():
             key("delete").first.click()
@@ -181,9 +190,9 @@ def fill_amount(page, amount: int) -> None:
         if not box.count():
             raise RuntimeError("no encontré dónde escribir el monto")
         box.fill(str(amount))
-    got = shown_amount(page)
-    if got != str(amount):
-        raise RuntimeError(f"la pantalla muestra {got or 'nada'} en vez de {amount}")
+    page.wait_for_timeout(300)
+    if not amount_on_screen(page, amount, before):
+        raise RuntimeError(f"no veo el monto {fmt(amount)} en la pantalla después de marcarlo")
 
 
 def pick_exenta_after_emit(page) -> None:
@@ -233,8 +242,9 @@ DUMP_JS = """() => {
   const out = [];
   document.querySelectorAll('input, select, textarea, button, [role=button], [role=radio], [role=tab], [role=option], [role=listitem], .v-list-item, a').forEach((el) => {
     if (!vis(el) || el.type === 'password' || el.type === 'hidden') return;
+    const val = 'value' in el && el.tagName !== 'BUTTON' && el.value ? ` valor="${String(el.value).slice(0, 30)}"` : '';
     const opts = el.tagName === 'SELECT' ? ' opciones=' + [...el.options].map((o) => o.text).join(' | ') : '';
-    out.push(`${el.tagName.toLowerCase()} role=${el.getAttribute('role') || ''} type=${el.type || ''} id=${el.id} texto="${(el.innerText || '').trim().replace(/\\s+/g, ' ').slice(0, 50)}" etiqueta="${lab(el).trim().slice(0, 40)}"${opts}`);
+    out.push(`${el.tagName.toLowerCase()} role=${el.getAttribute('role') || ''} type=${el.type || ''} id=${el.id} texto="${(el.innerText || '').trim().replace(/\\s+/g, ' ').slice(0, 50)}" etiqueta="${lab(el).trim().slice(0, 40)}"${val}${opts}`);
   });
   document.querySelectorAll('[role=dialog], .v-dialog, .v-overlay__content, .modal').forEach((d) => {
     if (vis(d)) out.push('VENTANA: ' + d.innerText.trim().replace(/\\s+/g, ' ').slice(0, 300));
@@ -249,18 +259,27 @@ def cmd_diagnostico(args) -> None:
     with sync_playwright() as pw:
         ctx, page = open_browser(pw)
         ensure_logged_in(page)
+        problem = None
         if args.tras_emitir:
             # Marca $1.000 y aprieta EMITIR solo para ver la ventana del tipo de boleta; NO elige nada.
-            fill_amount(page, 1000)
-            btn = first_visible([page.get_by_role("button", name=re.compile(r"^\s*emitir\s*$", re.I))])
-            if btn is None:
-                raise SystemExit('no encontré el botón "EMITIR"')
-            btn.click()
-            page.wait_for_timeout(2500)
+            try:
+                fill_amount(page, 1000)
+                btn = first_visible([page.get_by_role("button", name=re.compile(r"^\s*emitir\s*$", re.I))])
+                if btn is None:
+                    raise RuntimeError('no encontré el botón "EMITIR"')
+                btn.click()
+                page.wait_for_timeout(2500)
+            except Exception as e:  # se anota igual lo que hay en pantalla, sin apretar EMITIR
+                problem = str(e)
         info = page.evaluate(DUMP_JS)
+        if problem:
+            info.insert(0, f"PROBLEMA: {problem} (no se apretó EMITIR)")
+        page.screenshot(path=str(HERE / "diagnostico_eboleta.png"))
         target = HERE / "diagnostico_eboleta.txt"
         target.write_text(f"{page.url}\n" + "\n".join(info), encoding="utf-8")
-        print(f"\nListo: {len(info)} elementos anotados en {target}")
+        print(f"\nListo: {len(info)} elementos anotados en {target} (y foto de la pantalla en diagnostico_eboleta.png)")
+        if problem:
+            print(f"Ojo: {problem}. No se apretó EMITIR.")
         print("Mándale a Claude una foto o el texto de ese archivo (no contiene tu clave).")
         if args.tras_emitir:
             input("\nNO elijas nada en la ventana de Chrome: ciérrala o cancela, y luego presiona Enter aquí para cerrar… ")

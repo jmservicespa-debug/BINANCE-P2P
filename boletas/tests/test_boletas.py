@@ -102,3 +102,25 @@ def _chromium():
     import glob
     found = sorted(glob.glob("/opt/pw-browsers/chromium-*/chrome-linux*/chrome"))
     return found[-1] if found else None
+
+
+def test_monto_mostrado_como_texto(tmp_path, monkeypatch):
+    """Si el SII muestra el monto como texto (no en una casilla), igual se reconoce."""
+    from playwright.sync_api import sync_playwright
+
+    html = FAKE.replace("<input type=text id=input-33 readonly>", "<div id=input-33>$ 0</div>").replace("box.value", "box.textContent")
+    html = html.replace("if (t === 'delete') box.textContent = '';", "if (t === 'delete') box.textContent = '$ 0';")
+    html = html.replace("box.textContent = Number(", "box.textContent = '$ ' + Number(")
+    html = html.replace("(box.textContent.replace(/\\\\D/g, '') || '')", "(box.textContent.replace(/\\\\D/g, '').replace(/^0+/, '') || '')")
+    f = tmp_path / "e.html"
+    f.write_text(html, encoding="utf-8")
+    with sync_playwright() as pw:
+        br = pw.chromium.launch(executable_path=_chromium())
+        page = br.new_page()
+        page.goto(f.as_uri())
+        b.fill_amount(page, 14985)
+        assert "14.985" in page.locator("#input-33").inner_text()
+        with pytest.raises(RuntimeError):
+            page.evaluate("document.querySelectorAll('button').forEach((x) => { if (/^\\d$/.test(x.innerText)) x.onclick = null; })")
+            b.fill_amount(page, 2000)
+        br.close()
