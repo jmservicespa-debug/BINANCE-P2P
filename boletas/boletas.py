@@ -195,17 +195,26 @@ def fill_amount(page, amount: int) -> None:
         raise RuntimeError(f"no veo el monto {fmt(amount)} en la pantalla después de marcarlo")
 
 
+def pick_option(page, opener: re.Pattern, choice: re.Pattern, what: str) -> None:
+    """Selector desplegable de eboleta (Vuetify): se abre el que muestra `opener` y se elige la opción `choice`."""
+    box = first_visible([page.get_by_role("button", name=opener), page.locator("[role=button]").filter(has_text=opener)], timeout=5000)
+    if box is None:
+        raise RuntimeError(f"no encontré el selector de {what}")
+    if choice.search(box.inner_text()):
+        return  # ya estaba elegido
+    box.click()
+    opt = first_visible([page.get_by_role("option", name=choice), page.locator(".v-list-item, [role=option], [role=listitem]").filter(has_text=choice)], timeout=4000)
+    if opt is None:
+        raise RuntimeError(f"no encontré la opción de {what} que corresponde")
+    opt.click()
+    page.wait_for_timeout(300)
+    if not choice.search(box.inner_text()):
+        raise RuntimeError(f"el selector de {what} no quedó en la opción correcta")
+
+
 def pick_exenta_after_emit(page) -> None:
-    """Tras apretar EMITIR, eboleta pregunta el tipo de boleta: se elige la opción que dice "exenta"."""
-    re_ex = re.compile(r"exent", re.I)
-    el = first_visible([page.get_by_role("button", name=re_ex), page.get_by_role("radio", name=re_ex), page.get_by_role("option", name=re_ex),
-                        page.get_by_role("listitem").filter(has_text=re_ex), page.get_by_text(re_ex)], timeout=5000)
-    if el is None:
-        raise RuntimeError('después de EMITIR no apareció la opción "Exenta"')
-    if el.get_attribute("type") in ("radio", "checkbox"):
-        el.check()
-    else:
-        el.click()
+    """Tras apretar EMITIR, eboleta abre una ventana con el tipo de boleta ("Boleta afecta ▾"): se cambia a exenta."""
+    pick_option(page, re.compile(r"boleta\s+(afecta|exenta)", re.I), re.compile(r"boleta\s+exenta", re.I), "tipo de boleta")
 
 
 def emit(page) -> None:
@@ -214,8 +223,10 @@ def emit(page) -> None:
         raise RuntimeError('no encontré el botón "Emitir"')
     btn.click()
     pick_exenta_after_emit(page)
-    # Si el SII pide confirmar, se confirma (solo en modo emitir).
-    ok = first_visible([page.get_by_role("button", name=re.compile(r"^\s*(s[ií]|confirmar|aceptar|continuar|emitir)\s*$", re.I))], timeout=2000)
+    # El botón final está dentro de la ventana (no el EMITIR de la pantalla de atrás).
+    dialog = first_visible([page.locator(".v-dialog--active"), page.locator("[role=dialog]"), page.locator(".v-dialog"), page.locator(".v-overlay__content")], timeout=1000)
+    scope = dialog or page
+    ok = first_visible([scope.get_by_role("button", name=re.compile(r"^\s*(s[ií]|confirmar|aceptar|continuar|emitir)\s*$", re.I))], timeout=2000)
     if ok is not None:
         ok.click()
 

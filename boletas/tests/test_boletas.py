@@ -55,7 +55,7 @@ FAKE = """<!doctype html><meta charset=utf-8><h1>Emitir e-Boleta</h1>
 <button type=button>delete</button><button type=button>backspace</button>
 <button type=button>7</button><button type=button>8</button><button type=button>9</button><button type=button>4</button>
 <button type=button>5</button><button type=button>6</button><button type=button>1</button><button type=button>2</button>
-<button type=button>3</button><button type=button>0</button><button type=button id=e>EMITIR</button><div role=dialog id=tipo hidden><button type=button>Afecta</button><button type=button>Exenta</button></div><div id=out></div>
+<button type=button>3</button><button type=button>0</button><button type=button id=e>EMITIR</button><div role=dialog id=tipo hidden><div role=button id=sel>Boleta afecta arrow_drop_down</div><div id=menu hidden><div class=v-list-item id=o1>Boleta afecta</div><div class=v-list-item id=o2>Boleta exenta</div></div><button type=button>Aceptar</button></div><div id=out></div>
 <script>
 const box = document.getElementById('input-33');
 document.querySelectorAll('button').forEach((b) => b.onclick = () => {
@@ -63,10 +63,12 @@ document.querySelectorAll('button').forEach((b) => b.onclick = () => {
   if (/^\\d$/.test(t)) box.value = Number((box.value.replace(/\\D/g, '') || '') + t).toLocaleString('es-CL');
   if (t === 'delete') box.value = '';
   if (t === 'EMITIR') { document.getElementById('tipo').hidden = false; }
-  if (t === 'Afecta') document.getElementById('out').innerText = 'BOLETA ELECTRÓNICA AFECTA';
-  if (t === 'Exenta') { const m = Number(box.value.replace(/\\D/g, ''));
+  if (t === 'Aceptar' && !/exenta/i.test(document.getElementById('sel').innerText)) document.getElementById('out').innerText = 'BOLETA ELECTRÓNICA AFECTA';
+  if (t === 'Aceptar' && /exenta/i.test(document.getElementById('sel').innerText)) { const m = Number(box.value.replace(/\\D/g, ''));
     document.getElementById('out').innerText = 'BOLETA EXENTA ELECTRÓNICA NUMERO:\\n' + (21938 + m % 7).toLocaleString('es-CL') + '\\nMonto Total $ ' + m.toLocaleString('es-CL'); }
 });
+document.getElementById('sel').onclick = () => { document.getElementById('menu').hidden = false; };
+['o1', 'o2'].forEach((id) => document.getElementById(id).onclick = (e) => { document.getElementById('sel').innerText = e.target.innerText + ' arrow_drop_down'; document.getElementById('menu').hidden = true; });
 </script>"""
 
 
