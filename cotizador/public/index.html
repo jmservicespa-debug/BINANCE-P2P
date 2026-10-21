@@ -52,11 +52,22 @@
       </datalist>
     </div>
     <div id="quote">
+    <div class="usdt-ui" id="usdt-ui" hidden>
+      <div class="tabs" id="u-tabs" role="group" aria-label="Comprar o vender USDT">
+        <button data-side="buy" aria-pressed="true">Comprar USDT</button>
+        <button data-side="sell" aria-pressed="false">Vender USDT</button>
+      </div>
+      <label class="f" for="u-top"><span id="u-top-l">Pagas</span>
+        <span class="amount"><input id="u-top" inputmode="decimal" autocomplete="off"><span id="u-top-c">CLP</span></span></label>
+      <label class="f" for="u-bot"><span id="u-bot-l">Recibes</span>
+        <span class="amount"><input id="u-bot" inputmode="decimal" autocomplete="off"><span id="u-bot-c">USDT</span></span></label>
+      <div class="u-line" id="u-line" aria-live="polite"></div>
+    </div>
+    <div id="std">
     <div class="mode" id="modes">
       <button data-mode="send" aria-pressed="true">Yo envío</button>
       <button data-mode="get" aria-pressed="false">Quiero que reciba</button>
       <button data-mode="bcv" aria-pressed="false" id="mode-bcv" hidden>Equivalente en dólares BCV</button>
-      <button data-mode="sell" aria-pressed="false" id="mode-sell" hidden>Vendo USDT</button>
     </div>
     <label class="f" for="amount"><span id="amount-label">Monto que envías</span>
       <span class="amount"><input id="amount" inputmode="decimal" autocomplete="off" value="" placeholder="Ej. 100.000"><span id="amount-cur">CLP</span></span>
@@ -73,6 +84,7 @@
         <div class="row"><span>Dólar BCV <span id="b-date"></span></span><span id="b-rate"></span></div>
         <div class="row"><span>Equivale a</span><b id="b-usd"></b></div>
       </div>
+    </div>
     </div>
     </div>
     <div class="wa" id="wa"></div>

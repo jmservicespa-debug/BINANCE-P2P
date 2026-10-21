@@ -85,6 +85,13 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-size: 14px; colo
 .usdt-out b { font-family: var(--display); font-size: 20px; font-weight: 800; color: var(--accent); overflow-wrap: anywhere }
 .row2 > * { min-width: 0 } .row2 .amount { min-width: 0 } .row2 .amount input { font-size: 18px; width: 100% }
 .prov { display: flex; flex-direction: column; gap: 8px; margin: 2px 0 8px; padding: 10px 12px; border-radius: 12px; background: var(--sunken); border: 1px dashed var(--box-line) }
+.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border-radius: 14px; background: var(--sunken); border: 1px solid var(--line) }
+.tabs button { border: 0; background: transparent; border-radius: 10px; padding: 10px 6px; font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--muted) }
+.tabs button[aria-pressed="true"] { background: var(--brand); color: var(--brand-ink) }
+.usdt-ui { display: flex; flex-direction: column; gap: 12px }
+.u-line { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 12px; background: var(--box); border: 1px solid var(--box-line); font-size: 14px }
+.u-line b { font-family: var(--display); font-size: 18px; font-weight: 800 }
+.u-line span { color: var(--muted) }
 .soon { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; padding: 22px 16px; border-radius: 16px; background: var(--box); border: 1px solid var(--box-line) }
 .soon b { font-family: var(--display); font-size: 26px; font-weight: 800; color: var(--brand) }
 .soon p { margin: 0; color: var(--muted) }

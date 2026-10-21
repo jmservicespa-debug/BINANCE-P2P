@@ -30,10 +30,11 @@ no usa llaves de Binance ni toca la cuenta.
   entregar = CLP ÷ precio (2 decimales, hacia abajo). En el cotizador público aparece **USDT** en Chile solo si está marcada la casilla
   "USDT activo en el cotizador" (se guarda al instante); sin marcar no aparece para nadie.
   El precio lo lee el navegador del cliente desde CriptoYa (Vita + ganancia); si no puede, queda como "Mercado inestable".
-- **Comprar y vender**: en el cotizador, con USDT elegido, los botones son "Compro (en pesos)", "Compro (en USDT)" y
-  "Vendo USDT". Al vender, el cliente entrega USDT y recibe pesos al **precio de compra** = precio de compra (`bid`) de Vita
-  − ganancia al comprar (8 % por defecto, editable en el panel). Pesos a pagar = USDT × precio de compra (entero, hacia abajo).
-  Sin dato de compra, "Vendo USDT" queda como "Mercado inestable".
+- **Comprar y vender** (cotizador, con USDT elegido): dos botones, **Comprar USDT** y **Vender USDT**, y dos casillas enlazadas:
+  se escribe en cualquiera y la otra se calcula. Comprar: "Pagas (CLP)" → "Recibes (USDT)" al precio de venta.
+  Vender: "Entregas (USDT)" → "Recibes (CLP)" al **precio de compra** = precio de compra (`bid`) de Vita − ganancia al comprar
+  (8 % por defecto, editable en el panel). Redondeos a favor de no entregar de más: USDT a entregar hacia abajo, pesos a pagar al cliente hacia abajo,
+  USDT que debe entregar el cliente hacia arriba. Sin precio, el lado correspondiente queda como "Mercado inestable" (precio por WhatsApp).
 
 ## Otros países
 

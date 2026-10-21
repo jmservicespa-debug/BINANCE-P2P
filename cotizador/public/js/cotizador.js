@@ -61,6 +61,7 @@ function otherQuote() {
 }
 
 function calc() {
+  $('h-cot').textContent = 'Cotiza tu envío';
   const soon = Boolean(SOON[origin]);
   $('soon').hidden = !soon;
   $('wa').hidden = soon;
@@ -73,47 +74,47 @@ function calc() {
   if (isOther) { otherQuote(); return; }
   const r = ALL.find((x) => x.id === route);
   const o = ORIGINS[origin];
+  const isUsdt = r?.cur === 'USDT';
+  $('usdt-ui').hidden = !isUsdt;
+  $('std').hidden = isUsdt;
+  if (isUsdt) $('h-cot').textContent = 'Compra y venta de USDT';
+  if (isUsdt) { usdtQuote(r); return; }
   if (!r) { $('r-get').hidden = true; $('r-free').hidden = true; $('r-break').hidden = true; $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
   const bcv = data.bcv?.value;
   // "Equivalente en dólares BCV" (llegan bolívares): solo hacia Venezuela y con el dólar BCV disponible.
   const bcvOk = r.to.includes('VE') && bcv > 0;
   $('mode-bcv').hidden = !bcvOk;
   if (mode === 'bcv' && !bcvOk) setMode('send');
-  modeButtons(r);
-  if (mode === 'sell') { sellUsdt(r, o); return; }
   if (statusOf(r.id) === 'ask') { unstable(r, o); return; }
   $('r-big').classList.remove('ask');
   const rate = rateOf(r.id).rate;
   amountLabels(r, o);
   if (!$('amount').value.trim()) { rateOnly(r, o, rate); return; }
-  const isUsdt = r.cur === 'USDT';
-  const x = (isUsdt && mode === 'get' ? usdtNum : amountNum)($('amount').value);
+  const x = amountNum($('amount').value);
   const usd = mode === 'bcv' ? x : null;
   // Montos completos, sin decimales: desde ,50 se redondea hacia arriba; por debajo, hacia abajo.
   const target = mode === 'bcv' ? Math.round(x * bcv) : x;  // bolívares que deben llegar
   const send = Math.round(mode === 'send' ? x : invert(r, rate, target));
-  // USDT con 2 decimales, hacia abajo (nunca se entrega de más); el resto, entero.
-  const get = isUsdt ? Math.floor((mode === 'send' ? convert(r, rate, send) : target) * 100) / 100
-    : Math.round(mode === 'send' ? convert(r, rate, send) : target);
+  const get = Math.round(mode === 'send' ? convert(r, rate, send) : target);
   if (belowMin(r, send)) { minimum(r, o, send); return; }
   $('r-big').classList.remove('ask');
   $('r-free').hidden = false;
   $('r-break').hidden = false;
   $('r-break').innerHTML = [
-    [isUsdt ? 'Monto a pagar' : 'Monto a enviar', `${fmt(send, 0)} ${o.cur}`],
+    ['Monto a enviar', `${fmt(send, 0)} ${o.cur}`],
     ['Comisión', `0 ${o.cur}`],
     ['Cargos extras', `0 ${o.cur}`],
-    ['Tasa del día', isUsdt ? `${fmt(Number(rate), 2)} CLP por USDT` : rate],
+    ['Tasa del día', rate],
   ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')
     + `<dt class="total">Total a pagar</dt><dd class="total">${fmt(send, 0)} ${o.cur}</dd>`;
-  $('r-label').textContent = isUsdt ? (mode === 'send' ? 'Recibes' : 'Debes pagar') : mode === 'send' ? `Recibe en ${r.name}` : 'Debes enviar';
+  $('r-label').textContent = mode === 'send' ? `Recibe en ${r.name}` : 'Debes enviar';
   $('r-big').textContent = mode === 'send' ? `${fmt(get, r.dec)} ${r.cur}` : `${fmt(send, 0)} ${o.cur}`;
   // Lo que recibe la persona, bien visible cuando el cliente parte del monto a recibir.
   $('r-send').textContent = '';
   $('r-get').hidden = mode === 'send';
   if (mode !== 'send') {
     const ves = r.cur === 'VES';
-    $('g-label').textContent = isUsdt ? 'Recibes' : `Recibe en ${r.name}`;
+    $('g-label').textContent = `Recibe en ${r.name}`;
     $('g-amount').textContent = `${fmt(get, r.dec)} ${ves ? 'Bs' : r.cur}`;
     $('g-sub').textContent = mode === 'bcv' ? `Equivalen a ${fmt(usd, 0)} USD al dólar BCV` : ves ? 'Bolívares (VES)' : r.unit;
   }
@@ -129,7 +130,6 @@ function calc() {
   const ok = Number.isFinite(send) && Number.isFinite(get) && send > 0;
   const text = !ok ? '' : mode === 'bcv'
     ? `Hola, necesito que lleguen ${fmt(get, 0)} Bs a ${r.name} (equivalentes a ${fmt(usd, 0)} USD al dólar BCV), enviando desde ${o.name}. Según el cotizador debo pagar ${fmt(send, 0)} ${o.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`
-    : isUsdt ? `Hola, quiero comprar ${fmt(get, 2)} USDT pagando ${fmt(send, 0)} CLP (precio ${fmt(Number(rate), 2)} CLP por USDT, sin comisión). ¿Me confirmas?`
     : `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${dot(r.name)} Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`;
   $('wa').innerHTML = waButtons(text);
 }
@@ -157,81 +157,77 @@ function unstable(r, o) {
   $('r-break').hidden = true;
   amountLabels(r, o);
   const x = amountNum($('amount').value);
-  $('r-label').textContent = r.cur === 'USDT' ? 'USDT' : `Envíos a ${r.name}`;
+  $('r-label').textContent = `Envíos a ${r.name}`;
   $('r-big').textContent = 'Mercado inestable';
   $('r-big').classList.add('ask');
-  $('r-send').textContent = r.cur === 'USDT' ? 'El precio se confirma por WhatsApp.' : 'La tasa de este envío se confirma por WhatsApp.';
+  $('r-send').textContent = 'La tasa de este envío se confirma por WhatsApp.';
   $('r-rate').textContent = '';
   $('r-bcv').hidden = true;
   $('dest-note').textContent = r.note || '';
   $('r-min').textContent = r.min ? `Envío mínimo: ${fmt(r.min, 0)} ${o.cur}` : '';
   if (mode === 'send' && belowMin(r, x)) { minimum(r, o, x); return; }
-  const amount = r.cur === 'USDT' ? (mode === 'sell' ? 'vender USDT' : 'comprar USDT')
-    : !(Number.isFinite(x) && x > 0) ? 'hacer un envío'
+  const amount = !(Number.isFinite(x) && x > 0) ? 'hacer un envío'
     : mode === 'send' ? `enviar ${fmt(x, 0)} ${o.cur}` : mode === 'bcv' ? `que lleguen bolívares equivalentes a ${fmt(x, 0)} USD al dólar BCV` : `que reciban ${fmt(x, r.dec)} ${r.cur}`;
-  $('wa').innerHTML = waButtons(r.cur === 'USDT' ? `Hola, quiero ${amount}. ¿Me das el precio de este momento?`
-    : `Hola, quiero ${amount} desde ${o.name} a ${dot(r.name)} ¿Me das la tasa de este momento?`, 'Pedir tasa');
+  $('wa').innerHTML = waButtons(`Hola, quiero ${amount} desde ${o.name} a ${dot(r.name)} ¿Me das la tasa de este momento?`, 'Pedir tasa');
 }
 
 function amountLabels(r, o) {
   placeholder(r, o);
-  $('amount-label').textContent = r.cur === 'USDT'
-    ? { send: 'Pesos que pagas', get: 'USDT que quieres', sell: 'USDT que vendes' }[mode]
-    : { send: 'Monto que envías', get: 'Monto que debe recibir', bcv: 'Los bolívares deben equivaler a' }[mode];
+  $('amount-label').textContent = { send: 'Monto que envías', get: 'Monto que debe recibir', bcv: 'Los bolívares deben equivaler a' }[mode];
   $('amount-cur').textContent = mode === 'send' ? o.cur : mode === 'bcv' ? 'USD BCV' : r.cur;
 }
 
-// USDT: "Yo envío" / "Quiero que reciba" pasan a ser compra en pesos o en USDT, más la opción de vender.
-function modeButtons(r) {
-  const isUsdt = r.cur === 'USDT';
-  const btn = (m) => document.querySelector(`#modes button[data-mode="${m}"]`);
-  btn('send').textContent = isUsdt ? 'Compro (en pesos)' : 'Yo envío';
-  btn('get').textContent = isUsdt ? 'Compro (en USDT)' : 'Quiero que reciba';
-  $('mode-sell').hidden = !isUsdt;
-  if (mode === 'sell' && !isUsdt) setMode('send');
-}
-
-// Vender USDT: el cliente entrega USDT y recibe pesos al precio de compra (bid de Vita − ganancia al comprar).
-function sellUsdt(r, o) {
-  const buy = rateOf(r.id)?.buyRate;
-  amountLabels(r, o);
-  if (!buy) { unstable(r, o); return; }
-  $('r-big').classList.remove('ask');
-  const x = usdtNum($('amount').value);
-  ['r-get', 'r-bcv'].forEach((id) => { $(id).hidden = true; });
-  $('r-rate').textContent = '';
-  $('r-min').textContent = '';
-  $('dest-note').textContent = 'Envías los USDT a la wallet o cuenta de Binance que te indiquemos (la red se confirma por WhatsApp)';
-  if (!$('amount').value.trim()) {
-    $('r-free').hidden = true; $('r-break').hidden = true;
-    $('r-big').classList.add('ask');
-    $('r-label').textContent = 'Te compramos tus USDT';
-    $('r-big').textContent = `${fmt(Number(buy), 2)} CLP por USDT`;
-    $('r-send').textContent = 'Escribe cuántos USDT vendes para ver cuántos pesos recibes.';
-    $('wa').innerHTML = waButtons('Hola, quiero vender USDT.');
+// USDT: Comprar o Vender, con dos casillas enlazadas (se escribe en cualquiera y la otra se calcula).
+// Comprar: pagas CLP, recibes USDT (precio de venta). Vender: entregas USDT, recibes CLP (precio de compra).
+let side = 'buy', edited = 'top';
+const usdtFmt = (v) => fmt(v, 2), clpFmt = (v) => fmt(v, 0);
+function usdtQuote(r) {
+  const buy = side === 'buy';
+  const price = Number(buy ? rateOf(r.id)?.rate : rateOf(r.id)?.buyRate);
+  const ok = statusOf(r.id) === 'on' && price > 0;
+  // Casilla de arriba: lo que entrega el cliente; abajo: lo que recibe.
+  $('u-top-l').textContent = buy ? 'Pagas' : 'Entregas';
+  $('u-top-c').textContent = buy ? 'CLP' : 'USDT';
+  $('u-bot-l').textContent = 'Recibes';
+  $('u-bot-c').textContent = buy ? 'USDT' : 'CLP';
+  $('u-top').placeholder = buy ? 'Ej. 100.000' : 'Ej. 100';
+  $('u-bot').placeholder = buy ? 'Ej. 100' : 'Ej. 100.000';
+  $('dest-note').textContent = buy ? r.note : 'Envías los USDT a la wallet o cuenta de Binance que te indiquemos (la red se confirma por WhatsApp)';
+  if (!ok) {
+    $('u-line').innerHTML = '<b>Mercado inestable</b><span>El precio se confirma por WhatsApp.</span>';
+    $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} USDT. ¿Me das el precio de este momento?`, 'Pedir precio');
     return;
   }
-  const clp = Math.floor(Math.round(x * Number(buy) * 100) / 100);  // pesos enteros, hacia abajo
-  const ok = Number.isFinite(clp) && clp > 0;
-  $('r-free').hidden = false;
-  $('r-break').hidden = false;
-  $('r-break').innerHTML = [
-    ['USDT que entregas', `${fmt(x, 2)} USDT`],
-    ['Comisión', '0 CLP'],
-    ['Precio de compra', `${fmt(Number(buy), 2)} CLP por USDT`],
-  ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')
-    + `<dt class="total">Total a recibir</dt><dd class="total">${fmt(clp, 0)} ${o.cur}</dd>`;
-  $('r-label').textContent = 'Recibes en pesos';
-  $('r-big').textContent = `${fmt(clp, 0)} ${o.cur}`;
-  $('r-send').textContent = '';
-  $('wa').innerHTML = waButtons(ok ? `Hola, quiero vender ${fmt(x, 2)} USDT. Según el cotizador recibo ${fmt(clp, 0)} CLP (precio ${fmt(Number(buy), 2)} CLP por USDT, sin comisión). ¿Me confirmas?` : 'Hola, quiero vender USDT.');
+  $('u-line').innerHTML = `<b class="num">1 USDT = ${fmt(price, 2)} CLP</b><span>Comisión 0 % · Sin cargos extras</span>`;
+  const src = $(edited === 'top' ? 'u-top' : 'u-bot'), dst = $(edited === 'top' ? 'u-bot' : 'u-top');
+  if (!src.value.trim()) { dst.value = ''; $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} USDT.`); return; }
+  // Lo que escribe el cliente está en USDT o en CLP según la casilla y el lado.
+  const srcIsUsdt = (edited === 'top') !== buy;
+  const x = (srcIsUsdt ? usdtNum : amountNum)(src.value);
+  let usdt, clp;
+  if (srcIsUsdt) {
+    usdt = x;
+    // Comprar: cobra redondeado al peso. Vender: paga hacia abajo (sin pagar de más).
+    clp = buy ? Math.round(usdt * price) : Math.floor(Math.round(usdt * price * 100) / 100);
+  } else {
+    clp = x;
+    // Comprar: USDT a entregar, hacia abajo. Vender: USDT que debe entregar para recibir ese monto, hacia arriba.
+    usdt = buy ? Math.floor((clp / price) * 100) / 100 : Math.ceil(Math.round((clp / price) * 1e6) / 1e4) / 100;
+  }
+  const good = Number.isFinite(usdt) && Number.isFinite(clp) && usdt > 0 && clp > 0;
+  dst.value = good ? (srcIsUsdt ? clpFmt(clp) : usdtFmt(usdt)) : '';
+  $('wa').innerHTML = waButtons(!good ? `Hola, quiero ${buy ? 'comprar' : 'vender'} USDT.` : buy
+    ? `Hola, quiero comprar ${usdtFmt(usdt)} USDT pagando ${clpFmt(clp)} CLP (precio ${fmt(price, 2)} CLP por USDT, sin comisión). ¿Me confirmas?`
+    : `Hola, quiero vender ${usdtFmt(usdt)} USDT y recibir ${clpFmt(clp)} CLP (precio ${fmt(price, 2)} CLP por USDT, sin comisión). ¿Me confirmas?`);
 }
-
-function setMode(m) {
-  mode = m;
-  document.querySelectorAll('#modes button').forEach((o) => o.setAttribute('aria-pressed', String(o.dataset.mode === m)));
-  $('amount').value = '';  // cambia la moneda de la casilla: el cliente escribe su monto
-}
+document.querySelectorAll('#u-tabs button').forEach((b) => b.onclick = () => {
+  side = b.dataset.side; edited = 'top';
+  document.querySelectorAll('#u-tabs button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  $('u-top').value = ''; $('u-bot').value = '';
+  calc();
+});
+$('u-top').oninput = () => { edited = 'top'; calc(); };
+$('u-bot').oninput = () => { edited = 'bot'; calc(); };
 
 // Casilla vacía al inicio: se muestra la tasa del día y un ejemplo en gris según la moneda.
 const EXAMPLES = { CLP: '100.000', COP: '200.000', VES: '100.000', PEN: '300', USD: '100', USDT: '100', BRL: '500' };
@@ -241,17 +237,15 @@ function placeholder(r, o) {
 }
 
 function rateOnly(r, o, rate) {
-  const isUsdt = r.cur === 'USDT';
   ['r-get', 'r-free', 'r-break', 'r-bcv'].forEach((id) => { $(id).hidden = true; });
   $('r-big').classList.add('ask');
   $('r-label').textContent = `Tasa del día · ${r.name}`;
-  $('r-big').textContent = isUsdt ? `${fmt(Number(rate), 2)} CLP por USDT` : rate;
-  $('r-send').textContent = !isUsdt ? 'Escribe el monto para ver cuánto recibe.'
-    : mode === 'get' ? 'Escribe cuántos USDT quieres para ver cuánto pagas.' : 'Escribe los pesos para ver cuántos USDT recibes.';
+  $('r-big').textContent = rate;
+  $('r-send').textContent = 'Escribe el monto para ver cuánto recibe.';
   $('r-rate').textContent = '';
   $('r-min').textContent = r.min ? `Envío mínimo: ${fmt(r.min, 0)} ${o.cur}` : '';
   $('dest-note').textContent = r.note || '';
-  $('wa').innerHTML = waButtons(isUsdt ? 'Hola, quiero comprar USDT.' : `Hola, quiero cotizar un envío desde ${o.name} a ${dot(r.name)}`);
+  $('wa').innerHTML = waButtons(`Hola, quiero cotizar un envío desde ${o.name} a ${dot(r.name)}`);
 }
 
 function waButtons(text, action) {
