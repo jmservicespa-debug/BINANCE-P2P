@@ -3,3 +3,5 @@ boletas_emitidas.csv
 diagnostico_eboleta.txt
 diagnostico_eboleta.png
 ultimo_excel.txt
+boleta_fila_*.png
+diagnostico_boleta_emitida.txt

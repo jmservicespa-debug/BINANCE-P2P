@@ -291,8 +291,9 @@ def dialog_buttons(page) -> list[str]:
     return [t.strip() for t in scope.get_by_role("button").all_inner_texts() if t.strip()]
 
 
-def emit(page) -> None:
-    """EMITIR de la pantalla → ventana en "Boleta exenta" → EMITIR de la ventana (el método de pago se deja vacío)."""
+def emit(page, before_final=lambda: None) -> None:
+    """EMITIR de la pantalla → ventana en "Boleta exenta" → EMITIR de la ventana (el método de pago se deja vacío).
+    `before_final` se llama justo antes del clic final: ahí la fila se anota, para que nunca se emita dos veces."""
     open_dialog(page)
     re_final = re.compile(r"^\s*emitir\s*$", re.I)
     dialog = first_visible([page.locator(".v-dialog--active"), page.locator("[role=dialog]"), page.locator(".v-dialog"), page.locator(".v-overlay__content")], timeout=1000)
@@ -304,21 +305,49 @@ def emit(page) -> None:
         final = buttons.last if buttons.count() >= 2 else None
     if final is None:
         raise RuntimeError('no encontré el botón EMITIR de la ventana')
+    before_final()
     final.click()
 
 
-def read_folio(page, amount: int, timeout_s: int = 30) -> str:
-    """Espera la boleta emitida, comprueba el monto y devuelve el número (folio)."""
+def folio_in_json(obj) -> str | None:
+    """Busca un campo "folio" (o parecido) en la respuesta del SII."""
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if re.fullmatch(r"(folio|nro_?folio|numero_?folio|folioboleta)", str(k), re.I) and str(v).strip().replace(".", "").isdigit():
+                return str(v).strip()
+        obj = list(obj.values())
+    if isinstance(obj, list):
+        for v in obj:
+            got = folio_in_json(v)
+            if got:
+                return got
+    return None
+
+
+def read_folio(page, amount: int, responses: list, timeout_s: int = 30) -> str | None:
+    """Número de la boleta emitida. El SII la muestra como imagen, así que se busca en el texto de la página y sus
+    marcos, y en lo que respondió el SII al emitir. Si se ve un folio con otro monto, se detiene."""
     deadline = datetime.now().timestamp() + timeout_s
     while datetime.now().timestamp() < deadline:
-        text = page.locator("body").inner_text()
-        m = FOLIO_RE.search(text)
-        if m:
-            if fmt(amount) not in text and str(amount) not in text:
-                raise RuntimeError(f"la boleta {m.group(1)} no muestra el monto {fmt(amount)}: revísala en el SII")
-            return m.group(1)
+        for frame in page.frames:
+            try:
+                text = frame.locator("body").inner_text(timeout=1000)
+            except Exception:
+                continue
+            m = FOLIO_RE.search(text)
+            if m:
+                if fmt(amount) not in text and str(amount) not in text:
+                    raise RuntimeError(f"la boleta {m.group(1)} no muestra el monto {fmt(amount)}: revísala en el SII")
+                return m.group(1)
+        for r in list(responses):
+            try:
+                got = folio_in_json(r.json())
+            except Exception:
+                got = None
+            if got:
+                return got
         page.wait_for_timeout(500)
-    raise RuntimeError("no apareció el número de la boleta emitida")
+    return None
 
 
 # ------------------------------------------------------------------ comandos
@@ -416,11 +445,33 @@ def cmd_run(args, really_emit: bool) -> None:
                     if close is not None:
                         close.click()
                     continue
-                emit(page)
-                folio = read_folio(page, p.amount)
-                record(p.row, p.amount, folio)
+                responses = []
+
+                def keep(r, responses=responses):
+                    if "sii.cl" in r.url and "json" in (r.headers.get("content-type") or ""):
+                        responses.append(r)
+
+                page.on("response", keep)
+                try:
+                    emit(page, before_final=lambda: record(p.row, p.amount, "pendiente"))
+                    folio = read_folio(page, p.amount, responses)
+                finally:
+                    page.remove_listener("response", keep)
                 emitted += 1
-                print(f"  ✓ fila {p.row}: ${fmt(p.amount)} → boleta N° {folio}")
+                if folio:
+                    record(p.row, p.amount, folio)
+                    print(f"  ✓ fila {p.row}: ${fmt(p.amount)} → boleta N° {folio}")
+                    continue
+                # Emitida pero sin número legible: queda anotada (no se repite) y se guarda foto para revisar.
+                shot = HERE / f"boleta_fila_{p.row}.png"
+                page.screenshot(path=str(shot))
+                record(p.row, p.amount, "emitida-sin-numero")
+                info = page.evaluate(DUMP_JS)
+                (HERE / "diagnostico_boleta_emitida.txt").write_text(
+                    "\n".join([page.url, f"marcos: {[f.url for f in page.frames]}", f"respuestas: {[r.url for r in responses]}"] + info), encoding="utf-8")
+                print(f"  ✓ fila {p.row}: ${fmt(p.amount)} emitida, pero no pude leer el número (foto en {shot.name}).")
+                print("    Queda anotada y no se repetirá. Me detengo para que lo revises; mándale a Claude diagnostico_boleta_emitida.txt.")
+                break
             except Exception as e:  # cualquier cosa rara: se detiene para no emitir de más
                 print(f"\n✗ fila {p.row}: {e}. Me detengo aquí; revisa el SII antes de seguir.")
                 input("Presiona Enter para cerrar Chrome… ")
@@ -428,6 +479,12 @@ def cmd_run(args, really_emit: bool) -> None:
         if really_emit:
             print(f"\nEmitidas: {emitted} de {len(todo)}. Registro: {LOG}")
         ctx.close()
+
+
+def cmd_marcar(args) -> None:
+    """Anota a mano una fila ya emitida (por ejemplo, hecha en el SII sin el programa) para que no se repita."""
+    record(args.fila, args.monto, args.folio)
+    print(f"Anotada: fila {args.fila}, ${fmt(args.monto)}, boleta N° {args.folio}. No se volverá a emitir.")
 
 
 def cmd_revisar(args) -> None:
@@ -459,6 +516,10 @@ def main(argv=None) -> None:
     sub = ap.add_subparsers(dest="cmd", required=True)
     d = sub.add_parser("diagnostico", help="anota los campos de la página de emitir")
     d.add_argument("--tras-emitir", action="store_true", help="marca $1.000, aprieta EMITIR y anota la ventana del tipo de boleta (sin elegir)")
+    mk = sub.add_parser("marcar", help="anota a mano una fila ya emitida para que no se repita")
+    mk.add_argument("--fila", type=int, required=True)
+    mk.add_argument("--monto", type=int, required=True)
+    mk.add_argument("--folio", required=True)
     rv = sub.add_parser("revisar", help="muestra qué hay en esas filas del archivo guardado (no emite)")
     rv.add_argument("--excel")
     rv.add_argument("--desde", type=int, required=True)
@@ -474,6 +535,8 @@ def main(argv=None) -> None:
     args = ap.parse_args(argv)
     if args.cmd == "diagnostico":
         cmd_diagnostico(args)
+    elif args.cmd == "marcar":
+        cmd_marcar(args)
     elif args.cmd == "revisar":
         cmd_revisar(args)
     else:

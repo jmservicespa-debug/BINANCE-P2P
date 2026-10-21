@@ -97,7 +97,7 @@ def test_emite_en_pagina_de_prueba(tmp_path, monkeypatch):
     assert rows[10026]["monto"] == "14985" and rows[10026]["folio"]
     # Segunda pasada: nada pendiente, no se emite de nuevo.
     b.main(["emitir", "--excel", str(libro(tmp_path)), "--desde", "10026", "--hasta", "10028"])
-    assert len(log.read_text(encoding="utf-8").strip().splitlines()) == 3
+    assert len(log.read_text(encoding="utf-8").strip().splitlines()) == 5  # encabezado + "pendiente" y folio por boleta; nada nuevo
 
 
 def _chromium():
@@ -161,3 +161,38 @@ def test_formula_sin_valor_guardado(tmp_path):
     wb.save(p)  # openpyxl no guarda resultados de fórmulas
     rows = b.read_rows(p, 10039, 10040)
     assert [(r, a) for r, a, _ in rows] == [(10039, 9990), (10040, None)]
+
+
+def test_boleta_sin_numero_legible_queda_anotada(tmp_path, monkeypatch):
+    """Si el SII muestra la boleta como imagen (sin texto), la fila queda anotada y el programa se detiene."""
+    html = FAKE.replace("document.getElementById('out').innerText = 'BOLETA EXENTA", "document.getElementById('out').dataset.x = 'BOLETA EXENTA")
+    page_file = tmp_path / "emitir.html"
+    page_file.write_text(html, encoding="utf-8")
+    monkeypatch.setattr(b, "EMITIR_URL", page_file.as_uri())
+    monkeypatch.setattr(b, "HERE", tmp_path)
+    log = tmp_path / "log.csv"
+    monkeypatch.setattr(b, "LOG", log)
+    monkeypatch.setattr(builtins, "input", lambda *_: "SI")
+    monkeypatch.setattr(b, "ensure_logged_in", lambda page: None)
+    monkeypatch.setattr(b, "read_folio", lambda page, amount, responses, timeout_s=30: None)
+
+    def fake_open(pw):
+        ctx = pw.chromium.launch(executable_path=_chromium()).new_context()
+        return ctx, ctx.new_page()
+
+    monkeypatch.setattr(b, "open_browser", fake_open)
+    b.main(["emitir", "--excel", str(libro(tmp_path)), "--desde", "10026", "--hasta", "10027"])
+    rows = b.done_rows(log)
+    assert list(rows) == [10026]  # se detuvo tras la primera
+    assert rows[10026]["folio"] == "emitida-sin-numero"
+    assert (tmp_path / "boleta_fila_10026.png").exists()
+
+
+def test_marcar_a_mano(tmp_path, monkeypatch):
+    log = tmp_path / "log.csv"
+    monkeypatch.setattr(b, "LOG", log)
+    b.main(["marcar", "--fila", "10039", "--monto", "96903", "--folio", "21.940"])
+    assert b.done_rows(log)[10039]["folio"] == "21.940"
+    assert b.folio_in_json({"data": {"folio": 21940, "monto": 96903}}) == "21940"
+    assert b.folio_in_json({"x": [{"nroFolio": "21.941"}]}) == "21.941"
+    assert b.folio_in_json({"monto": 1}) is None

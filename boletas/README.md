@@ -9,6 +9,9 @@ y emite cada uno como **boleta exenta** en https://eboleta.sii.cl/emitir/, igual
   Una fila ya anotada **nunca** se vuelve a emitir.
 - Antes de emitir muestra la lista y el total y pide escribir `SI`. Si algo sale raro, se detiene.
 - Montos vacíos, con texto o con decimales se saltan (se avisa en pantalla).
+- La fila se anota justo antes del EMITIR final. Si no se logra leer el número de la boleta (el SII la muestra como
+  imagen), queda como `emitida-sin-numero`, se guarda una foto `boleta_fila_N.png` y el programa se detiene.
+- Una boleta hecha a mano se anota con `python boletas.py marcar --fila 10039 --monto 96903 --folio 21.940`.
 - La pantalla de emitir usa un teclado en pantalla: el programa borra, marca los dígitos y comprueba que la casilla
   muestre exactamente el monto antes de apretar EMITIR. Después de EMITIR, eboleta pregunta el tipo: el programa elige
   **Exenta**. Si la boleta emitida no dice BOLETA EXENTA, se detiene.
