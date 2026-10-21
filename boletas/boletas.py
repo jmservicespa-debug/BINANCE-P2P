@@ -232,6 +232,9 @@ def ready_for_next(page) -> None:
     if still_open is not None or keypad is None:
         page.goto(EMITIR_URL)
         page.wait_for_load_state("domcontentloaded")
+        # La página arma el teclado después de cargar: se espera hasta 20 s (más si el SII o el internet van lentos).
+        if first_visible([page.get_by_role("button", name="0", exact=True)], timeout=20000) is None:
+            raise RuntimeError("la pantalla de emitir no mostró el teclado (¿se cerró la sesión del SII o se cortó el internet?)")
 
 
 def choose_exenta(page) -> bool:
@@ -273,17 +276,13 @@ def fill_amount(page, amount: int) -> None:
     """eboleta usa un teclado en pantalla (0–9, delete, backspace): se borra y se marcan los dígitos.
     Después se comprueba que la casilla muestre exactamente el monto; si no, no se emite."""
     key = lambda name: page.get_by_role("button", name=name, exact=True)
+    if first_visible([key("0")], timeout=20000) is None:
+        raise RuntimeError("no aparece el teclado del SII (¿se cerró la sesión o se cortó el internet?)")
     before = page.locator("body").inner_text()
-    if key("0").count():
-        if key("delete").count():
-            key("delete").first.click()
-        for ch in str(amount):
-            key(ch).first.click()
-    else:
-        box = page.locator("input[type=text]").first
-        if not box.count():
-            raise RuntimeError("no encontré dónde escribir el monto")
-        box.fill(str(amount))
+    if key("delete").count():
+        key("delete").first.click()
+    for ch in str(amount):
+        key(ch).first.click()
     page.wait_for_timeout(300)
     if not amount_on_screen(page, amount, before):
         raise RuntimeError(f"no veo el monto {fmt(amount)} en la pantalla después de marcarlo")
