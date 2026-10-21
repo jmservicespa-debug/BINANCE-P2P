@@ -186,13 +186,27 @@ def fill_amount(page, amount: int) -> None:
         raise RuntimeError(f"la pantalla muestra {got or 'nada'} en vez de {amount}")
 
 
+def pick_exenta_after_emit(page) -> None:
+    """Tras apretar EMITIR, eboleta pregunta el tipo de boleta: se elige la opción que dice "exenta"."""
+    re_ex = re.compile(r"exent", re.I)
+    el = first_visible([page.get_by_role("button", name=re_ex), page.get_by_role("radio", name=re_ex), page.get_by_role("option", name=re_ex),
+                        page.get_by_role("listitem").filter(has_text=re_ex), page.get_by_text(re_ex)], timeout=5000)
+    if el is None:
+        raise RuntimeError('después de EMITIR no apareció la opción "Exenta"')
+    if el.get_attribute("type") in ("radio", "checkbox"):
+        el.check()
+    else:
+        el.click()
+
+
 def emit(page) -> None:
     btn = first_visible([page.get_by_role("button", name=re.compile(r"^\s*emitir\s*$", re.I)), page.get_by_text(re.compile(r"^\s*emitir\s*$", re.I))])
     if btn is None:
         raise RuntimeError('no encontré el botón "Emitir"')
     btn.click()
+    pick_exenta_after_emit(page)
     # Si el SII pide confirmar, se confirma (solo en modo emitir).
-    ok = first_visible([page.get_by_role("button", name=re.compile(r"^\s*(s[ií]|confirmar|aceptar)\s*$", re.I))], timeout=2000)
+    ok = first_visible([page.get_by_role("button", name=re.compile(r"^\s*(s[ií]|confirmar|aceptar|continuar|emitir)\s*$", re.I))], timeout=2000)
     if ok is not None:
         ok.click()
 
@@ -213,27 +227,43 @@ def read_folio(page, amount: int, timeout_s: int = 30) -> str:
 
 # ------------------------------------------------------------------ comandos
 
-def cmd_diagnostico(_args) -> None:
+DUMP_JS = """() => {
+  const vis = (el) => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+  const lab = (el) => (el.labels && el.labels[0] ? el.labels[0].innerText : '') || el.getAttribute('aria-label') || el.placeholder || '';
+  const out = [];
+  document.querySelectorAll('input, select, textarea, button, [role=button], [role=radio], [role=tab], [role=option], [role=listitem], .v-list-item, a').forEach((el) => {
+    if (!vis(el) || el.type === 'password' || el.type === 'hidden') return;
+    const opts = el.tagName === 'SELECT' ? ' opciones=' + [...el.options].map((o) => o.text).join(' | ') : '';
+    out.push(`${el.tagName.toLowerCase()} role=${el.getAttribute('role') || ''} type=${el.type || ''} id=${el.id} texto="${(el.innerText || '').trim().replace(/\\s+/g, ' ').slice(0, 50)}" etiqueta="${lab(el).trim().slice(0, 40)}"${opts}`);
+  });
+  document.querySelectorAll('[role=dialog], .v-dialog, .v-overlay__content, .modal').forEach((d) => {
+    if (vis(d)) out.push('VENTANA: ' + d.innerText.trim().replace(/\\s+/g, ' ').slice(0, 300));
+  });
+  return out;
+}"""
+
+
+def cmd_diagnostico(args) -> None:
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as pw:
         ctx, page = open_browser(pw)
         ensure_logged_in(page)
-        info = page.evaluate("""() => {
-          const lab = (el) => (el.labels && el.labels[0] ? el.labels[0].innerText : '') || el.getAttribute('aria-label') || el.placeholder || '';
-          const vis = (el) => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
-          const out = [];
-          document.querySelectorAll('input, select, textarea, button, [role=button], [role=radio], [role=tab], a.btn').forEach((el) => {
-            if (!vis(el) || el.type === 'password' || el.type === 'hidden') return;
-            const opts = el.tagName === 'SELECT' ? ' opciones=' + [...el.options].map((o) => o.text).join(' | ') : '';
-            out.push(`${el.tagName.toLowerCase()} type=${el.type || ''} id=${el.id} name=${el.name || ''} texto="${(el.innerText || '').trim().slice(0, 40)}" etiqueta="${lab(el).trim().slice(0, 40)}"${opts}`);
-          });
-          return out;
-        }""")
+        if args.tras_emitir:
+            # Marca $1.000 y aprieta EMITIR solo para ver la ventana del tipo de boleta; NO elige nada.
+            fill_amount(page, 1000)
+            btn = first_visible([page.get_by_role("button", name=re.compile(r"^\s*emitir\s*$", re.I))])
+            if btn is None:
+                raise SystemExit('no encontré el botón "EMITIR"')
+            btn.click()
+            page.wait_for_timeout(2500)
+        info = page.evaluate(DUMP_JS)
         target = HERE / "diagnostico_eboleta.txt"
         target.write_text(f"{page.url}\n" + "\n".join(info), encoding="utf-8")
         print(f"\nListo: {len(info)} elementos anotados en {target}")
         print("Mándale a Claude una foto o el texto de ese archivo (no contiene tu clave).")
+        if args.tras_emitir:
+            input("\nNO elijas nada en la ventana de Chrome: ciérrala o cancela, y luego presiona Enter aquí para cerrar… ")
         ctx.close()
 
 
@@ -289,7 +319,8 @@ def cmd_run(args, really_emit: bool) -> None:
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description="Boletas exentas en eboleta.sii.cl desde el Excel (columna D).")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("diagnostico", help="anota los campos de la página de emitir")
+    d = sub.add_parser("diagnostico", help="anota los campos de la página de emitir")
+    d.add_argument("--tras-emitir", action="store_true", help="marca $1.000, aprieta EMITIR y anota la ventana del tipo de boleta (sin elegir)")
     for name in ("practica", "emitir"):
         p = sub.add_parser(name)
         p.add_argument("--excel", required=True)

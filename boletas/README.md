@@ -10,7 +10,8 @@ y emite cada uno como **boleta exenta** en https://eboleta.sii.cl/emitir/, igual
 - Antes de emitir muestra la lista y el total y pide escribir `SI`. Si algo sale raro, se detiene.
 - Montos vacíos, con texto o con decimales se saltan (se avisa en pantalla).
 - La pantalla de emitir usa un teclado en pantalla: el programa borra, marca los dígitos y comprueba que la casilla
-  muestre exactamente el monto antes de apretar EMITIR. Si la boleta emitida no dice BOLETA EXENTA, se detiene.
+  muestre exactamente el monto antes de apretar EMITIR. Después de EMITIR, eboleta pregunta el tipo: el programa elige
+  **Exenta**. Si la boleta emitida no dice BOLETA EXENTA, se detiene.
 
 ## Instalar (una vez, PowerShell)
 
@@ -27,6 +28,7 @@ Usa el Chrome que ya tienes instalado. El libro debe ser `.xlsx`.
    emitir en `diagnostico_eboleta.txt`. Se lo mandas a Claude para ajustar el programa a la página real.
    ```
    python boletas.py diagnostico
+   python boletas.py diagnostico --tras-emitir   # marca $1.000, aprieta EMITIR y anota la ventana del tipo (no elige nada)
    ```
 2. **Práctica**: llena cada boleta (exenta + monto) pero NO aprieta Emitir. Revisas la pantalla y Enter.
    ```
