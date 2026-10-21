@@ -196,13 +196,39 @@ def ensure_logged_in(page) -> None:
 
 
 def first_visible(locators, timeout: int = 1500):
-    for loc in locators:
-        try:
-            loc.first.wait_for(state="visible", timeout=timeout)
-            return loc.first
-        except Exception:
-            continue
-    return None
+    """El primero visible de varios candidatos. Se revisan todos a la vez cada 100 ms (no uno tras otro con espera)."""
+    import time
+    deadline = time.monotonic() + timeout / 1000
+    while True:
+        for loc in locators:
+            try:
+                el = loc.first
+                if el.is_visible():
+                    return el
+            except Exception:
+                continue
+        if time.monotonic() >= deadline:
+            return None
+        time.sleep(0.1)
+
+
+CLOSE_RE = re.compile(r"^\s*(cerrar|close)\s*$", re.I)
+
+
+def ready_for_next(page) -> None:
+    """Deja la pantalla lista para la siguiente boleta: cierra la boleta emitida con CERRAR (sin recargar la página).
+    Si queda una ventana abierta o no está el teclado, recarga la página de emitir."""
+    done = first_visible([page.get_by_role("button", name=DONE_RE)], timeout=200)
+    if done is not None:
+        close = first_visible([page.get_by_role("button", name=CLOSE_RE)], timeout=1000)
+        if close is not None:
+            close.click()
+            page.wait_for_timeout(400)
+    still_open = first_visible([page.get_by_role("button", name=DONE_RE), page.get_by_role("button", name=re.compile(r"boleta\s+(afecta|exenta)", re.I))], timeout=200)
+    keypad = first_visible([page.get_by_role("button", name="0", exact=True)], timeout=200)
+    if still_open is not None or keypad is None:
+        page.goto(EMITIR_URL)
+        page.wait_for_load_state("domcontentloaded")
 
 
 def choose_exenta(page) -> bool:
@@ -465,13 +491,12 @@ def cmd_run(args, really_emit: bool) -> None:
     with sync_playwright() as pw:
         ctx, page = open_browser(pw)
         ensure_logged_in(page)
+        page.set_default_timeout(10000)  # un clic que no responde en 10 s es un problema: mejor detenerse
         emitted = 0
         saved_diag = False
         for p in todo:
             try:
-                page.goto(EMITIR_URL)
-                page.wait_for_load_state("domcontentloaded")
-                exenta = choose_exenta(page)
+                ready_for_next(page)
                 fill_amount(page, p.amount)
                 if not really_emit:
                     open_dialog(page)  # abre la ventana y deja "Boleta exenta", pero NO aprieta el botón final
