@@ -10,7 +10,8 @@ const VES_RANGE = [1, 100000];  // Bs por USDT fuera de este rango = dato absurd
 
 const parse = (text) => { try { return typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; } };
 const list = (d) => (Array.isArray(d?.data) ? d.data : ['list', 'rows', 'items', 'data'].map((k) => d?.data?.[k]).find(Array.isArray) || []);
-const isPagoMovil = (m) => /pago\s*m[oó]vil/i.test(`${m?.identifier || ''} ${m?.tradeMethodName || ''}`) || /^pagomovil$/i.test(m?.identifier || '');
+// Los métodos llegan como texto ("PagoMovil") en los anuncios y como objeto ({ identifier }) en la lista de métodos.
+const isPagoMovil = (m) => (typeof m === 'string' ? /^pago\s*m[oó]vil$/i.test(m) : /pago\s*m[oó]vil/i.test(`${m?.identifier || ''} ${m?.tradeMethodName || ''}`));
 
 // Identificador de Pago Móvil según la lista de métodos de Binance para VES.
 export function pagoMovilId(text) {
@@ -33,7 +34,8 @@ export function pickVes(text, minUsd = VES_MIN_USD) {
   const ok = ads.filter((a) => a.merchant && a.pm && a.price >= VES_RANGE[0] && a.price <= VES_RANGE[1]
     && (!Number.isFinite(a.min) || a.min <= minUsd * a.price) && (!Number.isFinite(a.max) || a.max >= minUsd * a.price));
   const top = ok.slice(0, 5).map((a) => a.price).sort((a, z) => a - z);
-  return { total: ads.length, count: ok.length, price: top.length ? top[Math.floor(top.length / 2)] : null, ads: ok.slice(0, 5).map(({ nick, price, min, max }) => ({ nick, price, min, max })) };
+  const drop = { 'no verificado': ads.filter((a) => !a.merchant).length, 'sin Pago Móvil': ads.filter((a) => !a.pm).length };
+  return { total: ads.length, count: ok.length, drop, price: top.length ? top[Math.floor(top.length / 2)] : null, ads: ok.slice(0, 5).map(({ nick, price, min, max }) => ({ nick, price, min, max })) };
 }
 
 // Consulta completa (métodos → anuncios de compra y venta). fetchFn permite usarla en el servidor o en el navegador.
@@ -54,7 +56,7 @@ export async function vesP2P(fetchFn = fetch, opts = {}) {
   const buyText = await get('compra', vesAdsUrl('BUY', method));
   const sellText = await get('venta', vesAdsUrl('SELL', method));
   const first = list(parse(buyText))[0];
-  if (first) debug.push(`1er anuncio: ${JSON.stringify(first).slice(0, 300)}`);
+  if (first) debug.push(`1er anuncio: campos ${Object.keys(first).join(', ')} · anunciante ${JSON.stringify(first.advertiser || {}).slice(0, 160)}`);
   return { method, buy: pickVes(buyText), sell: pickVes(sellText), debug };
 }
 

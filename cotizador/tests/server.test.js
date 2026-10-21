@@ -250,4 +250,10 @@ test('Venezuela: Binance P2P en Bs, solo verificados con Pago Móvil y orden de 
   // Quedan 300, 303 y 306: usuario común, mínimo alto (20.000 > 30×302), máximo bajo (8.000 < 30×304) y sin Pago Móvil, fuera.
   assert.deepEqual([r.total, r.count, r.price], [7, 3, 303]);
   assert.deepEqual(r.ads.map((a) => a.nick), ['n300', 'n303', 'n306']);
+  // Formato real visto en Binance: anuncio plano, data.items y métodos como texto.
+  const flat = JSON.stringify({ code: '000000', data: { items: [
+    { adNo: '1', price: 980.54, fiat: 'VES', minSingleTransAmount: 5000, maxSingleTransAmount: 500000, tradeMethods: ['PagoMovil'], advertiser: { nickName: 'P2P-ElMejorCambio', userType: 'merchant' } },
+    { adNo: '2', price: 979, fiat: 'VES', tradeMethods: ['Banesco'], advertiser: { nickName: 'x', userType: 'merchant' } },
+  ] } });
+  assert.deepEqual([pickVes(flat).count, pickVes(flat).price], [1, 980.54]);
 });

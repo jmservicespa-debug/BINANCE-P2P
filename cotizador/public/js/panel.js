@@ -320,7 +320,7 @@ $('v-test').onclick = async () => {
   copPerUsdt = cop;
   ves = !server.error ? server : !browser.error ? browser : null;
   const line = (name, r) => r.error ? `✗ ${name}: falló (${esc(r.error)})`
-    : `✓ ${name}: funciona (${r.buy.count} de ${r.buy.total} anuncios cumplen el filtro)`;
+    : `✓ ${name}: funciona (${r.buy.count} de ${r.buy.total} anuncios cumplen el filtro${r.buy.drop ? ` · descartados: ${Object.entries(r.buy.drop).map(([k, v]) => `${v} ${k}`).join(', ')}` : ''})`;
   const ads = (side) => side.ads.map((a) => `${esc(a.nick)} ${fmt(a.price, 2)}`).join(' · ') || 'ninguno cumple el filtro';
   $('v-out').innerHTML = `${line('Desde Cloudflare (siempre en línea)', server)}<br>${line('Desde este equipo', browser)}`
     + (ves ? `<br><br><b>Comprar USDT con Bs:</b> ${ves.buy.price ? fmt(ves.buy.price, 2) + ' Bs' : '—'}<br><small>${ads(ves.buy)}</small>`
