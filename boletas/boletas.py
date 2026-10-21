@@ -430,11 +430,40 @@ def cmd_run(args, really_emit: bool) -> None:
         ctx.close()
 
 
+def cmd_revisar(args) -> None:
+    """Muestra lo que hay en el archivo guardado (columnas A–E, valor y fórmula). No abre Chrome ni emite nada."""
+    from openpyxl import load_workbook
+
+    path = pick_excel(args.excel)
+    print(f"Leyendo {path.name}…", flush=True)
+    wv = load_workbook(path, data_only=True, read_only=True)
+    wf = load_workbook(path, data_only=False, read_only=True)
+    print(f"Archivo: {path}  ·  guardado: {datetime.fromtimestamp(path.stat().st_mtime):%d-%m-%Y %H:%M}")
+    print("Hojas: " + " | ".join(f"{n} ({wv[n].max_row} filas)" for n in wv.sheetnames))
+    if args.hoja not in wv.sheetnames:
+        print(f'No existe la hoja "{args.hoja}".')
+        return
+    vals = wv[args.hoja].iter_rows(min_row=args.desde, max_row=args.hasta, max_col=5, values_only=True)
+    forms = wf[args.hoja].iter_rows(min_row=args.desde, max_row=args.hasta, max_col=5, values_only=True)
+    print("fila  | A | B | C | D (valor) | D (fórmula) | E")
+    for r, v, f in zip(range(args.desde, args.hasta + 1), vals, forms):
+        v = list(v) + [None] * (5 - len(v))
+        f = list(f) + [None] * (5 - len(f))
+        print(f"{r} | {v[0]} | {v[1]} | {v[2]} | {v[3]} | {f[3] if isinstance(f[3], str) and f[3].startswith('=') else ''} | {v[4]}")
+    wv.close()
+    wf.close()
+
+
 def main(argv=None) -> None:
     ap = argparse.ArgumentParser(description="Boletas exentas en eboleta.sii.cl desde el Excel (columna D).")
     sub = ap.add_subparsers(dest="cmd", required=True)
     d = sub.add_parser("diagnostico", help="anota los campos de la página de emitir")
     d.add_argument("--tras-emitir", action="store_true", help="marca $1.000, aprieta EMITIR y anota la ventana del tipo de boleta (sin elegir)")
+    rv = sub.add_parser("revisar", help="muestra qué hay en esas filas del archivo guardado (no emite)")
+    rv.add_argument("--excel")
+    rv.add_argument("--desde", type=int, required=True)
+    rv.add_argument("--hasta", type=int, required=True)
+    rv.add_argument("--hoja", default=SHEET)
     for name in ("practica", "emitir"):
         p = sub.add_parser(name)
         p.add_argument("--excel", help="ruta del libro .xlsx (si no se pone, se elige en una ventana)")
@@ -445,6 +474,8 @@ def main(argv=None) -> None:
     args = ap.parse_args(argv)
     if args.cmd == "diagnostico":
         cmd_diagnostico(args)
+    elif args.cmd == "revisar":
+        cmd_revisar(args)
     else:
         if args.hasta < args.desde or args.hasta - args.desde > 500:
             sys.exit("Rango de filas no válido (máximo 500 por tanda).")
