@@ -55,7 +55,7 @@ FAKE = """<!doctype html><meta charset=utf-8><h1>Emitir e-Boleta</h1>
 <button type=button>delete</button><button type=button>backspace</button>
 <button type=button>7</button><button type=button>8</button><button type=button>9</button><button type=button>4</button>
 <button type=button>5</button><button type=button>6</button><button type=button>1</button><button type=button>2</button>
-<button type=button>3</button><button type=button>0</button><button type=button id=e>EMITIR</button><div role=dialog id=tipo hidden><div role=button id=sel>Boleta afecta arrow_drop_down</div><div id=menu hidden><div class=v-list-item id=o1>Boleta afecta</div><div class=v-list-item id=o2>Boleta exenta</div></div><button type=button>EMITIR</button></div><div id=out></div>
+<button type=button>3</button><button type=button>0</button><button type=button id=e>EMITIR</button><div role=dialog id=tipo hidden><div role=button id=sel>Boleta afecta arrow_drop_down</div><div id=menu hidden><div class=v-list-item id=o1>Boleta afecta</div><div class=v-list-item id=o2>Boleta exenta</div></div><button type=button>EMITIR</button></div><div id=out></div><div id=done hidden><button type=button>print IMPRIMIR</button><a href='#'>get_app DESCARGAR</a></div>
 <script>
 const box = document.getElementById('input-33');
 document.querySelectorAll('button').forEach((b) => b.onclick = () => {
@@ -65,6 +65,7 @@ document.querySelectorAll('button').forEach((b) => b.onclick = () => {
   if (t === 'EMITIR' && b.id === 'e') { document.getElementById('tipo').hidden = false; }
   if (t === 'EMITIR' && b.id !== 'e' && !/exenta/i.test(document.getElementById('sel').innerText)) document.getElementById('out').innerText = 'BOLETA ELECTRÓNICA AFECTA';
   if (t === 'EMITIR' && b.id !== 'e' && /exenta/i.test(document.getElementById('sel').innerText)) { const m = Number(box.value.replace(/\\D/g, ''));
+    document.getElementById('done').hidden = false;
     document.getElementById('out').innerText = 'BOLETA EXENTA ELECTRÓNICA NUMERO:\\n' + (21938 + m % 7).toLocaleString('es-CL') + '\\nMonto Total $ ' + m.toLocaleString('es-CL'); }
 });
 document.getElementById('sel').onclick = () => { document.getElementById('menu').hidden = false; };
@@ -163,9 +164,30 @@ def test_formula_sin_valor_guardado(tmp_path):
     assert [(r, a) for r, a, _ in rows] == [(10039, 9990), (10040, None)]
 
 
-def test_boleta_sin_numero_legible_queda_anotada(tmp_path, monkeypatch):
-    """Si el SII muestra la boleta como imagen (sin texto), la fila queda anotada y el programa se detiene."""
+def test_boleta_como_imagen_se_anota_y_sigue(tmp_path, monkeypatch):
+    """El SII muestra la boleta como imagen (sin texto): con IMPRIMIR/DESCARGAR a la vista se da por emitida y sigue."""
     html = FAKE.replace("document.getElementById('out').innerText = 'BOLETA EXENTA", "document.getElementById('out').dataset.x = 'BOLETA EXENTA")
+    log = _run(tmp_path, monkeypatch, html)
+    rows = b.done_rows(log)
+    assert sorted(rows) == [10026, 10027]
+    assert {r["folio"] for r in rows.values()} == {"ver-en-SII"}
+    assert (tmp_path / "diagnostico_boleta_emitida.txt").exists()
+
+
+def test_sin_senal_de_emitida_se_detiene_y_bloquea(tmp_path, monkeypatch):
+    html = FAKE.replace("document.getElementById('out').innerText = 'BOLETA EXENTA", "document.getElementById('out').dataset.x = 'BOLETA EXENTA")
+    html = html.replace("document.getElementById('done').hidden = false;", "")
+    monkeypatch.setattr(b, "read_folio", lambda page, amount, responses, timeout_s=30: b.__dict__["_rf"](page, amount, responses, 3))
+    log = _run(tmp_path, monkeypatch, html)
+    rows = b.done_rows(log)
+    assert list(rows) == [10026] and rows[10026]["folio"] == "pendiente"  # bloqueada, no se repite; no siguió
+
+
+_ORIG_READ = b.read_folio
+b._rf = _ORIG_READ
+
+
+def _run(tmp_path, monkeypatch, html):
     page_file = tmp_path / "emitir.html"
     page_file.write_text(html, encoding="utf-8")
     monkeypatch.setattr(b, "EMITIR_URL", page_file.as_uri())
@@ -174,7 +196,6 @@ def test_boleta_sin_numero_legible_queda_anotada(tmp_path, monkeypatch):
     monkeypatch.setattr(b, "LOG", log)
     monkeypatch.setattr(builtins, "input", lambda *_: "SI")
     monkeypatch.setattr(b, "ensure_logged_in", lambda page: None)
-    monkeypatch.setattr(b, "read_folio", lambda page, amount, responses, timeout_s=30: None)
 
     def fake_open(pw):
         ctx = pw.chromium.launch(executable_path=_chromium()).new_context()
@@ -182,10 +203,7 @@ def test_boleta_sin_numero_legible_queda_anotada(tmp_path, monkeypatch):
 
     monkeypatch.setattr(b, "open_browser", fake_open)
     b.main(["emitir", "--excel", str(libro(tmp_path)), "--desde", "10026", "--hasta", "10027"])
-    rows = b.done_rows(log)
-    assert list(rows) == [10026]  # se detuvo tras la primera
-    assert rows[10026]["folio"] == "emitida-sin-numero"
-    assert (tmp_path / "boleta_fila_10026.png").exists()
+    return log
 
 
 def test_marcar_a_mano(tmp_path, monkeypatch):

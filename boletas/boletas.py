@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import re
 import sys
 from dataclasses import dataclass
@@ -324,10 +325,27 @@ def folio_in_json(obj) -> str | None:
     return None
 
 
-def read_folio(page, amount: int, responses: list, timeout_s: int = 30) -> str | None:
-    """Número de la boleta emitida. El SII la muestra como imagen, así que se busca en el texto de la página y sus
-    marcos, y en lo que respondió el SII al emitir. Si se ve un folio con otro monto, se detiene."""
+DONE_RE = re.compile(r"imprimir|descargar|compartir", re.I)  # botones que muestra eboleta con la boleta ya emitida
+FOLIO_JSON_RE = re.compile(r'"(?:folio|nro_?folio|numero_?folio)"\s*:\s*"?([\d.]+)', re.I)
+
+
+def folio_from_page(page) -> str | None:
+    """Número en el enlace de DESCARGAR o en la imagen de la boleta (nombre de archivo, dirección o texto alternativo)."""
+    attrs = page.evaluate("""() => [...document.querySelectorAll('a, img')].flatMap((e) =>
+        [e.getAttribute('download'), e.getAttribute('alt'), e.getAttribute('title'), (e.getAttribute('href') || e.getAttribute('src') || '').slice(0, 300)])
+        .filter((x) => x && !x.startsWith('data:'))""")
+    for t in attrs:
+        m = re.search(r"folio\D{0,3}(\d{3,})", t, re.I)
+        if m:
+            return m.group(1)
+    return None
+
+
+def read_folio(page, amount: int, responses: list, timeout_s: int = 30) -> tuple[bool, str | None]:
+    """(¿emitida?, número). Emitida = aparece la boleta con IMPRIMIR/DESCARGAR/COMPARTIR (o su texto con el número).
+    El número se busca en el texto, en lo que respondió el SII y en el enlace de descarga; puede quedar sin leer."""
     deadline = datetime.now().timestamp() + timeout_s
+    shown_at = None
     while datetime.now().timestamp() < deadline:
         for frame in page.frames:
             try:
@@ -338,16 +356,26 @@ def read_folio(page, amount: int, responses: list, timeout_s: int = 30) -> str |
             if m:
                 if fmt(amount) not in text and str(amount) not in text:
                     raise RuntimeError(f"la boleta {m.group(1)} no muestra el monto {fmt(amount)}: revísala en el SII")
-                return m.group(1)
+                return True, m.group(1)
         for r in list(responses):
             try:
-                got = folio_in_json(r.json())
+                body = r.text()
             except Exception:
-                got = None
+                continue
+            try:
+                got = folio_in_json(json.loads(body))
+            except Exception:
+                m = FOLIO_JSON_RE.search(body)
+                got = m.group(1) if m else None
             if got:
-                return got
+                return True, got
+        if first_visible([page.get_by_role("button", name=DONE_RE), page.get_by_role("link", name=DONE_RE)], timeout=300) is not None:
+            shown_at = shown_at or datetime.now().timestamp()
+            folio = folio_from_page(page)
+            if folio or datetime.now().timestamp() - shown_at > 3:  # se espera un poco por si llega el número
+                return True, folio
         page.wait_for_timeout(500)
-    return None
+    return False, None
 
 
 # ------------------------------------------------------------------ comandos
@@ -431,6 +459,7 @@ def cmd_run(args, really_emit: bool) -> None:
         ctx, page = open_browser(pw)
         ensure_logged_in(page)
         emitted = 0
+        saved_diag = False
         for p in todo:
             try:
                 page.goto(EMITIR_URL)
@@ -448,30 +477,30 @@ def cmd_run(args, really_emit: bool) -> None:
                 responses = []
 
                 def keep(r, responses=responses):
-                    if "sii.cl" in r.url and "json" in (r.headers.get("content-type") or ""):
+                    if r.request.resource_type in ("xhr", "fetch"):
                         responses.append(r)
 
                 page.on("response", keep)
                 try:
                     emit(page, before_final=lambda: record(p.row, p.amount, "pendiente"))
-                    folio = read_folio(page, p.amount, responses)
+                    ok, folio = read_folio(page, p.amount, responses)
                 finally:
                     page.remove_listener("response", keep)
+                if not ok:
+                    raise RuntimeError("no apareció la boleta emitida (IMPRIMIR / DESCARGAR). La fila queda bloqueada como 'pendiente'")
                 emitted += 1
-                if folio:
-                    record(p.row, p.amount, folio)
-                    print(f"  ✓ fila {p.row}: ${fmt(p.amount)} → boleta N° {folio}")
-                    continue
-                # Emitida pero sin número legible: queda anotada (no se repite) y se guarda foto para revisar.
-                shot = HERE / f"boleta_fila_{p.row}.png"
-                page.screenshot(path=str(shot))
-                record(p.row, p.amount, "emitida-sin-numero")
-                info = page.evaluate(DUMP_JS)
-                (HERE / "diagnostico_boleta_emitida.txt").write_text(
-                    "\n".join([page.url, f"marcos: {[f.url for f in page.frames]}", f"respuestas: {[r.url for r in responses]}"] + info), encoding="utf-8")
-                print(f"  ✓ fila {p.row}: ${fmt(p.amount)} emitida, pero no pude leer el número (foto en {shot.name}).")
-                print("    Queda anotada y no se repetirá. Me detengo para que lo revises; mándale a Claude diagnostico_boleta_emitida.txt.")
-                break
+                record(p.row, p.amount, folio or "ver-en-SII")
+                print(f"  ✓ fila {p.row}: ${fmt(p.amount)} → " + (f"boleta N° {folio}" if folio else "emitida (número: ver en el SII)"))
+                if not folio and not saved_diag:
+                    saved_diag = True  # una vez por tanda: datos para aprender a leer el número
+                    links = page.evaluate("() => [...document.querySelectorAll('a, img')].map((e) => `${e.tagName} download=${e.getAttribute('download')} alt=${e.getAttribute('alt')} ${(e.getAttribute('href') || e.getAttribute('src') || '').slice(0, 150)}`)")
+                    resp = []
+                    for r in responses:
+                        try:
+                            resp.append(f"{r.request.method} {r.url} → {r.status} {r.text()[:300]}")
+                        except Exception:
+                            resp.append(f"{r.request.method} {r.url} → {r.status}")
+                    (HERE / "diagnostico_boleta_emitida.txt").write_text("\n".join(["ENLACES E IMÁGENES:"] + links + ["", "RESPUESTAS:"] + resp), encoding="utf-8")
             except Exception as e:  # cualquier cosa rara: se detiene para no emitir de más
                 print(f"\n✗ fila {p.row}: {e}. Me detengo aquí; revisa el SII antes de seguir.")
                 input("Presiona Enter para cerrar Chrome… ")
