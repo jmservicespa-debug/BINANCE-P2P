@@ -204,7 +204,7 @@ function usdtQuote(r) {
     $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} USDT. ¿Me das el precio de este momento?`, 'Pedir precio');
     return;
   }
-  $('u-line').innerHTML = `<b class="num">1 USDT = ${fmt(price, 2)} CLP</b><span>Comisión 0 % · Sin cargos extras</span>`;
+  $('u-line').innerHTML = `<b class="num">1 USDT = ${fmt(price, 2)} CLP</b><span>Comisión 0 % · Sin cargos extras · Mínimo ${clpFmt(buy ? r.min : r.buyMin)} CLP</span>`;
   const src = $(edited === 'top' ? 'u-top' : 'u-bot'), dst = $(edited === 'top' ? 'u-bot' : 'u-top');
   if (!src.value.trim()) { dst.value = ''; $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} USDT.`); return; }
   // Lo que escribe el cliente está en USDT o en CLP según la casilla y el lado.
@@ -222,6 +222,13 @@ function usdtQuote(r) {
   }
   const good = Number.isFinite(usdt) && Number.isFinite(clp) && usdt > 0 && clp > 0;
   dst.value = good ? (srcIsUsdt ? clpFmt(clp) : usdtFmt(usdt)) : '';
+  const min = buy ? r.min : r.buyMin;
+  if (good && clp < min) {
+    dst.value = '';  // bajo el mínimo no se cotiza
+    $('u-line').innerHTML = `<b>Mínimo ${clpFmt(min)} CLP</b><span>${buy ? 'Compra' : 'Venta'} desde ${clpFmt(min)} CLP${buy ? '' : ` (unos ${usdtFmt(Math.ceil((min / price) * 100) / 100)} USDT)`}.</span>`;
+    $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} USDT.`);
+    return;
+  }
   $('wa').innerHTML = waButtons(!good ? `Hola, quiero ${buy ? 'comprar' : 'vender'} USDT.` : buy
     ? `Hola, quiero comprar ${usdtFmt(usdt)} USDT pagando ${clpFmt(clp)} CLP (precio ${fmt(price, 2)} CLP por USDT, sin comisión). ¿Me confirmas?`
     : `Hola, quiero vender ${usdtFmt(usdt)} USDT y recibir ${clpFmt(clp)} CLP (precio ${fmt(price, 2)} CLP por USDT, sin comisión). ¿Me confirmas?`);

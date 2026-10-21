@@ -34,7 +34,7 @@ no usa llaves de Binance ni toca la cuenta.
   se escribe en cualquiera y la otra se calcula. Comprar: "Pagas (CLP)" → "Recibes (USDT)" al precio de venta.
   Vender: "Entregas (USDT)" → "Recibes (CLP)" al **precio de compra** = precio de compra (`bid`) de Vita − ganancia al comprar
   (8 % por defecto, editable en el panel). Redondeos a favor de no entregar de más: USDT a entregar hacia abajo, pesos a pagar al cliente hacia abajo,
-  USDT que debe entregar el cliente hacia arriba. Sin precio, el lado correspondiente queda como "Mercado inestable" (precio por WhatsApp).
+  USDT que debe entregar el cliente hacia arriba. Mínimos (CLP): comprar USDT 10.000 · vender USDT 15.000 (`min` y `buyMin` en `USDT_ROUTE`). Sin precio, el lado correspondiente queda como "Mercado inestable" (precio por WhatsApp).
 
 ## Otros países
 
