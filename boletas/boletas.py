@@ -18,7 +18,7 @@ import re
 import sys
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -40,7 +40,7 @@ class Pending:
 # ------------------------------------------------------------------ Excel y registro
 
 def to_amount(value: object) -> int | None:
-    """Monto entero en pesos: 14985, 14985.0 o "14.985". Vacío, texto o ≤ 0 → None."""
+    """Monto entero en pesos: 14985, 14985.0, "14.985" o 23576.4 → 23576 (redondeo normal). Vacío, texto o ≤ 0 → None."""
     if value is None or isinstance(value, bool):
         return None
     if isinstance(value, (int, float, Decimal)):
@@ -54,8 +54,10 @@ def to_amount(value: object) -> int | None:
             d = Decimal(t)
         except InvalidOperation:
             return None
-    if d <= 0 or d != d.to_integral_value():
-        return None  # con decimales no se emite: mejor revisarlo a mano
+    # Con decimales se redondea al peso, como lo muestra Excel (desde ,5 sube; por debajo, baja).
+    d = d.quantize(Decimal(1), rounding=ROUND_HALF_UP)
+    if d <= 0:
+        return None
     return int(d)
 
 
@@ -446,8 +448,11 @@ def cmd_run(args, really_emit: bool) -> None:
         return
     total = sum(p.amount for p in todo)
     print(f"\n{len(todo)} boletas exentas, total ${fmt(total)}:")
+    raws = {r: raw for r, _, raw in rows}
     for p in todo:
-        print(f"  fila {p.row}: ${fmt(p.amount)}")
+        raw = raws.get(p.row)
+        note = f"  (redondeado de {raw})" if isinstance(raw, float) and raw != int(raw) else ""
+        print(f"  fila {p.row}: ${fmt(p.amount)}{note}")
     if really_emit:
         if input(f"\n¿Emitir estas {len(todo)} boletas en el SII? Escribe SI para continuar: ").strip().upper() != "SI":
             print("Cancelado. No se emitió nada.")

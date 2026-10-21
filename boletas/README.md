@@ -8,7 +8,8 @@ y emite cada uno como **boleta exenta** en https://eboleta.sii.cl/emitir/, igual
 - Cada boleta emitida queda en `boletas_emitidas.csv` (fila, monto, número de boleta, hora).
   Una fila ya anotada **nunca** se vuelve a emitir.
 - Antes de emitir muestra la lista y el total y pide escribir `SI`. Si algo sale raro, se detiene.
-- Montos vacíos, con texto o con decimales se saltan (se avisa en pantalla).
+- Montos vacíos o con texto se saltan (se avisa en pantalla). Con decimales se redondean al peso, como los muestra
+  Excel (23.576,4 → 23.576; desde ,5 sube), y la lista lo indica.
 - La fila se anota justo antes del EMITIR final. Se da por emitida cuando aparece la boleta con IMPRIMIR / DESCARGAR /
   COMPARTIR; el número se lee si el SII lo deja disponible, si no queda `ver-en-SII` y sigue con la siguiente.
   Si la boleta no aparece, se detiene y la fila queda bloqueada como `pendiente` (revisar en el SII).

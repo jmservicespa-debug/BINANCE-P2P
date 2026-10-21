@@ -16,7 +16,9 @@ def test_montos():
     assert b.to_amount("") is None
     assert b.to_amount(0) is None
     assert b.to_amount(-5) is None
-    assert b.to_amount(10.5) is None  # con decimales se revisa a mano
+    assert b.to_amount(10.5) == 11  # con decimales: redondeo normal
+    assert b.to_amount(23576.4) == 23576
+    assert b.to_amount(0.4) is None
     assert b.to_amount("hola") is None
 
 
