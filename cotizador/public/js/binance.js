@@ -9,7 +9,7 @@ export const VES_MIN_USD = 30;
 const VES_RANGE = [1, 100000];  // Bs por USDT fuera de este rango = dato absurdo
 
 const parse = (text) => { try { return typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; } };
-const list = (d) => (Array.isArray(d?.data) ? d.data : Array.isArray(d?.data?.list) ? d.data.list : []);
+const list = (d) => (Array.isArray(d?.data) ? d.data : ['list', 'rows', 'items', 'data'].map((k) => d?.data?.[k]).find(Array.isArray) || []);
 const isPagoMovil = (m) => /pago\s*m[oó]vil/i.test(`${m?.identifier || ''} ${m?.tradeMethodName || ''}`) || /^pagomovil$/i.test(m?.identifier || '');
 
 // Identificador de Pago Móvil según la lista de métodos de Binance para VES.
@@ -37,14 +37,31 @@ export function pickVes(text, minUsd = VES_MIN_USD) {
 }
 
 // Consulta completa (métodos → anuncios de compra y venta). fetchFn permite usarla en el servidor o en el navegador.
+// `debug` resume cada respuesta (estado, código, mensaje, forma de los datos) para ver qué devuelve Binance.
 export async function vesP2P(fetchFn = fetch, opts = {}) {
-  const get = async (url) => {
+  const debug = [];
+  const get = async (name, url) => {
     const res = await fetchFn(url, opts);
-    if (!res.ok) throw new Error(`respondió ${res.status}`);
-    return res.text();
+    const text = await res.text();
+    debug.push(`${name}: ${res.status} ${describe(text)}`);
+    if (!res.ok) { const e = new Error(`respondió ${res.status}`); e.debug = debug; throw e; }
+    return text;
   };
-  const method = pagoMovilId(await get(VES_METHODS_URL));
-  if (!method) throw new Error('Binance no lista Pago Móvil para VES');
-  const [buy, sell] = await Promise.all(['BUY', 'SELL'].map(async (t) => pickVes(await get(vesAdsUrl(t, method)))));
-  return { method, buy, sell };
+  const methods = await get('métodos', VES_METHODS_URL);
+  const method = pagoMovilId(methods);
+  debug.push(`Pago Móvil = ${method || 'no encontrado'} · métodos: ${list(parse(methods)).slice(0, 12).map((m) => m.identifier).join(', ')}`);
+  if (!method) { const e = new Error('Binance no lista Pago Móvil para VES'); e.debug = debug; throw e; }
+  const buyText = await get('compra', vesAdsUrl('BUY', method));
+  const sellText = await get('venta', vesAdsUrl('SELL', method));
+  const first = list(parse(buyText))[0];
+  if (first) debug.push(`1er anuncio: ${JSON.stringify(first).slice(0, 300)}`);
+  return { method, buy: pickVes(buyText), sell: pickVes(sellText), debug };
+}
+
+function describe(text) {
+  const d = parse(text);
+  if (!d || typeof d !== 'object') return `texto: ${String(text).slice(0, 80)}`;
+  const data = d.data;
+  const shape = Array.isArray(data) ? `lista de ${data.length}` : data && typeof data === 'object' ? `objeto {${Object.keys(data).slice(0, 8).join(', ')}}` : String(data);
+  return `código ${d.code ?? '—'}${d.message || d.msg ? ` «${d.message || d.msg}»` : ''} · datos: ${shape}`;
 }

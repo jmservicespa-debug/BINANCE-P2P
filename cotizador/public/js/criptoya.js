@@ -58,4 +58,13 @@ export function parseCop(text) {
   return bids.length ? bids[Math.floor(bids.length / 2)] : null;
 }
 
+// Plan B Venezuela: Bs por USDT en Binance P2P según CriptoYa (precio general, sin filtro de verificados ni Pago Móvil).
+export const USDT_VES_URL = 'https://criptoya.com/api/usdt/ves/1';
+export function parseVes(text) {
+  let d;
+  try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }
+  const b = d?.binancep2p;
+  return b && Number(b.ask) > 0 ? { ask: Number(b.ask), bid: Number(b.bid) || null, exchanges: Object.keys(d).join(', ') } : null;
+}
+
 export const BRL_BRAKE = 0.02;  // si el mercado se movió más de 2 % desde la calibración: "Mercado inestable"

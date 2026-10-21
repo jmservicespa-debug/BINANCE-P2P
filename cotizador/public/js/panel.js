@@ -1,6 +1,6 @@
 import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js';
 import { esc, flag, flags } from './ui.js';
-import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, parseCop, parseCriptoYa } from './criptoya.js';
+import { BRL_BRAKE, USDT_COP_URL, USDT_URL, USDT_VES_URL, brlPerClp, parseCop, parseCriptoYa, parseVes } from './criptoya.js';
 import { vesP2P } from './binance.js';
 
 const $ = (id) => document.getElementById(id);
@@ -310,10 +310,11 @@ let ves = null, copPerUsdt = null;
 $('v-test').onclick = async () => {
   $('v-test').disabled = true;
   $('v-out').textContent = 'Consultando Binance…';
-  const [server, browser, cop] = await Promise.all([
+  const [server, browser, cop, cy] = await Promise.all([
     api('/api/ves').then(({ status, body }) => (status === 200 ? body : { error: body.error || `respondió ${status}` })),
-    vesP2P(fetch, { cache: 'no-store' }).catch((e) => ({ error: e.message || 'sin conexión' })),
+    vesP2P(fetch, { cache: 'no-store' }).catch((e) => ({ error: e.message || 'sin conexión', debug: e.debug })),
     fetch(USDT_COP_URL, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).then((t) => t && parseCop(t)).catch(() => null),
+    fetch(USDT_VES_URL, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : `respondió ${r.status}`)).then((t) => parseVes(t) || { error: String(t).slice(0, 60) }).catch((e) => ({ error: e.message })),
   ]);
   $('v-test').disabled = false;
   copPerUsdt = cop;
@@ -323,7 +324,12 @@ $('v-test').onclick = async () => {
   const ads = (side) => side.ads.map((a) => `${esc(a.nick)} ${fmt(a.price, 2)}`).join(' · ') || 'ninguno cumple el filtro';
   $('v-out').innerHTML = `${line('Desde Cloudflare (siempre en línea)', server)}<br>${line('Desde este equipo', browser)}`
     + (ves ? `<br><br><b>Comprar USDT con Bs:</b> ${ves.buy.price ? fmt(ves.buy.price, 2) + ' Bs' : '—'}<br><small>${ads(ves.buy)}</small>`
-      + `<br><b>Vender USDT por Bs:</b> ${ves.sell.price ? fmt(ves.sell.price, 2) + ' Bs' : '—'}<br><small>${ads(ves.sell)}</small>` : '');
+      + `<br><b>Vender USDT por Bs:</b> ${ves.sell.price ? fmt(ves.sell.price, 2) + ' Bs' : '—'}<br><small>${ads(ves.sell)}</small>` : '')
+    + `<br><br><b>Plan B · CriptoYa (Binance P2P general, sin filtros):</b> `
+    + (cy.error ? `falló (${esc(cy.error)})` : `comprar ${fmt(cy.ask, 2)} Bs · vender ${cy.bid ? fmt(cy.bid, 2) : '—'} Bs`)
+    + (browser.debug ? `<br><br><small>Detalle de Binance (para revisar):<br>${browser.debug.map(esc).join('<br>')}</small>` : '');
+  // Sin anuncios filtrados, el cálculo usa el plan B para que veas la tasa.
+  if (!ves?.buy?.price && cy.ask) ves = { buy: { price: cy.ask }, planB: true };
   renderVes();
 };
 
@@ -337,6 +343,7 @@ function renderVes() {
     return `<div><span class="muted">Venezuela → ${name}</span><b>${Number.isFinite(r) ? `1 Bs = ${fmt(r, 4)} ${cur}` : '—'}</b>`
       + `<span class="muted">${Number.isFinite(r) ? `1.000 Bs = ${fmt(1000 * r, 0)} ${cur} · ref. ${fmt(per, 2)} ${cur}/USDT` : 'sin dato'}</span></div>`;
   };
-  $('v-rates').innerHTML = !ves ? '' : box('Chile', clp, 'CLP') + box('Colombia', copPerUsdt, 'COP');
+  $('v-rates').innerHTML = !ves ? '' : (ves.planB ? '<div style="grid-column:1/-1" class="muted">Calculado con el plan B (CriptoYa).</div>' : '')
+    + box('Chile', clp, 'CLP') + box('Colombia', copPerUsdt, 'COP');
 }
 $('v-m').oninput = renderVes;
