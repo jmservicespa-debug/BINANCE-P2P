@@ -25,6 +25,7 @@ HERE = Path(__file__).resolve().parent
 EMITIR_URL = "https://eboleta.sii.cl/emitir/"
 PROFILE_DIR = HERE / ".perfil-chrome"  # sesión de Chrome solo para este programa (no se sube a GitHub)
 LOG = HERE / "boletas_emitidas.csv"
+UNMARKED = "desmarcada"  # anotación que deja la fila otra vez pendiente
 LAST_EXCEL = HERE / "ultimo_excel.txt"  # ruta del último libro usado (solo en este computador)
 SHEET = "SEGUNDA HOJA"
 COLUMN = "D"
@@ -143,7 +144,8 @@ def done_rows(log: Path | None = None) -> dict[int, dict]:
     if not log.exists():
         return {}
     with log.open(newline="", encoding="utf-8") as f:
-        return {int(x["fila"]): x for x in csv.DictReader(f)}
+        last = {int(x["fila"]): x for x in csv.DictReader(f)}  # vale la última anotación de cada fila
+    return {r: x for r, x in last.items() if x["folio"] != UNMARKED}
 
 
 def record(row: int, amount: int, folio: str, log: Path | None = None) -> None:
@@ -521,6 +523,16 @@ def cmd_marcar(args) -> None:
     print(f"Anotada: fila {args.fila}, ${fmt(args.monto)}, boleta N° {args.folio}. No se volverá a emitir.")
 
 
+def cmd_desmarcar(args) -> None:
+    """Quita una anotación hecha por error (la fila vuelve a quedar pendiente). Úsalo solo si esa boleta NO existe en el SII."""
+    done = done_rows()
+    if args.fila not in done:
+        print(f"La fila {args.fila} no está anotada como emitida.")
+        return
+    record(args.fila, int(done[args.fila]["monto"]), UNMARKED)
+    print(f"Fila {args.fila} desmarcada: queda pendiente y se emitirá la próxima vez que esté en el rango.")
+
+
 def cmd_revisar(args) -> None:
     """Muestra lo que hay en el archivo guardado (columnas A–E, valor y fórmula). No abre Chrome ni emite nada."""
     from openpyxl import load_workbook
@@ -554,6 +566,8 @@ def main(argv=None) -> None:
     mk.add_argument("--fila", type=int, required=True)
     mk.add_argument("--monto", type=int, required=True)
     mk.add_argument("--folio", required=True)
+    um = sub.add_parser("desmarcar", help="quita una anotación hecha por error (la fila vuelve a pendiente)")
+    um.add_argument("--fila", type=int, required=True)
     rv = sub.add_parser("revisar", help="muestra qué hay en esas filas del archivo guardado (no emite)")
     rv.add_argument("--excel")
     rv.add_argument("--desde", type=int, required=True)
@@ -571,6 +585,8 @@ def main(argv=None) -> None:
         cmd_diagnostico(args)
     elif args.cmd == "marcar":
         cmd_marcar(args)
+    elif args.cmd == "desmarcar":
+        cmd_desmarcar(args)
     elif args.cmd == "revisar":
         cmd_revisar(args)
     else:

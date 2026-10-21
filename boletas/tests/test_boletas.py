@@ -216,3 +216,13 @@ def test_marcar_a_mano(tmp_path, monkeypatch):
     assert b.folio_in_json({"data": {"folio": 21940, "monto": 96903}}) == "21940"
     assert b.folio_in_json({"x": [{"nroFolio": "21.941"}]}) == "21.941"
     assert b.folio_in_json({"monto": 1}) is None
+
+
+def test_desmarcar(tmp_path, monkeypatch):
+    log = tmp_path / "log.csv"
+    monkeypatch.setattr(b, "LOG", log)
+    b.main(["marcar", "--fila", "10031", "--monto", "23576", "--folio", "21957"])
+    b.main(["desmarcar", "--fila", "10031"])
+    assert 10031 not in b.done_rows(log)
+    b.main(["marcar", "--fila", "10031", "--monto", "23576", "--folio", "21960"])
+    assert b.done_rows(log)[10031]["folio"] == "21960"
