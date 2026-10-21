@@ -29,6 +29,7 @@ UNMARKED = "desmarcada"  # anotación que deja la fila otra vez pendiente
 LAST_EXCEL = HERE / "ultimo_excel.txt"  # ruta del último libro usado (solo en este computador)
 SHEET = "SEGUNDA HOJA"
 COLUMN = "D"
+MAX_AMOUNT = 500_000  # más que esto no va con boleta: lleva factura exenta (se hace aparte)
 FOLIO_RE = re.compile(r"BOLETA\s+EXENTA\s+ELECTR[OÓ]NICA\s+N[UÚ]MERO\s*:?\s*([\d.]+)", re.I)
 
 
@@ -158,8 +159,8 @@ def record(row: int, amount: int, folio: str, log: Path | None = None) -> None:
         w.writerow([row, amount, folio, datetime.now().isoformat(timespec="seconds")])
 
 
-def plan(rows, done) -> tuple[list[Pending], list[str]]:
-    """Separa lo que se emite de lo que se salta (ya emitida, vacía o con monto raro)."""
+def plan(rows, done, max_amount: int = MAX_AMOUNT) -> tuple[list[Pending], list[str]]:
+    """Separa lo que se emite de lo que se salta (ya emitida, vacía, con monto raro o sobre el tope)."""
     todo, notes = [], []
     for r, amount, raw in rows:
         if r in done:
@@ -167,6 +168,8 @@ def plan(rows, done) -> tuple[list[Pending], list[str]]:
         elif amount is None:
             if raw not in (None, ""):
                 notes.append(f"fila {r}: monto no válido ({raw!r}), se salta")
+        elif amount > max_amount:
+            notes.append(f"fila {r}: ${fmt(amount)} es más de ${fmt(max_amount)}, se salta (va con factura exenta)")
         else:
             todo.append(Pending(r, amount))
     return todo, notes
@@ -464,7 +467,7 @@ def cmd_run(args, really_emit: bool) -> None:
     from playwright.sync_api import sync_playwright
 
     rows = read_rows(pick_excel(args.excel), args.desde, args.hasta, args.hoja, args.columna)
-    todo, notes = plan(rows, done_rows())
+    todo, notes = plan(rows, done_rows(), args.maximo)
     for n in notes:
         print("  ·", n)
     if not todo:
@@ -605,6 +608,7 @@ def main(argv=None) -> None:
         p.add_argument("--hasta", type=int, required=True, help="última fila del Excel")
         p.add_argument("--hoja", default=SHEET)
         p.add_argument("--columna", default=COLUMN)
+        p.add_argument("--maximo", type=int, default=MAX_AMOUNT, help="monto máximo por boleta (más que esto se salta)")
     args = ap.parse_args(argv)
     if args.cmd == "diagnostico":
         cmd_diagnostico(args)

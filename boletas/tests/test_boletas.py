@@ -227,3 +227,10 @@ def test_desmarcar(tmp_path, monkeypatch):
     assert 10031 not in b.done_rows(log)
     b.main(["marcar", "--fila", "10031", "--monto", "23576", "--folio", "21960"])
     assert b.done_rows(log)[10031]["folio"] == "21960"
+
+
+def test_sobre_500_mil_se_salta():
+    rows = [(1, 500000, 500000), (2, 500001, 500001), (3, 9990, 9990)]
+    todo, notes = b.plan(rows, {})
+    assert [p.row for p in todo] == [1, 3]
+    assert any("fila 2" in n and "factura exenta" in n for n in notes)
