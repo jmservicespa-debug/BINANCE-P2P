@@ -177,6 +177,12 @@ function amountLabels(r, o) {
   $('amount-cur').textContent = mode === 'send' ? o.cur : mode === 'bcv' ? 'USD BCV' : r.cur;
 }
 
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('#modes button').forEach((o) => o.setAttribute('aria-pressed', String(o.dataset.mode === m)));
+  $('amount').value = '';  // cambia la moneda de la casilla: el cliente escribe su monto
+}
+
 // USDT: Comprar o Vender, con dos casillas enlazadas (se escribe en cualquiera y la otra se calcula).
 // Comprar: pagas CLP, recibes USDT (precio de venta). Vender: entregas USDT, recibes CLP (precio de compra).
 let side = 'buy', edited = 'top';
