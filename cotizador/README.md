@@ -43,6 +43,21 @@ no usa llaves de Binance ni toca la cuenta.
 - Botón de origen **Otro país** y recuadro **Otro destino** (en Chile y Colombia): el cliente escribe origen, destino y
   monto aproximado, y el botón **Pedir tasa** abre WhatsApp con el mensaje armado. No se publica ninguna tasa.
 
+## Apagar todas las tasas (en el panel)
+
+- Botón **Apagar todas las tasas** / **Encender todas las tasas** arriba del panel, se guarda al instante. Apagado:
+  el cotizador muestra **Actualizando tasas** y solo el botón de WhatsApp; no se publica ninguna tasa ni USDT.
+  Las tasas guardadas no se borran: al encender vuelven tal cual. El mismo aviso sale si ninguna ruta está activa.
+
+## Venezuela · Binance P2P (prueba, solo panel)
+
+- Botón **Probar ahora**: consulta pública de anuncios P2P de Binance (sin llave ni cuenta) en VES, comerciantes
+  verificados, con Pago Móvil y que aceptan una orden de ~30 USD; precio = mediana de los 5 primeros que cumplen.
+  Se intenta desde Cloudflare (siempre en línea) y desde el navegador, y dice cuál funcionó. Calcula, con tu ganancia
+  (12 % por defecto): tasa Venezuela → Chile = (CLP por USDT, compra de Vita) ÷ (Bs por USDT × (1 + ganancia));
+  Venezuela → Colombia igual con COP por USDT (Binance P2P vía CriptoYa). Todavía no se publica nada.
+  Desde el entorno de desarrollo Binance no es alcanzable; falta ver el resultado real desde Cloudflare.
+
 ## Estados de cada ruta (en el panel)
 
 - **Activa**: el cotizador calcula con la tasa; el flyer la muestra.

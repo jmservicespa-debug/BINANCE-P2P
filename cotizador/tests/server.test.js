@@ -214,3 +214,40 @@ test('Brasil automático: mercado cripto, calibración con el proveedor y factor
   assert.ok(Math.abs(cross * a.k - 0.004589) < 0.000002);
   assert.deepEqual(Object.keys(a).sort(), ['cal', 'k']);  // no se publican ni el proveedor ni la ganancia
 });
+
+test('apagar todo: un interruptor oculta todas las tasas sin borrarlas', async () => {
+  noBcv();
+  const { onRequestPut: putPausa } = await import('../functions/api/pausa.js');
+  const e = await env();
+  await e.TASAS.put('tasas', JSON.stringify({ rates: RATES, updated: 1 }));
+  assert.equal((await putPausa({ request: req('/api/pausa', { method: 'PUT', body: { paused: true } }), env: e })).status, 401);
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await putPausa({ request: req('/api/pausa', { method: 'PUT', cookie, body: { paused: true }, origin: 'https://otro.com' }), env: e })).status, 403);
+  assert.equal((await putPausa({ request: req('/api/pausa', { method: 'PUT', cookie, body: { paused: 'si' } }), env: e })).status, 400);
+  assert.equal((await putPausa({ request: req('/api/pausa', { method: 'PUT', cookie, body: { paused: true } }), env: e })).status, 200);
+  const pub = await (await getRates({ request: req('/api/tasas'), env: e })).json();
+  assert.deepEqual([pub.paused, pub.routes.length], [true, 0]);
+  const ses = await (await getSession({ request: req('/api/sesion', { cookie }), env: e })).json();
+  assert.equal(ses.paused, true);
+  assert.equal(ses.saved.rates['cl-ve'], '0.9320');  // lo guardado sigue ahí
+  await putPausa({ request: req('/api/pausa', { method: 'PUT', cookie, body: { paused: false } }), env: e });
+  const on = await (await getRates({ request: req('/api/tasas'), env: e })).json();
+  assert.equal(on.paused, undefined);
+  assert.equal(on.routes.find((r) => r.id === 'cl-ve').rate, '0.9320');
+});
+
+test('Venezuela: Binance P2P en Bs, solo verificados con Pago Móvil y orden de ~30 USD', async () => {
+  const { pagoMovilId, pickVes } = await import('../public/js/binance.js');
+  assert.equal(pagoMovilId(JSON.stringify({ code: '000000', data: [{ identifier: 'Banesco', tradeMethodName: 'Banesco' }, { identifier: 'PagoMovil', tradeMethodName: 'Pago Móvil' }] })), 'PagoMovil');
+  assert.equal(pagoMovilId('{"data":[]}'), null);
+  const ad = (price, userType, min, max, m = 'PagoMovil') => ({ adv: { price: String(price), minSingleTransAmount: String(min), maxSingleTransAmount: String(max), tradeMethods: [{ identifier: m }] }, advertiser: { nickName: `n${price}`, userType } });
+  const body = JSON.stringify({ data: [
+    ad(300, 'merchant', 1000, 50000), ad(301, 'user', 1000, 50000), ad(302, 'merchant', 20000, 90000),  // usuario común y mínimo alto: fuera
+    ad(303, 'merchant', 500, 30000), ad(304, 'merchant', 100, 8000), ad(305, 'merchant', 1000, 50000, 'Banesco'), ad(306, 'merchant', 1000, 50000),
+  ] });
+  const r = pickVes(body, 30);
+  // Quedan 300, 303 y 306: usuario común, mínimo alto (20.000 > 30×302), máximo bajo (8.000 < 30×304) y sin Pago Móvil, fuera.
+  assert.deepEqual([r.total, r.count, r.price], [7, 3, 303]);
+  assert.deepEqual(r.ads.map((a) => a.nick), ['n300', 'n303', 'n306']);
+});

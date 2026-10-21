@@ -29,6 +29,14 @@
     <button class="btn" type="submit">Entrar</button>
   </form>
 
+  <section class="card" id="power" hidden aria-labelledby="h-power">
+    <div>
+      <h2 id="h-power">Cotizador</h2>
+      <span class="muted" id="power-txt">—</span>
+    </div>
+    <button class="btn" id="power-btn">—</button>
+  </section>
+
   <section class="card" id="editor" hidden aria-labelledby="h-tasas">
     <div>
       <h2 id="h-tasas">Tasas del día</h2>
@@ -80,6 +88,18 @@
     <label class="switch"><input type="checkbox" id="u-pub"> <b>USDT activo en el cotizador</b></label>
     <span class="muted">Marcado: los clientes ven la opción USDT en Chile. Sin marcar: no aparece. Se guarda al instante.</span>
     <button class="btn ghost" id="u-save">Guardar</button>
+  </section>
+
+  <section class="card" id="ves" hidden aria-labelledby="h-ves">
+    <div>
+      <h2 id="h-ves">Venezuela · Binance P2P (prueba)</h2>
+      <span class="muted">Solo la ves tú; no se publica nada. Precio del USDT en bolívares de comerciantes verificados, con Pago Móvil y que aceptan órdenes de unos 30 USD.</span>
+    </div>
+    <button class="btn ghost" id="v-test">Probar ahora</button>
+    <div id="v-out" class="muted"></div>
+    <label class="f" for="v-m">Tu ganancia (%)
+      <span class="amount"><input id="v-m" inputmode="decimal" autocomplete="off" value="12"></span></label>
+    <div class="usdt-out num" id="v-rates"></div>
   </section>
 
   <section class="card" id="flyers" hidden aria-labelledby="h-fly">

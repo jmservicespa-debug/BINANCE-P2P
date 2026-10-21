@@ -3,6 +3,7 @@
 
 import { ROUTES, rateNum } from '../public/js/rutas.js';
 import { USDT_URL, parseCriptoYa } from '../public/js/criptoya.js';
+import { vesP2P } from '../public/js/binance.js';
 
 export { parseCriptoYa };
 
@@ -226,6 +227,39 @@ export async function publicView(env, saved, now = Date.now()) {
     }),
     bcv: await bcv(env, s.bcv_manual, now),
   };
+}
+
+// ------------------------------------------------------------------ Apagar todo
+
+// Un solo interruptor para apagar (y volver a encender) todas las tasas, sin tocar las guardadas.
+export const isPaused = async (env) => (await env.TASAS.get('paused')) === '1';
+
+export async function setPaused(request, env, now = Date.now()) {
+  if (!sameOrigin(request)) return json({ error: 'origen no permitido' }, 403);
+  if (!(await isAdmin(request, env, now))) return json({ error: 'Inicia sesión de nuevo.' }, 401);
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'datos inválidos' }, 400); }
+  if (typeof body?.paused !== 'boolean') return json({ error: 'datos inválidos' }, 400);
+  await env.TASAS.put('paused', body.paused ? '1' : '0');
+  return json({ paused: body.paused });
+}
+
+// ------------------------------------------------------------------ Venezuela: Binance P2P en Bs (prueba, solo panel)
+
+// Se guarda 2 minutos para no consultar a Binance en cada recarga del panel.
+export async function vesView(request, env, now = Date.now()) {
+  if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
+  let cached = null;
+  try { cached = JSON.parse((await env.TASAS.get('ves')) || 'null'); } catch { cached = null; }
+  if (cached && now - cached.ts < 120 * 1000) return json({ ...cached, age_s: Math.round((now - cached.ts) / 1000) });
+  try {
+    const got = await vesP2P(fetch, { headers: { accept: 'application/json', 'user-agent': 'JMCambios-cotizador/1.0 (+https://jmcambios.pages.dev)' }, signal: AbortSignal.timeout(8000) });
+    const fresh = { ...got, ts: now };
+    await env.TASAS.put('ves', JSON.stringify(fresh));
+    return json({ ...fresh, age_s: 0 });
+  } catch (e) {
+    return json({ error: e?.name === 'TimeoutError' ? 'no respondió a tiempo' : (e?.message || 'error de conexión') });
+  }
 }
 
 // ------------------------------------------------------------------ USDT/CLP (solo panel)

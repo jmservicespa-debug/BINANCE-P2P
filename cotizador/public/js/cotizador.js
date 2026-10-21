@@ -264,7 +264,16 @@ function waButtons(text, action) {
     + `<span class="fine">${adv ? esc(p.name) + ' · ' : ''}${p.show}</span>`;
 }
 
-function render() { renderOrigins(); renderDests(); calc(); }
+// Tasas apagadas (todas desde el panel, o ninguna activa): aviso "Actualizando tasas" y solo WhatsApp.
+const allOff = () => data.paused || !ALL.some((r) => ['on', 'ask'].includes(statusOf(r.id)));
+function render() {
+  const off = Boolean(data) && allOff();
+  $('paused').hidden = !off;
+  ['from-q', 'origins', 'dests', 'other', 'quote', 'soon'].forEach((id) => { if (off) $(id).hidden = true; });
+  $('from-q').hidden = off; $('origins').hidden = off;
+  if (off) { $('wa').hidden = false; $('dest-note').textContent = ''; $('wa').innerHTML = waButtons('Hola, quiero cotizar un envío. ¿Qué tasas tienen hoy?'); return; }
+  renderOrigins(); renderDests(); calc();
+}
 
 document.querySelectorAll('#modes button').forEach((b) => b.onclick = () => { setMode(b.dataset.mode); calc(); });
 $('amount').oninput = calc;
@@ -307,7 +316,7 @@ async function load() {
     if (!data) { $('error').hidden = false; $('error').textContent = 'No pudimos cargar las tasas. Revisa tu conexión o escríbenos por WhatsApp.'; data = { routes: [], bcv: null }; }
   }
   await Promise.all([loadUsdt(), loadBrl()]);
-  $('updated').textContent = data.updated
+  $('updated').textContent = data.paused ? 'Tasas en actualización' : data.updated
     ? 'Tasas del ' + new Date(data.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
     : 'Tasas aún no publicadas';
   if (origin !== OTHER && !SOON[origin] && route !== OTHER && (!route || !activeRoutes(origin).some((r) => r.id === route))) route = activeRoutes(origin)[0]?.id ?? null;

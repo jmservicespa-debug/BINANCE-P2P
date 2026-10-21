@@ -46,4 +46,16 @@ export async function brlPerClp(fetchFn = fetch) {
   return clp && brl ? brl / clp.value : null;
 }
 
+// Pesos colombianos por USDT (Binance P2P vía CriptoYa; si no viene, mediana). Lado bid: lo que paga el mercado por USDT.
+export const USDT_COP_URL = 'https://criptoya.com/api/usdt/cop/1';
+export function parseCop(text) {
+  let d;
+  try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }
+  if (!d || typeof d !== 'object') return null;
+  const ok = (v) => Number.isFinite(v) && v >= 1000 && v <= 20000;
+  if (ok(Number(d.binancep2p?.bid))) return Number(d.binancep2p.bid);
+  const bids = Object.values(d).map((x) => Number(x?.bid)).filter(ok).sort((a, z) => a - z);
+  return bids.length ? bids[Math.floor(bids.length / 2)] : null;
+}
+
 export const BRL_BRAKE = 0.02;  // si el mercado se movió más de 2 % desde la calibración: "Mercado inestable"

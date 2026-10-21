@@ -1,6 +1,7 @@
 import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js';
 import { esc, flag, flags } from './ui.js';
-import { BRL_BRAKE, USDT_URL, brlPerClp, parseCriptoYa } from './criptoya.js';
+import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, parseCop, parseCriptoYa } from './criptoya.js';
+import { vesP2P } from './binance.js';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -18,7 +19,7 @@ async function api(path, opts = {}) {
 
 function showEditor(on) {
   $('login').hidden = on;
-  ['editor', 'usdt', 'flyers', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  ['power', 'editor', 'usdt', 'ves', 'flyers', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
 }
 
 async function start() {
@@ -26,6 +27,7 @@ async function start() {
   if (status !== 200) { showEditor(false); $('password').focus(); return; }
   saved = body.saved;
   showEditor(true);
+  renderPower(body.paused);
   renderRoutes();
   renderBcv(body.view.bcv);
   renderLinks();
@@ -42,6 +44,24 @@ $('login').onsubmit = async (e) => {
   $('login-msg').textContent = body.error || 'No se pudo entrar. Intenta de nuevo.';
 };
 $('logout').onclick = async () => { await api('/api/logout', { method: 'POST' }); showEditor(false); };
+
+// Un botón para apagar todas las tasas en la noche y encenderlas al publicar (las tasas guardadas no se borran).
+let paused = false;
+function renderPower(p) {
+  paused = p;
+  $('power-txt').textContent = paused
+    ? 'Tasas APAGADAS: los clientes ven "Actualizando tasas".'
+    : 'Tasas encendidas: los clientes cotizan con las tasas publicadas.';
+  $('power-btn').textContent = paused ? 'Encender todas las tasas' : 'Apagar todas las tasas';
+  $('power-btn').className = paused ? 'btn' : 'btn ghost';
+}
+$('power-btn').onclick = async () => {
+  $('power-btn').disabled = true;
+  const { status, body } = await api('/api/pausa', { method: 'PUT', body: JSON.stringify({ paused: !paused }) });
+  $('power-btn').disabled = false;
+  if (status === 200) renderPower(body.paused);
+  else $('power-txt').textContent = body.error || 'No se pudo cambiar. Intenta de nuevo.';
+};
 
 function renderRoutes() {
   $('last').textContent = saved.updated ? `Última publicación: ${new Date(saved.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}` : '';
@@ -282,3 +302,41 @@ async function brlLive() {
   box.textContent = txt + ' Al guardar, se calibra con el número de tu proveedor.';
 }
 setInterval(() => { if (!$('editor').hidden && $('prov-auto')?.checked) brlLive(); }, 60 * 1000);
+
+// ------------------------------------------------------------------ Venezuela: prueba Binance P2P
+
+// Se intenta desde Cloudflare y desde este navegador, para saber cuál funciona antes de publicar nada.
+let ves = null, copPerUsdt = null;
+$('v-test').onclick = async () => {
+  $('v-test').disabled = true;
+  $('v-out').textContent = 'Consultando Binance…';
+  const [server, browser, cop] = await Promise.all([
+    api('/api/ves').then(({ status, body }) => (status === 200 ? body : { error: body.error || `respondió ${status}` })),
+    vesP2P(fetch, { cache: 'no-store' }).catch((e) => ({ error: e.message || 'sin conexión' })),
+    fetch(USDT_COP_URL, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).then((t) => t && parseCop(t)).catch(() => null),
+  ]);
+  $('v-test').disabled = false;
+  copPerUsdt = cop;
+  ves = !server.error ? server : !browser.error ? browser : null;
+  const line = (name, r) => r.error ? `✗ ${name}: falló (${esc(r.error)})`
+    : `✓ ${name}: funciona (${r.buy.count} de ${r.buy.total} anuncios cumplen el filtro)`;
+  const ads = (side) => side.ads.map((a) => `${esc(a.nick)} ${fmt(a.price, 2)}`).join(' · ') || 'ninguno cumple el filtro';
+  $('v-out').innerHTML = `${line('Desde Cloudflare (siempre en línea)', server)}<br>${line('Desde este equipo', browser)}`
+    + (ves ? `<br><br><b>Comprar USDT con Bs:</b> ${ves.buy.price ? fmt(ves.buy.price, 2) + ' Bs' : '—'}<br><small>${ads(ves.buy)}</small>`
+      + `<br><b>Vender USDT por Bs:</b> ${ves.sell.price ? fmt(ves.sell.price, 2) + ' Bs' : '—'}<br><small>${ads(ves.sell)}</small>` : '');
+  renderVes();
+};
+
+// Tasa = (pesos por USDT) ÷ (Bs por USDT × (1 + ganancia)): el cliente paga en Bs y recibe CLP o COP.
+function renderVes() {
+  const b = ves?.buy?.price, m = (Number(String($('v-m').value).replace(',', '.')) || 0) / 100;
+  const clp = usdt?.ref?.bid;
+  const rate = (per) => (b && per ? per / (b * (1 + m)) : NaN);
+  const box = (name, per, cur) => {
+    const r = rate(per);
+    return `<div><span class="muted">Venezuela → ${name}</span><b>${Number.isFinite(r) ? `1 Bs = ${fmt(r, 4)} ${cur}` : '—'}</b>`
+      + `<span class="muted">${Number.isFinite(r) ? `1.000 Bs = ${fmt(1000 * r, 0)} ${cur} · ref. ${fmt(per, 2)} ${cur}/USDT` : 'sin dato'}</span></div>`;
+  };
+  $('v-rates').innerHTML = !ves ? '' : box('Chile', clp, 'CLP') + box('Colombia', copPerUsdt, 'COP');
+}
+$('v-m').oninput = renderVes;
