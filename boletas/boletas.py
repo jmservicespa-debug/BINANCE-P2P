@@ -232,13 +232,19 @@ def dialog_buttons(page) -> list[str]:
 
 
 def emit(page) -> None:
+    """EMITIR de la pantalla → ventana en "Boleta exenta" → EMITIR de la ventana (el método de pago se deja vacío)."""
     open_dialog(page)
-    # El botón final está dentro de la ventana (no el EMITIR de la pantalla de atrás).
+    re_final = re.compile(r"^\s*emitir\s*$", re.I)
     dialog = first_visible([page.locator(".v-dialog--active"), page.locator("[role=dialog]"), page.locator(".v-dialog"), page.locator(".v-overlay__content")], timeout=1000)
-    scope = dialog or page
-    ok = first_visible([scope.get_by_role("button", name=re.compile(r"^\s*(s[ií]|confirmar|aceptar|continuar|emitir)\s*$", re.I))], timeout=2000)
-    if ok is not None:
-        ok.click()
+    if dialog is not None:
+        final = first_visible([dialog.get_by_role("button", name=re_final)], timeout=3000)
+    else:
+        # Sin ventana reconocible: el EMITIR de la ventana es el último de la página (el primero es el de atrás).
+        buttons = page.get_by_role("button", name=re_final)
+        final = buttons.last if buttons.count() >= 2 else None
+    if final is None:
+        raise RuntimeError('no encontré el botón EMITIR de la ventana')
+    final.click()
 
 
 def read_folio(page, amount: int, timeout_s: int = 30) -> str:
