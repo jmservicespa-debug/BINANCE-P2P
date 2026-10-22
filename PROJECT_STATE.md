@@ -205,6 +205,18 @@ tests/                     pruebas unitarias (sin red)
 - Actualizado 2026-10-20: el usuario arranca el 2026-10-21 con 1–1,5 M (mitad COP / mitad USDT), montos 100.000–500.000. Duración ~2 semanas (incluye fin de semana y la quincena del 30–31 oct); pasar de fase con ≥ 30 órdenes, ≥ 8 días y margen real vs. calculado < 0,2 pp. Objetivo del usuario: insistir hasta encontrar la estrategia; primero que se llenen, luego subir margen.
 - **Bitácora + escalera de margen** (construida 2026-10-20, `analysis/ladder.py`): tabla `my_ad_log` (mis anuncios cada lectura, ~5 min); por orden MAKER no cancelada: espera desde el último reinicio (cambio de precio / vuelta a en línea / orden anterior del mismo lado), puesto y margen del par. Escalera por lado: llenó < 20 min → subir 0,1 pp; > 60 min quieto → bajar 0,1 pp; marca si queda bajo el mínimo. Panel (Resultados → Bitácora; Mis anuncios), alerta `escalera:*` (RECOMMENDATION) y línea en el resumen. Órdenes se descargan cada 5 ciclos. Estas reglas son el borrador de la lógica del agente en las Fases 8–9.
 
+## Prueba real – día 1 (2026-10-22): aprendizajes
+- Compra en órdenes chicas (mínimo bajo, Bancolombia/Nequi/Bre-B): 19 compras en pocas horas, llenado ≈ 1 min, puesto general #21–#62
+  pero primero para clientes de ese monto. Costo promedio 3.165,22 (con comisión y 4x1000 estimado) vs mejor vendedor ~3.170–3.177.
+- Venta lenta (0 ventas el día 1): con margen mínimo 2 % la venta quedaba en ~3.226; con 1,5 % en ~3.200–3.207 (#27–#44 para
+  clientes del mínimo). Hay que limitar cuánto se compra (monto total chico) y rotar.
+- Etiqueta **"Verificación"** en el anuncio de venta: la pone Binance cuando la respuesta automática / términos del anuncio piden
+  requisitos (p. ej. "solo titulares"). Al borrar ese texto desaparece. La etiqueta resta ventas (paso extra para el comprador).
+- Construido ese día: Qué hacer ahora (subir/bajar/mantener), Mi capital, Mis métodos, Tu puesto (--puesto), tope en órdenes
+  chicas, puesto para clientes del mínimo con tus bancos, puesto si activas un anuncio pausado.
+- Pendiente: costo de los 500 USDT previos al inicio (no entran al costo promedio); confirmar si Bancolombia/Nequi son exentas
+  del 4x1000 (hoy marcadas 0,004 en JMC_MY_PAY_METHODS); estrategia de venta con datos de la bitácora.
+
 ## Cotizador de envíos (construido y publicado 2026-10-20, carpeta `cotizador/`)
 - Pedido del usuario: panel central donde escribe las tasas del día → actualiza el cotizador público y llena los 2 flyers (Chile / Colombia). Independiente del agente P2P.
 - Rutas: Chile → VE (×), PE (×), CO (×), US (÷), BR (×), PA·EC (÷); Colombia → VE (÷). Estados por ruta: Activa / Inestable (tasa por WhatsApp, flyer "CONSULTAR") / Apagada.
