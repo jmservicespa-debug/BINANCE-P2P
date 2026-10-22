@@ -359,7 +359,8 @@ class Advisor:
             "ladder_rules": {"fast_min": self._ladder_rules.fast_s // 60, "slow_min": self._ladder_rules.slow_s // 60,
                              "step_pct": _f(self._ladder_rules.step * 100)},
             "actions": [{"side": a.side, "id": a.ad_id, "online": a.online, "price": _f(a.price), "move": a.move,
-                         "to": _f(a.to), "delta": _f(a.delta), "reason": a.reason, "note": a.note, "rank": a.rank, "total": a.total}
+                         "to": _f(a.to), "delta": _f(a.delta), "reason": a.reason, "note": a.note, "rank": a.rank, "total": a.total,
+                         "small_rank": a.small_rank, "small_total": a.small_total}
                         for a in out.actions],
             "my_ads": my_ads, "errors": result.errors, "alerts": result.alerts + out.notes,
             "today": None if out.today is None else {

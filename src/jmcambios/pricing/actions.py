@@ -35,6 +35,8 @@ class AdAction:
     rank: int | None = None
     total: int | None = None
     note: str = ""
+    small_rank: int | None = None  # puesto entre quienes atienden una orden de tu mínimo con tus métodos
+    small_total: int | None = None
 
     @property
     def delta(self) -> Decimal | None:
@@ -56,6 +58,16 @@ def best_at_min(ad: MyAd, book: list[Ad], exclude_users: set[str] = frozenset())
     return max(pool) if ad.side is OrderSide.BUY else min(pool)
 
 
+def rank_at_min(ad: MyAd, book: list[Ad], exclude_users: set[str] = frozenset()) -> tuple[int, int] | None:
+    """(puesto, total) entre quienes atienden una orden del monto MÍNIMO de mi anuncio con alguno de mis métodos:
+    lo que ve un cliente que filtra por ese monto y por mis bancos."""
+    mine = set(ad.payment_methods)
+    pool = [a for a in book if a.ad_id != ad.ad_id and a.advertiser.user_id not in exclude_users
+            and a.accepts_amount(ad.min_fiat) and mine & set(a.payment_methods)]
+    better = [a for a in pool if (a.price > ad.price if ad.side is OrderSide.BUY else a.price < ad.price)]
+    return len(better) + 1, len(pool) + 1
+
+
 def ad_actions(positions: list[AdPosition], plan: PricePlan | None, ladder_steps=(),
                tolerance: Decimal = TOLERANCE, books: dict[str, list[Ad]] | None = None,
                exclude_users: set[str] = frozenset()) -> list[AdAction]:
@@ -67,8 +79,10 @@ def ad_actions(positions: list[AdPosition], plan: PricePlan | None, ladder_steps
     for p in sorted(positions, key=lambda x: x.ad.side is not OrderSide.BUY):
         ad = p.ad
         buying = ad.side is OrderSide.BUY
+        rs = rank_at_min(ad, books.get(ad.side.value, []), exclude_users) if books else None
         base = dict(side=ad.side.value, ad_id=ad.ad_id[-6:], online=ad.online, price=ad.price,
-                    rank=p.estimated_rank, total=p.total_competitors + 1)
+                    rank=p.estimated_rank, total=p.total_competitors + 1,
+                    small_rank=rs[0] if rs else None, small_total=rs[1] if rs else None)
         if not ad.online:
             out.append(AdAction(**base, move="fuera de línea", to=None, reason="El anuncio está fuera de línea."))
             continue
@@ -113,12 +127,18 @@ def ad_actions(positions: list[AdPosition], plan: PricePlan | None, ladder_steps
     return out
 
 
+def _where(a: AdAction) -> str:
+    if a.small_rank is None:
+        return ""
+    return f" · #{a.small_rank} de {a.small_total} en órdenes de tu mínimo con tus métodos (#{a.rank} en todo el mercado)"
+
+
 def console_line(a: AdAction) -> str:
     kind = "COMPRA" if a.side == "BUY" else "VENTA"
     if a.move in ("subir", "bajar"):
         arrow = "⬆ SUBE" if a.move == "subir" else "⬇ BAJA"
         d = a.delta
-        return f"  ➜ {kind}: {arrow} tu precio a {_money(a.to)} (ahora {_money(a.price)}, {'+' if d > 0 else ''}{_money(d)}) · {a.reason}"
+        return f"  ➜ {kind}: {arrow} tu precio a {_money(a.to)} (ahora {_money(a.price)}, {'+' if d > 0 else ''}{_money(d)}){_where(a)} · {a.reason}"
     if a.move == "mantener":
-        return f"  ✓ {kind}: mantén {_money(a.price)} · {a.reason}"
+        return f"  ✓ {kind}: mantén {_money(a.price)}{_where(a)} · {a.reason}"
     return f"  · {kind}: fuera de línea"

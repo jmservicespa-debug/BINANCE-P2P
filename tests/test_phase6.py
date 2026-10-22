@@ -675,3 +675,21 @@ def test_small_orders_cap():
     low = my_ad(OrderSide.BUY, "3100")
     t = ad_actions([position(low, bids)], pp, books={"BUY": bids, "SELL": asks})[0]
     assert t.move == "subir" and t.to <= D("3140.01")
+
+
+def test_rank_at_min_amount():
+    from jmcambios.pricing.actions import ad_actions, console_line, rank_at_min
+
+    big = [make_ad(f"bb{i}", str(3190 - i), "1000", side=Side.BID, methods=("DaviviendaSA",), user=f"big{i}",
+                   lo="500000", hi="5000000") for i in range(3)]
+    other_bank = [make_ad(f"ob{i}", str(3180 - i), "1000", side=Side.BID, methods=("Nequi",), user=f"ob{i}",
+                          lo="50000", hi="5000000") for i in range(2)]
+    small = [bid(i, str(3140 - i)) for i in range(5)]
+    bids = big + other_bank + small
+    me = my_ad(OrderSide.BUY, "3138.5")  # mínimo 200.000, Davivienda
+    assert rank_at_min(me, bids) == (3, 6)  # solo cuentan los 5 chicos con Davivienda: 3140 y 3139 van delante
+    asks = [ask(i, str(3200 + i)) for i in range(10)]
+    pp = plan(asks, bids, buy_profile=PROFILE, sell_profile=PROFILE, costs=COSTS)
+    a = ad_actions([position(me, bids)], pp, books={"BUY": bids, "SELL": asks})[0]
+    assert (a.small_rank, a.small_total, a.rank) == (3, 6, 8)
+    assert "#3 de 6 en órdenes de tu mínimo" in console_line(a)

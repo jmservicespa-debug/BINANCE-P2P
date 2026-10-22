@@ -301,8 +301,11 @@ function renderTodo(s) {
       what = `${kind}: ${a.move === 'subir' ? '⬆ SUBE' : '⬇ BAJA'} a <span class="mono">${fmt(a.to)}</span>`;
     } else if (a.move === 'mantener') { cls = 'keep'; what = `${kind}: ✓ mantén <span class="mono">${fmt(a.price)}</span>`; }
     else { cls = 'keep'; what = `${kind}: fuera de línea`; }
+    const where = a.small_rank ? `<b>#${a.small_rank} de ${a.small_total}</b> para clientes de tu mínimo con tus bancos · #${a.rank} de ${a.total} en todo el mercado`
+      : `puesto #${a.rank} de ${a.total} en todo el mercado`;
     const now = a.move === 'subir' || a.move === 'bajar'
-      ? `<span class="muted">Ahora ${fmt(a.price)} (${a.delta > 0 ? '+' : ''}${fmt(a.delta)}) · puesto #${a.rank} de ${a.total}</span>` : '';
+      ? `<span class="muted">Ahora ${fmt(a.price)} (${a.delta > 0 ? '+' : ''}${fmt(a.delta)}) · ${where}</span>`
+      : a.move === 'mantener' ? `<span class="muted">${where}</span>` : '';
     return `<div class="act ${cls}${changed && cls !== 'keep' ? ' flash' : ''}"><span class="what">${what}</span>${now}
       <span class="muted">${esc(a.reason)}</span>${a.note ? `<span class="muted">${esc(a.note)}</span>` : ''}</div>`;
   }).join('');

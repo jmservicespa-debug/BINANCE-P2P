@@ -142,6 +142,9 @@ jmcambios-panel                                    # solo el panel (si el monito
 - **Órdenes chicas**: Qué hacer ahora revisa quién atiende una orden del **monto mínimo** de tu anuncio con tus métodos (lo que
   ve un cliente que quiere hacer una orden chica). Si ahí quedas primero por más de 1 COP, te pide acercarte al siguiente, y
   ningún escenario te sube (compra) o baja (venta) más allá de ese punto, porque solo regalarías margen.
+- **Dos puestos**: el puesto "en todo el mercado" cuenta todos los anuncios del lado (cualquier monto y banco). El que importa
+  es el **puesto para clientes de tu mínimo con tus bancos** (quienes aceptan una orden de tu monto mínimo y comparten un
+  método contigo), que es lo que ve en Binance un cliente que filtra por monto y banco. Qué hacer ahora muestra los dos.
 - **Qué hacer ahora** (arriba del panel, en todas las pestañas; solo en modo RECOMMENDATION): una línea por anuncio en línea:
   **⬆ SUBE a X**, **⬇ BAJA a X** o **✓ mantén**, con el precio actual, la diferencia, el puesto y el motivo. Prioridad: si regalas
   margen (estás más allá del siguiente competidor) → acercarte a él; si estás a más de 1 COP del escenario equilibrado → ir a ese
