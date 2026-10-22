@@ -141,4 +141,6 @@ def console_line(a: AdAction) -> str:
         return f"  ➜ {kind}: {arrow} tu precio a {_money(a.to)} (ahora {_money(a.price)}, {'+' if d > 0 else ''}{_money(d)}){_where(a)} · {a.reason}"
     if a.move == "mantener":
         return f"  ✓ {kind}: mantén {_money(a.price)}{_where(a)} · {a.reason}"
+    if a.small_rank is not None:
+        return f"  · {kind}: fuera de línea · si lo activas a {_money(a.price)} quedarías #{a.small_rank} de {a.small_total} en órdenes de tu mínimo (#{a.rank} en todo el mercado)"
     return f"  · {kind}: fuera de línea"

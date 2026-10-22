@@ -693,3 +693,14 @@ def test_rank_at_min_amount():
     a = ad_actions([position(me, bids)], pp, books={"BUY": bids, "SELL": asks})[0]
     assert (a.small_rank, a.small_total, a.rank) == (3, 6, 8)
     assert "#3 de 6 en órdenes de tu mínimo" in console_line(a)
+
+
+def test_offline_ad_shows_where_it_would_land():
+    from jmcambios.pricing.actions import ad_actions, console_line
+
+    bids = [bid(i, str(3140 - i)) for i in range(5)]
+    asks = [ask(i, str(3200 + i)) for i in range(10)]
+    pp = plan(asks, bids, buy_profile=PROFILE, sell_profile=PROFILE, costs=COSTS)
+    a = ad_actions([position(my_ad(OrderSide.BUY, "3138.5", status=3), bids)], pp, books={"BUY": bids, "SELL": asks})[0]
+    assert a.move == "fuera de línea" and a.small_rank == 3
+    assert "si lo activas a 3.138,50 quedarías #3 de 6" in console_line(a)

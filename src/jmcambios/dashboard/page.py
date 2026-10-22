@@ -305,7 +305,8 @@ function renderTodo(s) {
       : `puesto #${a.rank} de ${a.total} en todo el mercado`;
     const now = a.move === 'subir' || a.move === 'bajar'
       ? `<span class="muted">Ahora ${fmt(a.price)} (${a.delta > 0 ? '+' : ''}${fmt(a.delta)}) · ${where}</span>`
-      : a.move === 'mantener' ? `<span class="muted">${where}</span>` : '';
+      : a.move === 'mantener' ? `<span class="muted">${where}</span>`
+      : a.small_rank ? `<span class="muted">Si lo activas a ${fmt(a.price)}: <b>#${a.small_rank} de ${a.small_total}</b> para clientes de tu mínimo con tus bancos · #${a.rank} en todo el mercado</span>` : '';
     return `<div class="act ${cls}${changed && cls !== 'keep' ? ' flash' : ''}"><span class="what">${what}</span>${now}
       <span class="muted">${esc(a.reason)}</span>${a.note ? `<span class="muted">${esc(a.note)}</span>` : ''}</div>`;
   }).join('');
