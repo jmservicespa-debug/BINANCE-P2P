@@ -77,6 +77,7 @@ nav div{display:flex;gap:6px;max-width:520px;width:100%}
 @media (min-width: 1100px){nav{display:none}}
 nav button{flex:1;min-height:44px;font-size:13px}
 .hidden{display:none}
+[hidden]{display:none!important}
 .todo{border:1px solid var(--accent);margin-top:4px}
 .act{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:var(--calc-bg)}
 .act .what{font-size:16px;font-weight:700}
@@ -137,6 +138,18 @@ input{font:inherit;font-size:14px;width:118px;min-height:36px;padding:0 10px;bor
 </div>
 
 <div id="tab-precios" class="hidden"><div class="coltitle">PRECIOS Y ESTRATEGIAS</div>
+  <section class="card"><div class="row"><h2>Mi capital</h2><span class="chip calc">Tú eliges</span></div>
+    <span class="muted">Con cuánto empiezas. Se suman y restan tus órdenes de Binance desde que lo guardas.</span>
+    <div class="row"><label class="label" for="capcop">Pesos (COP)</label><input id="capcop" type="text" inputmode="numeric" placeholder="ej. 1.500.000"></div>
+    <div class="row"><label class="label" for="capusdt">USDT</label><input id="capusdt" type="text" inputmode="decimal" placeholder="ej. 500"></div>
+    <div class="row"><span class="muted" id="capsince"></span><div class="btns"><button id="capsave">Guardar desde ahora</button></div></div>
+    <div id="capout"></div>
+  </section>
+  <section class="card"><div class="row"><h2>Mis métodos de pago</h2><span class="chip calc">Tú eliges</span></div>
+    <span class="muted">Las estrategias y la competencia por monto se calculan solo contra quienes aceptan alguno de estos.</span>
+    <div class="btns" id="metbtns" style="flex-wrap:wrap"></div>
+    <div class="row"><span class="muted" id="methint"></span><div class="btns"><button id="metreset">Mis anuncios</button></div></div>
+  </section>
   <section class="card"><div class="row"><h2>Escenarios de precio</h2><span class="chip calc">Cálculo</span></div>
     <span class="muted" id="costs"></span><div id="prio"></div></section>
   <section class="card"><div class="row"><h2>Ganancia libre que buscas</h2><span class="chip calc">Tú eliges</span></div>
@@ -350,10 +363,10 @@ document.querySelectorAll('#vbtns button').forEach(b => b.classList.toggle('on',
     $('lmin').value = limits ? fmt(limits[0], 0) : ''; $('lmax').value = limits ? fmt(limits[1], 0) : '';
   }
   renderTramos(v);
-  if (shown('tab-precios')) renderMerchants(v);
+  if (shown('tab-precios')) { renderMerchants(v); renderCapital(); renderMethods(); }
   try {
     const r = await api('/api/escenarios?margen=' + m + '&verificados=' + (v ? 1 : 0)
-      + (limits ? '&min=' + limits[0] + '&max=' + limits[1] : ''));
+      + (limits ? '&min=' + limits[0] + '&max=' + limits[1] : '') + metQ());
     if (r.available) renderPlan(r);
   } catch (e) { renderPlan(s.plan); }
 }
@@ -395,7 +408,7 @@ async function renderBitacora() {
 
 async function renderTramos(v) {
   try {
-    const t = await api('/api/tramos?verificados=' + (v ? 1 : 0));
+    const t = await api('/api/tramos?verificados=' + (v ? 1 : 0) + metQ());
     const table = (rows, title) => `<h3 style="margin:10px 0 4px;font-size:14px;color:var(--text)">${title}</h3>
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums">
       <tr><th style="text-align:left">Tramo</th><th style="text-align:right">Anuncios</th><th style="text-align:right">Mejor</th><th style="text-align:right">Tu puesto</th></tr>
@@ -451,6 +464,71 @@ function setLimits(v) {
   try { v ? localStorage.setItem('jmc_limites', JSON.stringify(v)) : localStorage.removeItem('jmc_limites'); } catch (e) {}
   if (lastState) renderPlanFor(lastState);
 }
+
+// Métodos de pago elegidos en el panel (null = los de tus anuncios).
+let methods = null;
+try { const v = JSON.parse(localStorage.getItem('jmc_metodos') || 'null'); if (Array.isArray(v) && v.length) methods = v; } catch (e) {}
+const metQ = () => methods ? '&metodos=' + encodeURIComponent(methods.join(',')) : '';
+let metList = null;
+async function renderMethods() {
+  try { metList = metList || await api('/api/metodos'); } catch (e) { return; }
+  const ids = [...new Set([...(metList.mine || []), ...(methods || []), ...metList.book.map(x => x.id)])];
+  const sel = new Set(methods || metList.mine || []);
+  const count = Object.fromEntries(metList.book.map(x => [x.id, x.ads]));
+  $('metbtns').innerHTML = ids.map(id => `<button data-id="${esc(id)}" class="${sel.has(id) ? 'on' : ''}">${esc(id)}${count[id] ? ` <span class="muted">${count[id]}</span>` : ''}</button>`).join('');
+  $('methint').textContent = methods ? `Elegidos en el panel: ${methods.join(', ')}` : `De tus anuncios: ${(metList.mine || []).join(', ') || '—'}`;
+  document.querySelectorAll('#metbtns button').forEach(b => b.onclick = () => {
+    const cur = new Set(methods || metList.mine || []);
+    cur.has(b.dataset.id) ? cur.delete(b.dataset.id) : cur.add(b.dataset.id);
+    setMethods(cur.size ? [...cur] : null);
+  });
+}
+function setMethods(v) {
+  methods = v;
+  try { v ? localStorage.setItem('jmc_metodos', JSON.stringify(v)) : localStorage.removeItem('jmc_metodos'); } catch (e) {}
+  renderMethods();
+  if (lastState) renderPlanFor(lastState);
+}
+
+// Mi capital: pesos y USDT al inicio (guardados en este navegador) → saldo actual con tus órdenes.
+let cap = null;
+try { const v = JSON.parse(localStorage.getItem('jmc_capital') || 'null'); if (v && v.since) cap = v; } catch (e) {}
+const parseUsdt = (t) => { let x = String(t || '').trim(); if (x.includes(',')) x = x.replace(/\./g, '').replace(',', '.'); return x === '' ? NaN : +x; };
+const CAPS = {pesos: ['Cargado de pesos', 'neg'], usdt: ['Cargado de USDT', 'neg'], equilibrado: ['Balance sano', 'good'], 'sin precio': ['Sin precio de referencia', '']};
+async function renderCapital() {
+  if (!cap) { $('capout').innerHTML = ''; $('capsince').textContent = 'Sin capital guardado'; return; }
+  if (document.activeElement !== $('capcop')) $('capcop').value = fmt(cap.cop, 0);
+  if (document.activeElement !== $('capusdt')) $('capusdt').value = fmt(cap.usdt, 2);
+  $('capsince').textContent = 'Desde ' + dmy(cap.since);
+  try {
+    const c = await api(`/api/capital?pesos=${cap.cop}&usdt=${cap.usdt}&desde=${cap.since}`);
+    const [label, cls] = CAPS[c.status] || ['', ''];
+    const share = c.cop_share === null ? null : c.cop_share * 100;
+    $('capout').innerHTML = `
+      <div class="kv"><span>Pesos ahora</span><b>${fmt(c.cop, 0)} COP</b></div>
+      <div class="kv"><span>USDT ahora</span><b>${fmt(c.usdt, 2)} USDT</b></div>
+      <div class="muted">${c.buys} compras · ${c.sells} ventas desde que guardaste${c.price ? ' · USDT a ' + fmt(c.price) : ''}</div>
+      ${share === null ? '' : `<div class="bar"><span style="left:0;width:${share}%;background:var(--bid)"></span></div>
+      <div class="row muted"><span>Pesos ${fmt(share, 0)} %</span><span class="${cls}">${label}</span><span>USDT ${fmt(100 - share, 0)} %</span></div>`}
+      ${c.advice.map(a => `<div class="muted">• ${esc(a)}</div>`).join('')}
+      ${c.warnings.map(w => `<div class="warn">${esc(w)}</div>`).join('')}
+      ${c.max_buy_order && c.max_sell_order ? '<div class="row"><span class="muted">Llevar ese máximo a las estrategias</span><button id="capuse">Usar estos montos</button></div>' : ''}`;
+    const use = $('capuse');
+    if (use) use.onclick = () => {
+      const lo = limits ? limits[0] : (lastState?.profiles?.buy?.min_fiat || 50000);
+      const hi = Math.min(c.max_buy_order, c.max_sell_order);
+      if (hi > lo) setLimits([lo, hi]); else $('lhint').innerHTML = '<span class="neg">El máximo sugerido queda bajo tu mínimo</span>';
+    };
+  } catch (e) { $('capout').innerHTML = '<span class="muted">No se pudo calcular el capital.</span>'; }
+}
+$('capsave').onclick = () => {
+  const c = parseCop($('capcop').value), u = parseUsdt($('capusdt').value);
+  if (!(c >= 0) || !(u >= 0)) { $('capsince').innerHTML = '<span class="neg">Escribe los pesos y los USDT</span>'; return; }
+  cap = {cop: c, usdt: u, since: Math.floor(Date.now() / 1000)};
+  try { localStorage.setItem('jmc_capital', JSON.stringify(cap)); } catch (e) {}
+  renderCapital();
+};
+$('metreset').onclick = () => setMethods(null);
 
 function setVerified(v) {
   verified = v;

@@ -10,6 +10,7 @@ from __future__ import annotations
 import hmac
 import json
 import logging
+import re
 import secrets
 import socket
 import threading
@@ -21,6 +22,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from jmcambios.analysis import ladder, merchants
+from jmcambios.analysis.capital import capital as capital_view
 from jmcambios.analysis.amounts import tranche_views
 from jmcambios.analysis.pressure import PressureReport
 from jmcambios.dashboard.icon import ICON_PNG
@@ -47,6 +49,28 @@ def _limits(q: dict) -> tuple[Decimal, Decimal] | None | str:
     except InvalidOperation:
         return "bad"
     return (a, b) if Decimal("0") < a < b <= Decimal("1e10") else "bad"
+
+
+METHOD_RE = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
+
+
+def _methods(q: dict) -> tuple[str, ...] | None | str:
+    raw = (q.get("metodos") or [""])[0]
+    if not raw:
+        return None
+    ms = tuple(dict.fromkeys(m for m in raw.split(",") if m))
+    return ms if ms and len(ms) <= 20 and all(METHOD_RE.match(m) for m in ms) else "bad"
+
+
+def _num(q: dict, key: str) -> Decimal | None | str:
+    raw = (q.get(key) or [""])[0]
+    if not raw:
+        return None
+    try:
+        v = Decimal(raw.replace(",", "."))
+    except InvalidOperation:
+        return "bad"
+    return v if Decimal("0") <= v <= Decimal("1e12") else "bad"
 
 
 def new_token() -> str:
@@ -157,7 +181,7 @@ class PanelData:
         ]
 
     def escenarios(self, margin_pct: Decimal, now_ts: int, merchants_only: bool | None = None,
-                   limits: tuple[Decimal, Decimal] | None = None) -> dict[str, Any]:
+                   limits: tuple[Decimal, Decimal] | None = None, methods: tuple[str, ...] | None = None) -> dict[str, Any]:
         """Recalcula los 3 escenarios con otro margen mínimo, usando el último libro guardado. Solo lectura."""
         state = self.estado(now_ts)
         if not state.get("available") or not state.get("costs"):
@@ -173,6 +197,8 @@ class PanelData:
                            else AdProfile(tuple(self.cost_config.gmf_by_account), *DEFAULT_LIMITS))
             if limits is not None:  # estrategia para el rango de montos elegido
                 profiles[k] = AdProfile(profiles[k].methods, *limits)
+            if methods:  # métodos elegidos en el panel
+                profiles[k] = AdProfile(methods, profiles[k].min_fiat, profiles[k].max_fiat)
         pr = state.get("pressure") or {}
         pressure = PressureReport(score=pr.get("score", 0.0), confidence=pr.get("confidence", 0), label="")
         with self._store() as st:
@@ -190,6 +216,7 @@ class PanelData:
             "merchants_only": pp.merchants_only,
             "leader_gaps": [float(x) for x in leaders] if leaders else None,
             "limits": [float(profiles["buy"].min_fiat), float(profiles["buy"].max_fiat)],
+            "methods": list(profiles["buy"].methods),
             "scenarios": [{
                 "name": sc.name, "target_margin": f(sc.target_margin), "margin": f(sc.margin),
                 "margin_worst": f(sc.margin_worst), "net_per_unit": f(sc.net_per_unit),
@@ -199,13 +226,15 @@ class PanelData:
             } for sc in pp.scenarios],
         }
 
-    def tramos(self, now_ts: int, merchants_only: bool | None = None) -> dict[str, Any]:
+    def tramos(self, now_ts: int, merchants_only: bool | None = None, chosen: tuple[str, ...] | None = None) -> dict[str, Any]:
         """Competencia por tramo de monto, por lado, con tus métodos y el precio de tus anuncios."""
         state = self.estado(now_ts)
         ver = bool(state.get("merchants_only", True)) if merchants_only is None else merchants_only
         mine = {a["side"]: a["price"] for a in state.get("my_ads") or []}
         methods = {k: tuple((state.get("profiles") or {}).get(k, {}).get("methods") or self.cost_config.gmf_by_account)
                    for k in ("buy", "sell")}
+        if chosen:
+            methods = {"buy": chosen, "sell": chosen}
         out: dict[str, Any] = {"merchants_only": ver}
         views: dict[str, list] = {}
         with self._store() as st:
@@ -232,6 +261,33 @@ class PanelData:
             out["suggested"] = best
             out["min_margin"] = float(c["min_margin"])
         return out
+
+    def metodos(self, now_ts: int) -> dict[str, Any]:
+        """Métodos de tus anuncios y los más usados en el libro (para elegir en el panel)."""
+        state = self.estado(now_ts)
+        mine = list(dict.fromkeys(m for k in ("buy", "sell") for m in ((state.get("profiles") or {}).get(k, {}).get("methods") or [])))
+        counts: dict[str, int] = {}
+        with self._store() as st:
+            for side in (Side.ASK, Side.BID):
+                for a in self._book(st, side):
+                    for m in a.payment_methods:
+                        counts[m] = counts.get(m, 0) + 1
+        top = sorted(counts.items(), key=lambda x: -x[1])[:20]
+        return {"mine": mine or list(self.cost_config.gmf_by_account), "book": [{"id": m, "ads": n} for m, n in top]}
+
+    def capital(self, cop0: Decimal, usdt0: Decimal, since_ts: int, now_ts: int) -> dict[str, Any]:
+        """Pesos y USDT que quedan desde que se fijó el capital (órdenes completadas de Binance)."""
+        state = self.estado(now_ts)
+        m = state.get("market") or {}
+        a, b = (m.get("ask") or {}).get("best"), (m.get("bid") or {}).get("best")
+        price = Decimal(str((a + b) / 2)) if a and b else (Decimal(str(a or b)) if (a or b) else None)
+        with self._store() as st:
+            orders = st.load_orders(fiat=self.fiat, asset=self.asset, since_ts=since_ts)
+        v = capital_view(cop0, usdt0, orders, since_ts, price)
+        f = lambda x: None if x is None else float(x)  # noqa: E731
+        return {"cop": f(v.cop), "usdt": f(v.usdt), "price": f(v.price), "cop_share": f(v.cop_share), "status": v.status,
+                "max_buy_order": f(v.max_buy_order), "max_sell_order": f(v.max_sell_order), "buys": v.buys, "sells": v.sells,
+                "advice": v.advice, "warnings": v.warnings, "since_ts": since_ts}
 
     def comerciantes(self, now_ts: int, merchants_only: bool | None = None) -> dict[str, Any]:
         """Estudio de los mejores comerciantes (últimos 3 días). Se guarda 10 min: tarda unos segundos."""
@@ -347,17 +403,29 @@ def make_handler(data: PanelData, token: str) -> type[BaseHTTPRequestHandler]:
                         self._send(400, "margen inválido".encode(), "text/plain; charset=utf-8")
                     else:
                         ver = (q.get("verificados") or [""])[0]
-                        lim = _limits(q)
-                        if lim == "bad":
-                            self._send(400, "límites inválidos".encode(), "text/plain; charset=utf-8")
+                        lim, met = _limits(q), _methods(q)
+                        if lim == "bad" or met == "bad":
+                            self._send(400, "límites o métodos inválidos".encode(), "text/plain; charset=utf-8")
                         else:
-                            self._json(data.escenarios(m, ts, None if ver not in ("0", "1") else ver == "1", lim))
+                            self._json(data.escenarios(m, ts, None if ver not in ("0", "1") else ver == "1", lim, met))
                 elif url.path == "/api/comerciantes":
                     ver = (q.get("verificados") or [""])[0]
                     self._json(data.comerciantes(ts, None if ver not in ("0", "1") else ver == "1"))
                 elif url.path == "/api/tramos":
                     ver = (q.get("verificados") or [""])[0]
-                    self._json(data.tramos(ts, None if ver not in ("0", "1") else ver == "1"))
+                    met = _methods(q)
+                    if met == "bad":
+                        self._send(400, "métodos inválidos".encode(), "text/plain; charset=utf-8")
+                    else:
+                        self._json(data.tramos(ts, None if ver not in ("0", "1") else ver == "1", met))
+                elif url.path == "/api/metodos":
+                    self._json(data.metodos(ts))
+                elif url.path == "/api/capital":
+                    cop, usdt, since = _num(q, "pesos"), _num(q, "usdt"), _num(q, "desde")
+                    if "bad" in (cop, usdt, since) or cop is None or usdt is None:
+                        self._send(400, "capital inválido".encode(), "text/plain; charset=utf-8")
+                    else:
+                        self._json(data.capital(cop, usdt, int(since or 0), ts))
                 elif url.path == "/api/rentabilidad":
                     self._json(data.rentabilidad(now))
                 elif url.path == "/api/bitacora":

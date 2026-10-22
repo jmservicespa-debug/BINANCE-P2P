@@ -574,3 +574,62 @@ def test_advisor_state_has_actions_only_when_recommending(tmp_path):
         assert bool(out.actions) is expect and bool(data["actions"]) is expect
         if expect:
             assert data["actions"][0]["move"] == "bajar" and data["actions"][0]["to"] is not None
+
+
+# ------------------------------------------------------------------ capital y métodos
+def test_capital_balance_and_advice():
+    from jmcambios.analysis.capital import capital
+
+    since = int((NOW - timedelta(hours=10)).timestamp())
+    orders = [ordr(1, OrderSide.BUY, "100", "3150", 5),  # -315.000 COP, +100 USDT
+              ordr(2, OrderSide.SELL, "50", "3180", 4),  # +159.000 COP, -50 USDT
+              ordr(3, OrderSide.SELL, "10", "3180", 3, status="CANCELLED"),  # no cuenta
+              ordr(4, OrderSide.BUY, "10", "3150", 20)]  # antes de fijar el capital: no cuenta
+    v = capital(D("1500000"), D("500"), orders, since, D("3165"))
+    assert (v.cop, v.usdt, v.buys, v.sells) == (D("1344000"), D("550"), 1, 1)
+    assert v.status == "equilibrado" and v.max_buy_order == D("440000") and v.max_sell_order == D("580000")
+    heavy = capital(D("3000000"), D("50"), [], since, D("3165"))
+    assert heavy.status == "pesos" and "COMPRAR" in heavy.advice[0]
+    assert capital(D("100000"), D("2000"), [], since, D("3165")).status == "usdt"
+    neg = capital(D("100000"), D("0"), [ordr(5, OrderSide.BUY, "100", "3150", 1)], since, D("3165"))
+    assert neg.warnings and neg.cop < 0
+    assert capital(D("1"), D("1"), [], since, None).status == "sin precio"
+
+
+def test_panel_capital_and_methods(tmp_path):
+    from jmcambios.analysis.market_stats import summarize as summ
+
+    db, state = tmp_path / "h.db", tmp_path / "estado.json"
+    asks = [ask(i, str(3160 + i * 2), methods=("BancolombiaSA",) if i < 4 else ("DaviviendaSA",)) for i in range(10)]
+    bids = [bid(i, str(3155 - i * 2), methods=("Nequi",) if i < 3 else ("DaviviendaSA",)) for i in range(10)]
+    with HistoryStore(db) as st:
+        for side, ads in ((Side.ASK, asks), (Side.BID, bids)):
+            snap = MarketSnapshot(venue="binance_p2p", asset="USDT", fiat="COP", side=side, taken_at=T0, ads=ads,
+                                  source="t", reported_total=len(ads), complete=True)
+            st.record_snapshot(snap, summ(side, ads), int(T0.timestamp()))
+        st.upsert_orders([ordr(1, OrderSide.BUY, "100", "3150", 1)], 1)
+    adv = Advisor(orders=[], fiat="COP", gmf_by_account=METHODS, mode=Mode.RECOMMENDATION, state_path=state)
+    adv.process(cycle(asks, bids), 0, int(datetime.now(UTC).timestamp()))
+    data = panel.PanelData(db, state, venue="binance_p2p", market="USDT/COP", fiat="COP", asset="USDT",
+                           cost_config=panel.cost_config(METHODS))
+    srv = panel.start(data, "clave", host="127.0.0.1", port=0)
+    try:
+        base = f"http://127.0.0.1:{srv.server_address[1]}"
+        m = json.loads(_get(base + "/api/metodos?t=clave")[2])
+        assert {x["id"] for x in m["book"]} >= {"BancolombiaSA", "Nequi", "DaviviendaSA"}
+        sc = json.loads(_get(base + "/api/escenarios?margen=0,3&metodos=BancolombiaSA,Nequi&t=clave")[2])
+        assert sc["methods"] == ["BancolombiaSA", "Nequi"]
+        bal = next(s for s in sc["scenarios"] if s["name"] == "equilibrado")
+        assert bal["sell"]["compatible_total"] == 4 and bal["buy"]["compatible_total"] == 3  # solo quienes aceptan esos métodos
+        tr = json.loads(_get(base + "/api/tramos?verificados=0&metodos=Nequi&t=clave")[2])
+        assert tr["buy"][0]["ads"] == 3
+        since = int((NOW - timedelta(hours=2)).timestamp())
+        c = json.loads(_get(base + f"/api/capital?pesos=1500000&usdt=500&desde={since}&t=clave")[2])
+        assert (c["cop"], c["usdt"], c["buys"]) == (1185000.0, 600.0, 1)
+        for bad in ("/api/escenarios?margen=1&metodos=a%20b", "/api/tramos?metodos=" + ",".join(["x"] * 0) + "%3Cscript%3E",
+                    "/api/capital?pesos=abc&usdt=1", "/api/capital?usdt=1"):
+            with pytest.raises(urllib.error.HTTPError) as e:
+                _get(base + bad + ("&" if "?" in bad else "?") + "t=clave")
+            assert e.value.code == 400
+    finally:
+        srv.shutdown()
