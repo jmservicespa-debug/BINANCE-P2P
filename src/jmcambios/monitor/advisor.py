@@ -302,7 +302,8 @@ class Advisor:
             if snap is not None and key in market:
                 r = real_best(side, snap.ads, exclude_users=self._my_users)
                 market[key]["real_best"] = {"price": _f(r.price), "best": _f(r.best), "min_liquidity": _f(r.min_liquidity),
-                                            "bait": len(r.bait), "bait_fiat": _f(r.bait_fiat)}
+                                            "bait": len(r.bait), "bait_fiat": _f(r.bait_fiat),
+                                            "distorted": r.distorted}
         if result.spread is not None:
             market["spread"] = _f(result.spread.absolute)
             market["spread_pct"] = _f(result.spread.pct)

@@ -239,7 +239,7 @@ const HINT = {conservador: 'más margen, menos órdenes', equilibrado: 'recomend
 function realBest(r) {
   if (!r) return '';
   if (r.price === null) return `Real: el libro entero no suma ${fmt(r.min_liquidity, 0)} COP`;
-  if (!r.bait || r.price === r.best) return `Real: ${fmt(r.price)} ✓`;
+  if (!r.distorted) return `Real: ${fmt(r.price)} ✓`;
   return `<b>Real: ${fmt(r.price)}</b> · ${r.bait} arriba con solo ${fmt(r.bait_fiat, 0)} COP (posible carnada)`;
 }
 

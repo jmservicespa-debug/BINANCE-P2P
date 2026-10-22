@@ -14,6 +14,7 @@ from decimal import Decimal
 from jmcambios.domain import Ad, Side
 
 MIN_LIQUIDITY = Decimal("2000000")  # COP acumulados que debe haber hasta el precio para considerarlo real
+MIN_GAP = Decimal("0.002")  # menos de 0,2 % entre el primero y el real = mercado normal, no carnada
 ZERO = Decimal("0")
 
 
@@ -30,7 +31,10 @@ class RealBest:
 
     @property
     def distorted(self) -> bool:
-        return bool(self.bait) and self.price is not None and self.best != self.price
+        """Hay anuncios con poca plata arriba Y quedan lejos (≥ 0,2 %) del precio real: posible carnada."""
+        if not self.bait or self.price is None or self.best is None:
+            return False
+        return abs(self.best - self.price) >= self.price * MIN_GAP
 
 
 def real_best(side: Side, ads: list[Ad], *, min_liquidity: Decimal = MIN_LIQUIDITY,
@@ -52,8 +56,10 @@ def describe(r: RealBest, money) -> str:
     """Una línea para consola y panel."""
     if r.price is None:
         return f"todo el libro junto no suma {money(r.min_liquidity, 0)} COP: no hay precio real confiable"
-    if not r.distorted:
+    if not r.bait:
         return f"{money(r.price)} (el primero ya tiene plata detrás)"
+    if not r.distorted:
+        return f"{money(r.price)} (casi igual al primero, {money(r.best)}: sin carnada)"
     n = len(r.bait)
     return (f"{money(r.price)} · {n} anuncio{'s' if n != 1 else ''} por delante con solo {money(r.bait_fiat, 0)} COP "
             f"en total (posible carnada, desde {money(r.best)})")

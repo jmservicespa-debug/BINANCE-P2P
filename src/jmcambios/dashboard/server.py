@@ -13,6 +13,7 @@ import logging
 import re
 import secrets
 import socket
+import sys
 import threading
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
@@ -449,9 +450,17 @@ def make_handler(data: PanelData, token: str) -> type[BaseHTTPRequestHandler]:
     return Handler
 
 
+class _Server(ThreadingHTTPServer):
+    def handle_error(self, request, client_address) -> None:
+        # El celular cerró la conexión a medias (bloqueó la pantalla, cambió de app): normal, no se ensucia la consola.
+        if isinstance(sys.exc_info()[1], (ConnectionAbortedError, ConnectionResetError, BrokenPipeError)):
+            return
+        super().handle_error(request, client_address)
+
+
 def start(data: PanelData, token: str, host: str = "0.0.0.0", port: int = 8765) -> ThreadingHTTPServer:
     """Arranca el servidor en un hilo de fondo y lo devuelve (llamar .shutdown() para detenerlo)."""
-    server = ThreadingHTTPServer((host, port), make_handler(data, token))
+    server = _Server((host, port), make_handler(data, token))
     threading.Thread(target=server.serve_forever, name="panel", daemon=True).start()
     return server
 

@@ -52,3 +52,21 @@ def test_console_shows_real_best_and_pc_time():
     assert "hora de tu computador; Colombia" in out
     assert "Mejor precio REAL para vender" in out and "posible carnada" in out and money(D("3160")) in out
     assert "Mejor precio REAL para comprar" in out and "el primero ya tiene plata detrás" in out
+
+
+def test_small_gap_is_not_bait():
+    # Caso real del 22-10: vendedores a 3.167,98 y 3.169 con poca plata, real 3.169 → 1 peso: no es carnada.
+    r = real_best(Side.ASK, [ask(1, "3167.98", "300"), ask(2, "3169", "1000")])
+    assert r.price == D("3169") and r.bait and not r.distorted
+    from jmcambios.analysis.bait import describe
+    assert "sin carnada" in describe(r, money)
+
+
+def test_panel_disconnect_is_quiet(capsys):
+    from jmcambios.dashboard.server import _Server
+    srv = _Server.__new__(_Server)
+    try:
+        raise ConnectionAbortedError("celular cerró")
+    except ConnectionAbortedError:
+        srv.handle_error(None, ("1.2.3.4", 1))
+    assert capsys.readouterr().err == ""
