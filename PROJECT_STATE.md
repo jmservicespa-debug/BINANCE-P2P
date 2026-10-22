@@ -216,6 +216,10 @@ tests/                     pruebas unitarias (sin red)
   chicas, puesto para clientes del mínimo con tus bancos, puesto si activas un anuncio pausado.
 - Pendiente: costo de los 500 USDT previos al inicio (no entran al costo promedio); confirmar si Bancolombia/Nequi son exentas
   del 4x1000 (hoy marcadas 0,004 en JMC_MY_PAY_METHODS); estrategia de venta con datos de la bitácora.
+- Anuncios carnada: un comprador a 3.190 con poca plata movía el "mejor precio" (el mercado real estaba ~3.100/3.160).
+  Construido: **mejor precio real** (`analysis/bait.py`) = primer precio con ≥ 2 M COP acumulados detrás; los de arriba con
+  poca plata se marcan "posible carnada" (consola y tarjetas del panel). Panel y consola muestran la hora de Chile
+  (la persona opera desde Chile); "Hoy", metas y resúmenes siguen contando el día de Colombia.
 
 ## Cotizador de envíos (construido y publicado 2026-10-20, carpeta `cotizador/`)
 - Pedido del usuario: panel central donde escribe las tasas del día → actualiza el cotizador público y llena los 2 flyers (Chile / Colombia). Independiente del agente P2P.

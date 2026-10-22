@@ -228,6 +228,7 @@ def test_advisor_state_alerts_and_ad_cadence(tmp_path):
     assert len(s["plan"]["scenarios"]) == 3 and s["my_ads"][0]["suggested"] is not None
     assert s["costs"]["maker_buy"] == 0.002  # sin órdenes: tasa del anuncio
     assert s["market"]["ask"]["verified_best"] == 3200.0 and s["market"]["bid"]["verified_best"] == 3150.0
+    assert s["market"]["ask"]["real_best"]["min_liquidity"] == 2000000.0 and "bait" in s["market"]["bid"]["real_best"]
     # una sola vez cada una (enfriamiento); el mercado de ejemplo deja 1 % siendo #1 en montos pequeños
     assert [t for t, _ in chan.sent] == ["🔔 Tu anuncio de COMPRA está regalando margen", "🔔 Oportunidad de margen: < 500 mil"]
 

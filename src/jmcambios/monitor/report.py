@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import timedelta, timezone
 from decimal import Decimal
 
+from jmcambios.analysis.bait import describe as describe_real_best, real_best
 from jmcambios.analysis.crossing import CrossReport
 from jmcambios.analysis.filters import AdFilter
 from jmcambios.analysis.market_stats import SideStats, Spread
@@ -91,9 +92,9 @@ TITLES = {
 
 
 def render(result: CycleResult, ad_filter: AdFilter, *, detail: bool = True) -> str:
-    ts = result.started_at.astimezone(BOGOTA)
+    ts = result.started_at.astimezone()  # hora del computador (Chile, donde corre el monitor)
     any_snap = next(iter(result.snapshots.values()), None)
-    header = f"=== {ts:%Y-%m-%d %H:%M:%S} (hora Colombia) · USDT/COP"
+    header = f"=== {ts:%Y-%m-%d %H:%M:%S} (hora de tu computador; Colombia {result.started_at.astimezone(BOGOTA):%H:%M}) · USDT/COP"
     if any_snap:
         header += f" · {any_snap.venue} · fuente {any_snap.source}"
     lines = [header + " ==="]
@@ -101,6 +102,11 @@ def render(result: CycleResult, ad_filter: AdFilter, *, detail: bool = True) -> 
         if side in result.stats:
             lines += _side_block(TITLES[side], result.stats[side], detail=detail)
     lines.append(_spread_line("Diferencial entre mejores precios [cálculo]", result.spread))
+    for side in (Side.ASK, Side.BID):
+        if side in result.snapshots:
+            r = real_best(side, result.snapshots[side].ads)
+            lines.append(f"  Mejor precio REAL {'para comprar' if side is Side.ASK else 'para vender'} "
+                         f"(≥ {money(r.min_liquidity, 0)} COP detrás) [cálculo]: {describe_real_best(r, money)}")
     lines += _cross_lines(result.cross)
     if result.pressure is not None and result.pressure.windows:
         pr = result.pressure

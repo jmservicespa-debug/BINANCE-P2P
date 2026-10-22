@@ -119,7 +119,7 @@ def test_monitor_cycle_records_and_renders(tmp_path):
     text = render(result, f)
     assert "COMPRAR USDT" in text and "VENDER USDT" in text
     assert "volumen ejecutado: no disponible" in text
-    assert "10:00:00 (hora Colombia)" in text
+    assert "(hora de tu computador; Colombia 10:00)" in text
     assert "Con mis filtros" in text
 
 

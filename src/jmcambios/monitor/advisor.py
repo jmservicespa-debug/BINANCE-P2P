@@ -18,6 +18,7 @@ from typing import Any
 
 from jmcambios.alerts import rules
 from jmcambios.alerts.manager import AlertManager, Delivery
+from jmcambios.analysis.bait import real_best
 from jmcambios.analysis.competition import AdPosition, position
 from jmcambios.analysis.pressure import PressureReport
 from jmcambios.config import Mode
@@ -298,6 +299,10 @@ class Advisor:
             prices = [a.price for a in snap.ads if a.advertiser.is_merchant] if snap else []
             if prices and key in market:
                 market[key]["verified_best"] = _f(min(prices) if side is Side.ASK else max(prices))
+            if snap is not None and key in market:
+                r = real_best(side, snap.ads, exclude_users=self._my_users)
+                market[key]["real_best"] = {"price": _f(r.price), "best": _f(r.best), "min_liquidity": _f(r.min_liquidity),
+                                            "bait": len(r.bait), "bait_fiat": _f(r.bait_fiat)}
         if result.spread is not None:
             market["spread"] = _f(result.spread.absolute)
             market["spread_pct"] = _f(result.spread.pct)

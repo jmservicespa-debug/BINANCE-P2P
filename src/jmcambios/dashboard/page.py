@@ -114,8 +114,8 @@ input{font:inherit;font-size:14px;width:118px;min-height:36px;padding:0 10px;bor
 <div id="cols">
 <div id="tab-mercado"><div class="coltitle">MERCADO</div>
   <div class="grid">
-    <div class="card"><span class="label">Mejor precio para COMPRAR</span><span class="big" id="ask">—</span><span class="muted" style="color:var(--real)" id="askn"></span><span class="muted mono" id="askv"></span></div>
-    <div class="card"><span class="label">Mejor precio para VENDER</span><span class="big" id="bid">—</span><span class="muted" style="color:var(--real)" id="bidn"></span><span class="muted mono" id="bidv"></span></div>
+    <div class="card"><span class="label">Mejor precio para COMPRAR</span><span class="big" id="ask">—</span><span class="muted" style="color:var(--real)" id="askn"></span><span class="muted mono" id="askv"></span><span class="muted" id="askr"></span></div>
+    <div class="card"><span class="label">Mejor precio para VENDER</span><span class="big" id="bid">—</span><span class="muted" style="color:var(--real)" id="bidn"></span><span class="muted mono" id="bidv"></span><span class="muted" id="bidr"></span></div>
     <div class="card span2"><div class="row"><div><span class="label">Diferencial entre mejores precios</span><div class="mid" id="spread">—</div></div><span class="chip calc">Cálculo</span></div><div id="cross"></div></div>
   </div>
   <section class="card">
@@ -215,8 +215,10 @@ const pct = (v, d = 3) => v === null || v === undefined ? '—' : fmt(v * 100, d
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $ = (id) => document.getElementById(id);
 const api = (p) => fetch(p + (p.includes('?') ? '&' : '?') + 't=' + encodeURIComponent(T), {cache: 'no-store'}).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
-const hhmm = (ts) => new Date(ts * 1000).toLocaleTimeString('es-CO', {timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit'});
-const dmy = (ts) => new Date(ts * 1000).toLocaleString('es-CO', {timeZone: 'America/Bogota', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'});
+// Horas en Chile (donde está la persona); "Hoy" y las metas siguen contando el día de Colombia.
+const hhmm = (ts) => new Date(ts * 1000).toLocaleTimeString('es-CL', {timeZone: 'America/Santiago', hour: '2-digit', minute: '2-digit'});
+const hhmmCO = (ts) => new Date(ts * 1000).toLocaleTimeString('es-CO', {timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit'});
+const dmy = (ts) => new Date(ts * 1000).toLocaleString('es-CL', {timeZone: 'America/Santiago', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'});
 let hours = 6;
 const WIDE = window.matchMedia('(min-width: 1100px)');
 const shown = (id) => WIDE.matches || !$(id).classList.contains('hidden');
@@ -233,17 +235,26 @@ const NAMES = {conservador: 'Conservador', equilibrado: 'Equilibrado', agresivo:
 const HINT = {conservador: 'más margen, menos órdenes', equilibrado: 'recomendado por defecto', agresivo: 'primer puesto, menos margen',
   'como los mejores': 'misma distancia al mejor precio que los líderes', 'tu puesto': 'el puesto que elegiste, con tu margen mínimo'};
 
+// Mejor precio real: el primero con al menos N COP de plata acumulada detrás (los de arriba con poca plata = posible carnada).
+function realBest(r) {
+  if (!r) return '';
+  if (r.price === null) return `Real: el libro entero no suma ${fmt(r.min_liquidity, 0)} COP`;
+  if (!r.bait || r.price === r.best) return `Real: ${fmt(r.price)} ✓`;
+  return `<b>Real: ${fmt(r.price)}</b> · ${r.bait} arriba con solo ${fmt(r.bait_fiat, 0)} COP (posible carnada)`;
+}
+
 function renderEstado(s) {
   if (!s.available) { $('updated').textContent = s.message; return; }
   const m = s.market || {};
   $('title').textContent = `Mercado ${m.asset || 'USDT'}/${m.fiat || 'COP'}`;
   $('mode').textContent = MODES[s.mode] || s.mode;
-  $('updated').textContent = `Actualizado ${hhmm(s.cycle_ts)} · hora Colombia`;
+  $('updated').textContent = `Actualizado ${hhmm(s.cycle_ts)} hora Chile · ${hhmmCO(s.cycle_ts)} Colombia`;
   $('stale').innerHTML = s.age_s > 300 ? `<div class="bad">Datos de hace ${Math.round(s.age_s / 60)} min: ¿está corriendo el monitor en el computador?</div>` : '';
   $('ask').textContent = fmt(m.ask?.best); $('askn').textContent = m.ask ? `Binance · ${m.ask.ads} anuncios` : '';
   $('bid').textContent = fmt(m.bid?.best); $('bidn').textContent = m.bid ? `Binance · ${m.bid.ads} anuncios` : '';
   $('askv').textContent = m.ask?.verified_best != null ? `Verificados: ${fmt(m.ask.verified_best)}` : '';
   $('bidv').textContent = m.bid?.verified_best != null ? `Verificados: ${fmt(m.bid.verified_best)}` : '';
+  $('askr').innerHTML = realBest(m.ask?.real_best); $('bidr').innerHTML = realBest(m.bid?.real_best);
   $('spread').textContent = m.spread === undefined ? '—' : `${fmt(m.spread)} COP · ${fmt(m.spread_pct, 3)}%`;
   $('askq').textContent = fmt(m.ask?.qty, 0); $('bidq').textContent = fmt(m.bid?.qty, 0);
   const c = s.cross;
