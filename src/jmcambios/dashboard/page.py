@@ -77,6 +77,13 @@ nav div{display:flex;gap:6px;max-width:520px;width:100%}
 @media (min-width: 1100px){nav{display:none}}
 nav button{flex:1;min-height:44px;font-size:13px}
 .hidden{display:none}
+.todo{border:1px solid var(--accent);margin-top:4px}
+.act{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:var(--calc-bg)}
+.act .what{font-size:16px;font-weight:700}
+.act.up .what{color:var(--up)}.act.down .what{color:var(--down)}.act.keep .what{color:var(--soft)}
+.act.flash{animation:flash 1s ease-in-out 3}
+@keyframes flash{50%{background:var(--accent-bg)}}
+@media (min-width: 1100px){#todolist{display:grid;grid-template-columns:1fr 1fr;gap:10px}}
 th{color:var(--muted);font-weight:500;padding:4px 2px;border-bottom:1px solid var(--line)}td{padding:5px 2px;border-bottom:1px solid var(--line)}
 input{font:inherit;font-size:14px;width:118px;min-height:36px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text)}
 @media (prefers-color-scheme: light){
@@ -96,6 +103,11 @@ input{font:inherit;font-size:14px;width:118px;min-height:36px;padding:0 10px;bor
   <div class="chips"><span class="chip real">Binance = dato real</span><span class="chip calc">Cálculo = sistema</span><span class="chip inf">Inferido = estimación</span></div>
   <span class="muted" id="updated">Cargando…</span>
   <div id="stale"></div>
+  <section class="card todo" id="todo" hidden>
+    <div class="row"><h2>Qué hacer ahora</h2><button id="snd" title="Suena cuando cambia lo que hay que hacer">🔕 Sonido</button></div>
+    <div id="todolist"></div>
+    <span class="muted">Sugerencia del escenario equilibrado. El precio lo cambias tú en la app de Binance.</span>
+  </section>
 </header>
 
 <div id="cols">
@@ -238,7 +250,52 @@ function renderEstado(s) {
   $('costs').textContent = `Comisión maker compra ${pct(k.maker_buy)} · venta ${pct(k.maker_sell)} · 4x1000 ${pct(k.gmf)} (exenta) / ${pct(k.gmf_worst)} · margen mínimo ${pct(k.min_margin, 2)}`;
   renderPlanFor(s);
   renderOperation(s);
+  renderTodo(s);
 }
+
+// Qué hacer ahora: una línea por anuncio (subir / bajar / mantener). Suena (si se activa) cuando cambia.
+let sound = false;
+try { sound = localStorage.getItem('jmc_sonido') === '1'; } catch (e) {}
+let lastTodo = null;
+const setSnd = () => { $('snd').textContent = sound ? '🔔 Sonido' : '🔕 Sonido'; $('snd').classList.toggle('on', sound); };
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.25].forEach(t => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = 880;
+      g.gain.setValueAtTime(0.15, ctx.currentTime + t); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.2);
+      o.connect(g).connect(ctx.destination); o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.2); });
+  } catch (e) {}
+}
+function renderTodo(s) {
+  const box = $('todo');
+  if (s.mode === 'OBSERVATION') {
+    box.hidden = false;
+    $('todolist').innerHTML = '<div class="warn">En modo Observación no se sugieren cambios. Pon JMC_MODE=RECOMMENDATION en el archivo .env y reinicia el monitor.</div>';
+    return;
+  }
+  const acts = s.actions || [];
+  box.hidden = !acts.length;
+  if (!acts.length) return;
+  const sig = acts.map(a => a.side + a.move + (a.to ?? '')).join('|');
+  const changed = lastTodo !== null && sig !== lastTodo;
+  $('todolist').innerHTML = acts.map(a => {
+    const kind = a.side === 'BUY' ? 'COMPRA' : 'VENTA';
+    let what, cls;
+    if (a.move === 'subir' || a.move === 'bajar') {
+      cls = a.move === 'subir' ? 'up' : 'down';
+      what = `${kind}: ${a.move === 'subir' ? '⬆ SUBE' : '⬇ BAJA'} a <span class="mono">${fmt(a.to)}</span>`;
+    } else if (a.move === 'mantener') { cls = 'keep'; what = `${kind}: ✓ mantén <span class="mono">${fmt(a.price)}</span>`; }
+    else { cls = 'keep'; what = `${kind}: fuera de línea`; }
+    const now = a.move === 'subir' || a.move === 'bajar'
+      ? `<span class="muted">Ahora ${fmt(a.price)} (${a.delta > 0 ? '+' : ''}${fmt(a.delta)}) · puesto #${a.rank} de ${a.total}</span>` : '';
+    return `<div class="act ${cls}${changed && cls !== 'keep' ? ' flash' : ''}"><span class="what">${what}</span>${now}
+      <span class="muted">${esc(a.reason)}</span>${a.note ? `<span class="muted">${esc(a.note)}</span>` : ''}</div>`;
+  }).join('');
+  if (changed && sound && acts.some(a => a.move === 'subir' || a.move === 'bajar')) beep();
+  lastTodo = sig;
+}
+setSnd();
+$('snd').onclick = () => { sound = !sound; try { localStorage.setItem('jmc_sonido', sound ? '1' : '0'); } catch (e) {} setSnd(); if (sound) beep(); };
 
 const compat = (sp) => sp.rank_compatible <= sp.compatible_total
   ? `#${sp.rank_compatible} de ${sp.compatible_total} compatibles` : `detrás de los ${sp.compatible_total} compatibles`;

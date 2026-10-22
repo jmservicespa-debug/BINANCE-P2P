@@ -532,3 +532,45 @@ def test_opportunity_and_summary_alerts(tmp_path):
     assert titles.count("ℹ️ Resumen del mercado") == 1 and len(chan.sent) == len(titles)
     adv.process(cycle(asks, bids), 0, at_noon + 3600)  # 13:05: no es hora de resumen
     assert len(chan.sent) == len(titles)
+
+
+# ------------------------------------------------------------------ qué hacer ahora
+def test_ad_actions_subir_bajar_mantener():
+    from jmcambios.pricing.actions import ad_actions, console_line
+
+    asks, bids, pp = _setup_ads()
+    bal = next(s for s in pp.scenarios if s.name == "equilibrado")
+    act = lambda ad, book: ad_actions([position(ad, book)], pp)[0]  # noqa: E731
+    # Compra regalando margen (10 COP sobre el mejor): bajar hasta el siguiente + 0,01.
+    a = act(my_ad(OrderSide.BUY, "3160"), bids)
+    assert a.move == "bajar" and a.to < D("3160") and "Regalas" in a.reason
+    # Compra atrasada: subir al equilibrado.
+    a = act(my_ad(OrderSide.BUY, str(bal.buy.price - 20)), bids)
+    assert (a.move, a.to, a.delta) == ("subir", bal.buy.price, D("20")) and "atrás" in a.reason
+    assert "SUBE" in console_line(a)
+    # Dentro de la tolerancia: mantener.
+    assert act(my_ad(OrderSide.BUY, str(bal.buy.price + D("0.5"))), bids).move == "mantener"
+    # Venta regalando (muy por debajo del mejor vendedor): subir.
+    s = act(my_ad(OrderSide.SELL, "3150", ad_id="838528"), asks)
+    assert s.move == "subir" and s.to > D("3150")
+    # Venta atrasada (más cara que lo sugerido): bajar al equilibrado.
+    s = act(my_ad(OrderSide.SELL, str(bal.sell.price + 30), ad_id="838528"), asks)
+    assert (s.move, s.to) == ("bajar", bal.sell.price) and "BAJA" in console_line(s)
+    # Fuera de línea: no se sugiere precio.
+    assert act(my_ad(OrderSide.BUY, "3160", status=3), bids).move == "fuera de línea"
+    # La compra va primero aunque llegue después.
+    both = ad_actions([position(my_ad(OrderSide.SELL, "3150", ad_id="s"), asks), position(my_ad(OrderSide.BUY, "3160"), bids)], pp)
+    assert [x.side for x in both] == ["BUY", "SELL"]
+
+
+def test_advisor_state_has_actions_only_when_recommending(tmp_path):
+    asks, bids, _ = _setup_ads()
+    for mode, expect in ((Mode.RECOMMENDATION, True), (Mode.OBSERVATION, False)):
+        state = tmp_path / f"{mode.value}.json"
+        adv = Advisor(orders=[], fiat="COP", gmf_by_account=METHODS, mode=mode,
+                      fetch_my_ads=lambda: [my_ad(OrderSide.BUY, "3160")], state_path=state)
+        out = adv.process(cycle(asks, bids), 0, 1000)
+        data = json.loads(state.read_text())
+        assert bool(out.actions) is expect and bool(data["actions"]) is expect
+        if expect:
+            assert data["actions"][0]["move"] == "bajar" and data["actions"][0]["to"] is not None

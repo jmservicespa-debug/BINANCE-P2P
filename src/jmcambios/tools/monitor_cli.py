@@ -27,6 +27,7 @@ from jmcambios.connectors.binance.client import BinanceP2PClient
 from jmcambios.connectors.binance.market import BinanceMarketSource
 from jmcambios.dashboard import server as panel
 from jmcambios.logging_utils import setup_logging
+from jmcambios.pricing.actions import console_line
 from jmcambios.analysis.ladder import LadderRules
 from jmcambios.monitor.advisor import Advisor
 from jmcambios.monitor.recorder import SnapshotRecorder
@@ -153,6 +154,8 @@ def main(argv: list[str] | None = None) -> int:
                 logging.getLogger(__name__).exception("error en el asesor")
                 print(f"  ✘ asesor: {type(exc).__name__}: {exc}")
             else:
+                for a in out.actions:
+                    print(console_line(a))
                 for d in out.deliveries:
                     if d.suppressed:
                         continue

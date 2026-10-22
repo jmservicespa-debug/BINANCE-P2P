@@ -30,6 +30,7 @@ from jmcambios.profitability.costs import CostConfig
 from jmcambios.analysis import ladder
 from jmcambios.analysis.amounts import tranche_views
 from jmcambios.monitor.report import money
+from jmcambios.pricing.actions import AdAction, ad_actions
 from jmcambios.pricing.engine import tranche_opportunities
 from jmcambios.pricing.engine import DEFAULT_LIMITS, AdProfile, Costs, PricePlan, build_costs, plan, profile_for
 
@@ -46,6 +47,7 @@ class AdvisorOutput:
     opportunities: tuple | None = None  # (lista por tramo, índice sugerido)
     exempt: daily.ExemptUsage | None = None
     ladder: list[ladder.Step] = field(default_factory=list)
+    actions: list[AdAction] = field(default_factory=list)  # qué hacer ahora con cada anuncio (solo si no es OBSERVATION)
 
 
 def _f(v: Decimal | None) -> float | None:
@@ -241,6 +243,8 @@ class Advisor:
             ]
             out.opportunities = self._opportunities(snaps, my_users)
         self._ladder(out, now_ts)
+        if self.mode is not Mode.OBSERVATION:
+            out.actions = ad_actions(out.positions, out.plan, out.ladder)
 
         failing = bool(result.errors)
         alerts = [a for a in (rules.cross_alert(result.cross, self._cross_min), rules.pressure_alert(result.pressure)) if a]
@@ -349,6 +353,9 @@ class Advisor:
                         "below_min": st.below_min} for st in out.ladder],
             "ladder_rules": {"fast_min": self._ladder_rules.fast_s // 60, "slow_min": self._ladder_rules.slow_s // 60,
                              "step_pct": _f(self._ladder_rules.step * 100)},
+            "actions": [{"side": a.side, "id": a.ad_id, "online": a.online, "price": _f(a.price), "move": a.move,
+                         "to": _f(a.to), "delta": _f(a.delta), "reason": a.reason, "note": a.note, "rank": a.rank, "total": a.total}
+                        for a in out.actions],
             "my_ads": my_ads, "errors": result.errors, "alerts": result.alerts + out.notes,
             "today": None if out.today is None else {
                 "day": out.today.day.isoformat(), "goal": _f(out.today.goal), "realized": _f(out.today.realized),
