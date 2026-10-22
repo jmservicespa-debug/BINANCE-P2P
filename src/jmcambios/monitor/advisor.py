@@ -79,7 +79,9 @@ class Advisor:
         summary_hours: tuple[int, ...] = (),
         store=None,
         ladder_rules: ladder.LadderRules = ladder.LadderRules(),
+        target_rank: int | None = None,
     ) -> None:
+        self._target_rank = target_rank  # puesto elegido (--puesto): escenario "tu puesto"
         self._store = store  # bitácora de mis anuncios (None = sin escalera)
         self._ladder_rules = ladder_rules
         self._ads_fresh = False
@@ -231,6 +233,7 @@ class Advisor:
                 buy_profile=profile_for(buy_ad, self._gmf, DEFAULT_LIMITS),
                 sell_profile=profile_for(sell_ad, self._gmf, DEFAULT_LIMITS),
                 costs=self.costs, pressure=result.pressure, exclude_users=my_users, merchants_only=self._merchants_only,
+                custom_rank=self._target_rank,
             )
             self._profiles = {
                 "buy": profile_for(buy_ad, self._gmf, DEFAULT_LIMITS),
@@ -244,7 +247,9 @@ class Advisor:
             out.opportunities = self._opportunities(snaps, my_users)
         self._ladder(out, now_ts)
         if self.mode is not Mode.OBSERVATION:
-            out.actions = ad_actions(out.positions, out.plan, out.ladder)
+            snaps = result.snapshots
+            books = {"BUY": snaps[Side.BID].ads, "SELL": snaps[Side.ASK].ads} if Side.ASK in snaps and Side.BID in snaps else None
+            out.actions = ad_actions(out.positions, out.plan, out.ladder, books=books, exclude_users=self._my_users)
 
         failing = bool(result.errors)
         alerts = [a for a in (rules.cross_alert(result.cross, self._cross_min), rules.pressure_alert(result.pressure)) if a]

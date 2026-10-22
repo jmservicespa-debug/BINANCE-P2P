@@ -181,7 +181,8 @@ class PanelData:
         ]
 
     def escenarios(self, margin_pct: Decimal, now_ts: int, merchants_only: bool | None = None,
-                   limits: tuple[Decimal, Decimal] | None = None, methods: tuple[str, ...] | None = None) -> dict[str, Any]:
+                   limits: tuple[Decimal, Decimal] | None = None, methods: tuple[str, ...] | None = None,
+                   rank: int | None = None) -> dict[str, Any]:
         """Recalcula los 3 escenarios con otro margen mínimo, usando el último libro guardado. Solo lectura."""
         state = self.estado(now_ts)
         if not state.get("available") or not state.get("costs"):
@@ -208,6 +209,7 @@ class PanelData:
         leaders = ((D(round(pattern["gap_buy"], 2)), D(round(pattern["gap_sell"], 2)))
                    if pattern.get("gap_buy") is not None and pattern.get("gap_sell") is not None else None)
         pp = plan(asks, bids, buy_profile=profiles["buy"], sell_profile=profiles["sell"], costs=costs, leader_gaps=leaders,
+                  custom_rank=rank,
                   pressure=pressure, exclude_users=set(state.get("my_users") or []),
                   merchants_only=bool(state.get("merchants_only", True)) if merchants_only is None else merchants_only)
         f = lambda v: None if v is None else float(v)  # noqa: E731
@@ -404,10 +406,12 @@ def make_handler(data: PanelData, token: str) -> type[BaseHTTPRequestHandler]:
                     else:
                         ver = (q.get("verificados") or [""])[0]
                         lim, met = _limits(q), _methods(q)
-                        if lim == "bad" or met == "bad":
-                            self._send(400, "límites o métodos inválidos".encode(), "text/plain; charset=utf-8")
+                        pu = (q.get("puesto") or [""])[0]
+                        rank = int(pu) if pu.isdigit() and 1 <= int(pu) <= 50 else ("bad" if pu else None)
+                        if lim == "bad" or met == "bad" or rank == "bad":
+                            self._send(400, "límites, métodos o puesto inválidos".encode(), "text/plain; charset=utf-8")
                         else:
-                            self._json(data.escenarios(m, ts, None if ver not in ("0", "1") else ver == "1", lim, met))
+                            self._json(data.escenarios(m, ts, None if ver not in ("0", "1") else ver == "1", lim, met, rank))
                 elif url.path == "/api/comerciantes":
                     ver = (q.get("verificados") or [""])[0]
                     self._json(data.comerciantes(ts, None if ver not in ("0", "1") else ver == "1"))

@@ -621,6 +621,11 @@ def test_panel_capital_and_methods(tmp_path):
         assert sc["methods"] == ["BancolombiaSA", "Nequi"]
         bal = next(s for s in sc["scenarios"] if s["name"] == "equilibrado")
         assert bal["sell"]["compatible_total"] == 4 and bal["buy"]["compatible_total"] == 3  # solo quienes aceptan esos métodos
+        pu = json.loads(_get(base + "/api/escenarios?margen=0,3&puesto=5&t=clave")[2])
+        assert pu["scenarios"][-1]["name"] == "tu puesto"
+        with pytest.raises(urllib.error.HTTPError) as e:
+            _get(base + "/api/escenarios?margen=0,3&puesto=99&t=clave")
+        assert e.value.code == 400
         tr = json.loads(_get(base + "/api/tramos?verificados=0&metodos=Nequi&t=clave")[2])
         assert tr["buy"][0]["ads"] == 3
         since = int((NOW - timedelta(hours=2)).timestamp())
@@ -633,3 +638,40 @@ def test_panel_capital_and_methods(tmp_path):
             assert e.value.code == 400
     finally:
         srv.shutdown()
+
+
+# ------------------------------------------------------------------ tu puesto y órdenes chicas
+def test_custom_rank_scenario_and_actions_prefer_it():
+    from jmcambios.pricing.actions import ad_actions
+
+    asks = [ask(i, str(3200 + i)) for i in range(10)]
+    bids = [bid(i, str(3150 - i)) for i in range(10)]
+    pp = plan(asks, bids, buy_profile=PROFILE, sell_profile=PROFILE, costs=COSTS, custom_rank=5)
+    names = [s.name for s in pp.scenarios]
+    assert names[:3] == ["conservador", "equilibrado", "agresivo"] and names[-1] == "tu puesto"
+    mine = next(s for s in pp.scenarios if s.name == "tu puesto")
+    assert mine.target_rank == 5 and mine.buy.price <= D("3146.01")  # por delante del 5.º (3146) o más abajo por margen
+    a = ad_actions([position(my_ad(OrderSide.BUY, str(mine.buy.price - 20)), bids)], pp)[0]
+    assert (a.move, a.to) == ("subir", mine.buy.price)
+    assert ad_actions([position(my_ad(OrderSide.BUY, str(mine.buy.price)), bids)], pp)[0].reason.startswith("Estás en el precio de tu puesto")
+
+
+def test_small_orders_cap():
+    from jmcambios.pricing.actions import ad_actions, best_at_min
+
+    big = [make_ad(f"bb{i}", str(3190 - i), "1000", side=Side.BID, methods=("DaviviendaSA",), user=f"big{i}",
+                   lo="500000", hi="5000000") for i in range(3)]  # no atienden órdenes de 200 mil
+    small = [bid(i, str(3140 - i)) for i in range(5)]
+    bids = big + small
+    asks = [ask(i, str(3200 + i)) for i in range(10)]
+    pp = plan(asks, bids, buy_profile=PROFILE, sell_profile=PROFILE, costs=COSTS)
+    me = my_ad(OrderSide.BUY, "3149.15")  # mínimo 200.000
+    assert best_at_min(me, bids) == D("3140")
+    a = ad_actions([position(me, bids)], pp, books={"BUY": bids, "SELL": asks})[0]
+    assert (a.move, a.to) == ("bajar", D("3140.01")) and "órdenes de tu mínimo" in a.reason
+    # Sin el libro no se aplica el tope (comportamiento anterior).
+    assert ad_actions([position(me, bids)], pp)[0].to != D("3140.01")
+    # Si el escenario pide pagar más que el tope, se queda en el tope.
+    low = my_ad(OrderSide.BUY, "3100")
+    t = ad_actions([position(low, bids)], pp, books={"BUY": bids, "SELL": asks})[0]
+    assert t.move == "subir" and t.to <= D("3140.01")

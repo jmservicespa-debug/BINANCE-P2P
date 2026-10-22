@@ -89,6 +89,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("--estado", default="data/estado.json", help="Archivo de estado que lee el panel")
     p.add_argument("--anuncios-cada", type=int, default=5, help="Leer mis anuncios cada N ciclos (0 = nunca)")
     p.add_argument("--margen-min", help="Margen mínimo del ciclo en %% (por defecto JMC_MARGEN_MIN de .env)")
+    p.add_argument("--puesto", type=int, help="Puesto objetivo para tus anuncios (1–50): escenario 'tu puesto', "
+                   "que usa la tarjeta Qué hacer ahora en vez del equilibrado")
     p.add_argument("--ordenes-cada", type=int, default=5, help="Descargar mis órdenes cada N ciclos (0 = nunca)")
     p.add_argument("--cruce-min", default="10.000", help="Ganancia total mínima en COP para alertar un cruce")
     p.add_argument("--sin-alertas", action="store_true", help="No enviar alertas por Telegram/correo")
@@ -123,6 +125,9 @@ def _start_panel(settings: Settings, args: argparse.Namespace):
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.puesto is not None and not 1 <= args.puesto <= 50:
+        print("--puesto debe estar entre 1 y 50.")
+        return 2
     if args.interval < MIN_INTERVAL_S:
         print(f"--interval mínimo es {MIN_INTERVAL_S} s para respetar los límites de Binance.")
         return 2
@@ -194,6 +199,7 @@ def main(argv: list[str] | None = None) -> int:
                 store=store,
                 ladder_rules=LadderRules(fast_s=settings.ladder_fast_min * 60, slow_s=settings.ladder_slow_min * 60,
                                          step=settings.ladder_step_pct / 100),
+                target_rank=args.puesto,
             )
         if args.panel and store is not None:
             server = _start_panel(settings, args)

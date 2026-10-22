@@ -33,6 +33,7 @@ DEFAULT_LIMITS = (Decimal("200000"), Decimal("3000000"))  # límites por defecto
 DEFAULT_MAKER_RATE = Decimal("0.002")  # commissionRate de los anuncios COP observado en la verificación
 MIN_PRESSURE_CONFIDENCE = 50
 LEADERS = "como los mejores"
+CUSTOM = "tu puesto"  # escenario con el puesto que eliges tú (margen mínimo, sin extra)
 
 # (nombre, puesto objetivo entre competidores compatibles, margen extra sobre el mínimo)
 SCENARIOS: tuple[tuple[str, int, Decimal], ...] = (
@@ -181,6 +182,7 @@ def plan(
     exclude_users: set[str] | None = None,
     merchants_only: bool = False,
     leader_gaps: tuple[Decimal, Decimal] | None = None,
+    custom_rank: int | None = None,
 ) -> PricePlan:
     """`asks` = anuncios de venta (compiten con mi VENTA); `bids` = de compra (compiten con mi COMPRA).
 
@@ -214,8 +216,7 @@ def plan(
             "mercado cruzado: el mejor vendedor está más barato que el mejor comprador; "
             "un anuncio de compra arriba pagaría más que tomar al mejor vendedor"
         )
-    raw = []
-    for name, target, extra in SCENARIOS:
+    def prices(name: str, target: int, extra: Decimal) -> list:
         target_margin = costs.min_margin + extra
         required = (1 + costs.maker_sell) * (1 + costs.gmf) / ((1 - target_margin) * (1 - costs.maker_buy))
         b0 = competitive_price(Side.BID, bids, buy_profile, target)
@@ -225,12 +226,16 @@ def plan(
             k = required * b / s  # cuánto hay que abrir la diferencia (>1)
             b = (b0 / k ** w).quantize(TICK, rounding=ROUND_FLOOR)
             s = (s0 * k ** (1 - w)).quantize(TICK, rounding=ROUND_CEILING)
-        raw.append([name, target, target_margin, b0, s0, b, s])
+        return [name, target, target_margin, b0, s0, b, s]
+
+    raw = [prices(*sc) for sc in SCENARIOS]
     # Un escenario más prudente nunca compra más caro ni vende más barato que el siguiente
     # (solo puede ganar margen al aplicarlo).
     for i in range(len(raw) - 2, -1, -1):
         raw[i][5] = min(raw[i][5], raw[i + 1][5])
         raw[i][6] = max(raw[i][6], raw[i + 1][6])
+    if custom_rank is not None:  # no entra en la regla de prudencia: es el puesto que pide la persona
+        raw.append(prices(CUSTOM, custom_rank, Decimal("0")))
     for name, target, target_margin, b0, s0, b, s in raw:
         buy = _place(Side.BID, bids, buy_profile, b, b0, OrderSide.BUY, b != b0)
         sell = _place(Side.ASK, asks, sell_profile, s, s0, OrderSide.SELL, s != s0)

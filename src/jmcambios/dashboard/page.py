@@ -107,7 +107,7 @@ input{font:inherit;font-size:14px;width:118px;min-height:36px;padding:0 10px;bor
   <section class="card todo" id="todo" hidden>
     <div class="row"><h2>Qué hacer ahora</h2><button id="snd" title="Suena cuando cambia lo que hay que hacer">🔕 Sonido</button></div>
     <div id="todolist"></div>
-    <span class="muted">Sugerencia del escenario equilibrado. El precio lo cambias tú en la app de Binance.</span>
+    <span class="muted">Sugerencia del escenario equilibrado (o "tu puesto" si arrancaste el monitor con --puesto), sin regalar margen en las órdenes de tu mínimo. El precio lo cambias tú en la app de Binance.</span>
   </section>
 </header>
 
@@ -160,6 +160,8 @@ input{font:inherit;font-size:14px;width:118px;min-height:36px;padding:0 10px;bor
       <div class="btns"><input id="lmin" type="text" inputmode="numeric" placeholder="mín. ej. 50000" aria-label="Monto mínimo">
       <input id="lmax" type="text" inputmode="numeric" placeholder="máx. ej. 500000" aria-label="Monto máximo"></div></div>
     <div class="row"><span class="muted" id="lhint"></span><div class="btns"><button id="lapply">Aplicar</button><button id="lreset">Mis anuncios</button></div></div>
+    <div class="row"><label class="label" for="rank">Tu puesto (opcional)</label>
+      <div class="btns"><input id="rank" type="number" inputmode="numeric" min="1" max="50" placeholder="ej. 5" style="width:80px"></div></div>
     <div class="row"><span class="label">Competidores</span><div class="btns" id="vbtns"><button data-v="1">Solo verificados</button><button data-v="0">Todos</button></div></div>
   </section>
   <div id="scen"></div>
@@ -227,9 +229,9 @@ try { const v = JSON.parse(localStorage.getItem('jmc_limites') || 'null'); if (A
 let verified = null;  // true/false elegido en el panel (null = el de la configuración)
 try { const v = localStorage.getItem('jmc_verificados'); if (v === '1' || v === '0') verified = v === '1'; } catch (e) {}
 const MODES = {OBSERVATION: 'Modo: Observación', RECOMMENDATION: 'Modo: Recomendación', AUTOMATIC: 'Modo: Automático'};
-const NAMES = {conservador: 'Conservador', equilibrado: 'Equilibrado', agresivo: 'Agresivo', 'como los mejores': 'Como los mejores'};
+const NAMES = {conservador: 'Conservador', equilibrado: 'Equilibrado', agresivo: 'Agresivo', 'como los mejores': 'Como los mejores', 'tu puesto': 'Tu puesto'};
 const HINT = {conservador: 'más margen, menos órdenes', equilibrado: 'recomendado por defecto', agresivo: 'primer puesto, menos margen',
-  'como los mejores': 'misma distancia al mejor precio que los líderes'};
+  'como los mejores': 'misma distancia al mejor precio que los líderes', 'tu puesto': 'el puesto que elegiste, con tu margen mínimo'};
 
 function renderEstado(s) {
   if (!s.available) { $('updated').textContent = s.message; return; }
@@ -366,7 +368,7 @@ document.querySelectorAll('#vbtns button').forEach(b => b.classList.toggle('on',
   if (shown('tab-precios')) { renderMerchants(v); renderCapital(); renderMethods(); }
   try {
     const r = await api('/api/escenarios?margen=' + m + '&verificados=' + (v ? 1 : 0)
-      + (limits ? '&min=' + limits[0] + '&max=' + limits[1] : '') + metQ());
+      + (limits ? '&min=' + limits[0] + '&max=' + limits[1] : '') + metQ() + (rank ? '&puesto=' + rank : ''));
     if (r.available) renderPlan(r);
   } catch (e) { renderPlan(s.plan); }
 }
@@ -464,6 +466,17 @@ function setLimits(v) {
   try { v ? localStorage.setItem('jmc_limites', JSON.stringify(v)) : localStorage.removeItem('jmc_limites'); } catch (e) {}
   if (lastState) renderPlanFor(lastState);
 }
+
+// Puesto objetivo elegido en el panel (escenario "tu puesto"; null = no se muestra).
+let rank = null;
+try { const v = +localStorage.getItem('jmc_puesto'); if (v >= 1 && v <= 50) rank = v; } catch (e) {}
+if (rank) $('rank').value = rank;
+$('rank').onchange = () => {
+  const v = Math.round(+$('rank').value);
+  rank = v >= 1 && v <= 50 ? v : null;
+  try { rank ? localStorage.setItem('jmc_puesto', rank) : localStorage.removeItem('jmc_puesto'); } catch (e) {}
+  if (lastState) renderPlanFor(lastState);
+};
 
 // Métodos de pago elegidos en el panel (null = los de tus anuncios).
 let methods = null;
