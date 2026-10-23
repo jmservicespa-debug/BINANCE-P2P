@@ -22,7 +22,7 @@ const env = {
   ADMIN_PASSWORD_HASH: await hashPassword(process.env.DEV_PASSWORD || 'clave-de-prueba', crypto.getRandomValues(new Uint8Array(16))),
 };
 const API = { '/api/tasas': tasas, '/api/login': loginFn, '/api/logout': logoutFn, '/api/sesion': sesion, '/api/usdt': usdtFn, '/api/pausa': pausaFn };
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg' };
 
 createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
