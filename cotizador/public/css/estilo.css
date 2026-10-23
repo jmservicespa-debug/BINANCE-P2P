@@ -116,6 +116,9 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-size: 14px; colo
 .adv code { font-size: 12px; background: var(--sunken); padding: 2px 6px; border-radius: 6px; overflow-wrap: anywhere }
 #usdt .amount input { font-size: 18px; width: 100% }
 
+/* La página pública siempre en claro, aunque el teléfono esté en modo oscuro (también evita el oscurecido automático del navegador). */
+html.claro { color-scheme: light only; background: #FAF8FE }
+
 /* ---- Tema de los flyers (solo la página pública): fondo claro con ondas moradas, siempre en modo claro ---- */
 .tema-flyer {
   --bg: #FAF8FE; --surface: #FFFFFF; --sunken: #F3EEFC; --line: #C9BBFD;
