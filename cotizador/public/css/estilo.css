@@ -145,7 +145,10 @@ label.f { display: flex; flex-direction: column; gap: 6px; font-size: 14px; colo
   -webkit-text-stroke: 1px #8B6BB3; paint-order: stroke fill; text-shadow: 0 2px 0 rgba(91,42,134,.18); text-align: center }
 .tema-flyer #updated { display: block; text-align: center; color: var(--accent); font-weight: 600 }
 .tema-flyer .seg button, .tema-flyer .dest button { border: 2px solid var(--line); border-radius: 16px; background: #fff; color: var(--ink) }
-.tema-flyer .seg button[aria-pressed="true"], .tema-flyer .dest button[aria-pressed="true"] { border-color: var(--brand); background: var(--box); box-shadow: 0 0 0 2px rgba(91,42,134,.15) }
+.tema-flyer .seg button[aria-pressed="true"], .tema-flyer .dest button[aria-pressed="true"] { border-color: #45206A; background: var(--brand); color: #fff;
+  box-shadow: 0 6px 16px rgba(69,32,106,.35); transform: translateY(-1px) }
+.tema-flyer .dest button[aria-pressed="true"] small { color: rgba(255,255,255,.85) }
+.tema-flyer .seg button[aria-pressed="true"] .flag, .tema-flyer .dest button[aria-pressed="true"] .flag { box-shadow: 0 0 0 2px #fff }
 .tema-flyer .dest button { padding: 10px }
 .tema-flyer .dest .flag { width: 30px; height: 30px; box-shadow: 0 1px 4px rgba(0,0,0,.18) }
 .tema-flyer .amount { border: 2px solid var(--box-line); background: var(--box); border-radius: 14px }
