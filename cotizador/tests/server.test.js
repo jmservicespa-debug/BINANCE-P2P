@@ -136,7 +136,22 @@ test('dólar BCV leído de la página oficial y guardado 1 hora', async () => {
   const b = await (await getRates({ request: req('/api/tasas'), env: e })).json();
   assert.equal(a.bcv.source, 'bcv');
   assert.equal(b.bcv.value, 36.5623);
-  assert.equal(calls, 1);
+  assert.equal(calls, 3);  // dólar (BCV) + euro (BCV sin euro en esta página y DolarApi); la segunda visita usa lo guardado
+});
+
+test('euro BCV: se lee de la misma página del BCV, con respaldo y valor manual propios', async () => {
+  const html = '<div id="euro" class="col"><div><span> EUR </span></div><div class="centrado"><strong> 41,23450000 </strong></div></div>'
+    + '<div id="dolar" class="col"><div><span> USD </span></div><div class="centrado"><strong> 36,56230000 </strong></div></div>';
+  assert.equal(parseBcv(html, 'euro').value, 41.2345);
+  assert.equal(parseBcv(html).value, 36.5623);
+  globalThis.fetch = async () => new Response(html);
+  const v = await (await getRates({ request: req('/api/tasas'), env: await env() })).json();
+  assert.equal(v.bcv.value, 36.5623);
+  assert.deepEqual(v.bcv_eur, { value: 41.2345, date: null, source: 'bcv' });
+  noBcv();
+  const e = await env();
+  assert.deepEqual(await bcv(e, '41,5', 1_000_000, 'eur'), { value: 41.5, date: null, source: 'manual', errors: ['bcv: sin red', 'dolarapi: sin red'] });
+  assert.deepEqual(validate({ rates: RATES, bcv_manual_eur: 'abc' }).errors, ['bcv_eur']);
 });
 
 test('dólar BCV: si la página del BCV falla usa DolarApi; si todo falla, el manual y el motivo', async () => {

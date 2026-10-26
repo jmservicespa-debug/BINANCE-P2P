@@ -74,6 +74,7 @@
       <button data-mode="send" aria-pressed="true">Yo envío</button>
       <button data-mode="get" aria-pressed="false">Quiero que reciba</button>
       <button data-mode="bcv" aria-pressed="false" id="mode-bcv" hidden>Equivalente en dólares BCV</button>
+      <button data-mode="eur" aria-pressed="false" id="mode-eur" hidden>Equivalente en euros BCV</button>
     </div>
     <label class="f" for="amount"><span id="amount-label">Monto que envías</span>
       <span class="amount"><input id="amount" inputmode="decimal" autocomplete="off" value="" placeholder="Ej. 100.000"><span id="amount-cur">CLP</span></span>
@@ -87,8 +88,10 @@
       <div class="row num"><span id="r-send"></span><span id="r-rate"></span></div>
       <div class="row num"><span id="r-min"></span></div>
       <div class="bcv num" id="r-bcv" hidden>
-        <div class="row"><span>Dólar BCV <span id="b-date"></span></span><span id="b-rate"></span></div>
-        <div class="row"><span>Equivale a</span><b id="b-usd"></b></div>
+        <div id="b-usd-rows"><div class="row"><span>Dólar BCV <span id="b-date"></span></span><span id="b-rate"></span></div>
+        <div class="row"><span>Equivale a</span><b id="b-usd"></b></div></div>
+        <div id="b-eur-rows"><div class="row"><span>Euro BCV <span id="e-date"></span></span><span id="e-rate"></span></div>
+        <div class="row"><span>Equivale a</span><b id="e-eur"></b></div></div>
       </div>
     </div>
     </div>

@@ -80,20 +80,23 @@ function calc() {
   if (isUsdt) $('h-cot').textContent = 'Compra y venta de USDT';
   if (isUsdt) { usdtQuote(r); return; }
   if (!r) { $('r-get').hidden = true; $('r-free').hidden = true; $('r-break').hidden = true; $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
-  const bcv = data.bcv?.value;
-  // "Equivalente en dólares BCV" (llegan bolívares): solo hacia Venezuela y con el dólar BCV disponible.
-  const bcvOk = r.to.includes('VE') && bcv > 0;
+  const bcv = data.bcv?.value, eur = data.bcv_eur?.value;
+  // "Equivalente en dólares / euros BCV" (llegan bolívares): solo hacia Venezuela y con el valor BCV disponible.
+  const bcvOk = r.to.includes('VE') && bcv > 0, eurOk = r.to.includes('VE') && eur > 0;
   $('mode-bcv').hidden = !bcvOk;
-  if (mode === 'bcv' && !bcvOk) setMode('send');
+  $('mode-eur').hidden = !eurOk;
+  if ((mode === 'bcv' && !bcvOk) || (mode === 'eur' && !eurOk)) setMode('send');
   if (statusOf(r.id) === 'ask') { unstable(r, o); return; }
   $('r-big').classList.remove('ask');
   const rate = rateOf(r.id).rate;
   amountLabels(r, o);
   if (!$('amount').value.trim()) { rateOnly(r, o, rate); return; }
   const x = amountNum($('amount').value);
-  const usd = mode === 'bcv' ? x : null;
+  const ref = mode === 'bcv' ? bcv : mode === 'eur' ? eur : null;  // bolívares por dólar o por euro BCV
+  const usd = ref ? x : null;
+  const refName = mode === 'eur' ? 'EUR al euro BCV' : 'USD al dólar BCV';
   // Montos completos, sin decimales: desde ,50 se redondea hacia arriba; por debajo, hacia abajo.
-  const target = mode === 'bcv' ? Math.round(x * bcv) : x;  // bolívares que deben llegar
+  const target = ref ? Math.round(x * ref) : x;  // bolívares que deben llegar
   const send = Math.round(mode === 'send' ? x : invert(r, rate, target));
   const get = Math.round(mode === 'send' ? convert(r, rate, send) : target);
   if (belowMin(r, send)) { minimum(r, o, send); return; }
@@ -116,20 +119,29 @@ function calc() {
     const ves = r.cur === 'VES';
     $('g-label').textContent = `Recibe en ${r.name}`;
     $('g-amount').textContent = `${fmt(get, r.dec)} ${ves ? 'Bs' : r.cur}`;
-    $('g-sub').textContent = mode === 'bcv' ? `Equivalen a ${fmt(usd, 0)} USD al dólar BCV` : ves ? 'Bolívares (VES)' : r.unit;
+    $('g-sub').textContent = ref ? `Equivalen a ${fmt(usd, 0)} ${refName}` : ves ? 'Bolívares (VES)' : r.unit;
   }
   $('r-rate').textContent = '';
   $('r-min').textContent = r.min ? `Envío mínimo: ${fmt(r.min, 0)} ${o.cur}` : '';
-  $('r-bcv').hidden = !bcvOk;
-  if (!$('r-bcv').hidden) {
+  // Debajo del resultado: cuánto equivalen los bolívares en dólares y en euros BCV.
+  const day = (v) => (v?.date ? `(${v.date.split('-').reverse().join('/')})` : '');
+  $('r-bcv').hidden = !(bcvOk || eurOk);
+  $('b-usd-rows').hidden = !bcvOk;
+  $('b-eur-rows').hidden = !eurOk;
+  if (bcvOk) {
     $('b-rate').textContent = `${fmt(bcv, 2)} Bs/USD`;
     $('b-usd').textContent = `${fmt(Math.round(get / bcv), 0)} USD`;
-    $('b-date').textContent = data.bcv.date ? `(${data.bcv.date.split('-').reverse().join('/')})` : '';
+    $('b-date').textContent = day(data.bcv);
+  }
+  if (eurOk) {
+    $('e-rate').textContent = `${fmt(eur, 2)} Bs/EUR`;
+    $('e-eur').textContent = `${fmt(Math.round(get / eur), 0)} EUR`;
+    $('e-date').textContent = day(data.bcv_eur);
   }
   $('dest-note').textContent = r.note || '';
   const ok = Number.isFinite(send) && Number.isFinite(get) && send > 0;
-  const text = !ok ? '' : mode === 'bcv'
-    ? `Hola, necesito que lleguen ${fmt(get, 0)} Bs a ${r.name} (equivalentes a ${fmt(usd, 0)} USD al dólar BCV), enviando desde ${o.name}. Según el cotizador debo pagar ${fmt(send, 0)} ${o.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`
+  const text = !ok ? '' : ref
+    ? `Hola, necesito que lleguen ${fmt(get, 0)} Bs a ${r.name} (equivalentes a ${fmt(usd, 0)} ${refName}), enviando desde ${o.name}. Según el cotizador debo pagar ${fmt(send, 0)} ${o.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`
     : `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${dot(r.name)} Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`;
   $('wa').innerHTML = waButtons(text);
 }
@@ -167,14 +179,14 @@ function unstable(r, o) {
   $('r-min').textContent = r.min ? `Envío mínimo: ${fmt(r.min, 0)} ${o.cur}` : '';
   if (mode === 'send' && belowMin(r, x)) { minimum(r, o, x); return; }
   const amount = !(Number.isFinite(x) && x > 0) ? 'hacer un envío'
-    : mode === 'send' ? `enviar ${fmt(x, 0)} ${o.cur}` : mode === 'bcv' ? `que lleguen bolívares equivalentes a ${fmt(x, 0)} USD al dólar BCV` : `que reciban ${fmt(x, r.dec)} ${r.cur}`;
+    : mode === 'send' ? `enviar ${fmt(x, 0)} ${o.cur}` : mode === 'bcv' ? `que lleguen bolívares equivalentes a ${fmt(x, 0)} USD al dólar BCV` : mode === 'eur' ? `que lleguen bolívares equivalentes a ${fmt(x, 0)} EUR al euro BCV` : `que reciban ${fmt(x, r.dec)} ${r.cur}`;
   $('wa').innerHTML = waButtons(`Hola, quiero ${amount} desde ${o.name} a ${dot(r.name)} ¿Me das la tasa de este momento?`, 'Pedir tasa');
 }
 
 function amountLabels(r, o) {
   placeholder(r, o);
-  $('amount-label').textContent = { send: 'Monto que envías', get: 'Monto que debe recibir', bcv: 'Los bolívares deben equivaler a' }[mode];
-  $('amount-cur').textContent = mode === 'send' ? o.cur : mode === 'bcv' ? 'USD BCV' : r.cur;
+  $('amount-label').textContent = { send: 'Monto que envías', get: 'Monto que debe recibir', bcv: 'Los bolívares deben equivaler a', eur: 'Los bolívares deben equivaler a' }[mode];
+  $('amount-cur').textContent = mode === 'send' ? o.cur : mode === 'bcv' ? 'USD BCV' : mode === 'eur' ? 'EUR BCV' : r.cur;
 }
 
 function setMode(m) {
@@ -245,7 +257,7 @@ $('u-bot').oninput = () => { edited = 'bot'; calc(); };
 // Casilla vacía al inicio: se muestra la tasa del día y un ejemplo en gris según la moneda.
 const EXAMPLES = { CLP: '100.000', COP: '200.000', VES: '100.000', PEN: '300', USD: '100', USDT: '100', BRL: '500' };
 function placeholder(r, o) {
-  const cur = mode === 'send' ? o.cur : mode === 'bcv' ? 'BCV' : r.cur;
+  const cur = mode === 'send' ? o.cur : mode === 'bcv' || mode === 'eur' ? 'BCV' : r.cur;
   $('amount').placeholder = `Ej. ${cur === 'BCV' ? '20' : EXAMPLES[cur] || '100'}`;
 }
 
@@ -320,7 +332,7 @@ async function load() {
     data = await res.json();
     $('error').hidden = true;
   } catch {
-    if (!data) { $('error').hidden = false; $('error').textContent = 'No pudimos cargar las tasas. Revisa tu conexión o escríbenos por WhatsApp.'; data = { routes: [], bcv: null }; }
+    if (!data) { $('error').hidden = false; $('error').textContent = 'No pudimos cargar las tasas. Revisa tu conexión o escríbenos por WhatsApp.'; data = { routes: [], bcv: null, bcv_eur: null }; }
   }
   await Promise.all([loadUsdt(), loadBrl()]);
   $('updated').textContent = data.paused ? 'Tasas en actualización' : data.updated

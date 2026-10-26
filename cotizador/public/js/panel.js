@@ -28,7 +28,7 @@ async function start() {
   showEditor(true);
   renderPower(body.paused);
   renderRoutes();
-  renderBcv(body.view.bcv);
+  renderBcv(body.view.bcv, body.view.bcv_eur);
   renderLinks();
   drawFlyers();
   loadUsdt(true);
@@ -86,6 +86,8 @@ function renderRoutes() {
   }
   $('bcv').value = saved.bcv_manual || '';
   $('bcv-flag').innerHTML = flag('VE');
+  $('bcv-eur').value = saved.bcv_manual_eur || '';
+  $('bcv-eur-flag').innerHTML = flag('VE');
   ['prov-brl', 'prov-m'].forEach((id) => { $(id).oninput = () => provCalc(true); });
   $('prov-auto').onchange = () => brlLive();
   provCalc(false);
@@ -122,11 +124,13 @@ function provCalc(fill) {
   if (fill) { $('in-cl-br').value = rate; $('in-cl-br').dispatchEvent(new Event('input')); }
 }
 
-function renderBcv(b) {
-  $('bcv-now').textContent = b?.value
-    ? `Hoy en el cotizador: ${fmt(b.value, 2)} Bs/USD (${SOURCES[b.source] || b.source}${b.date ? ', ' + b.date.split('-').reverse().join('/') : ''}).`
-    : 'No se pudo leer el BCV y no hay valor manual: el cotizador no muestra el equivalente en dólares.';
-  if (b?.errors?.length) $('bcv-now').textContent += ` Lectura automática fallida (${b.errors.join(' · ')}).`;
+function renderBcv(b, e) {
+  for (const [id, v, unit, name] of [['bcv-now', b, 'Bs/USD', 'dólares'], ['bcv-eur-now', e, 'Bs/EUR', 'euros']]) {
+    $(id).textContent = v?.value
+      ? `Hoy en el cotizador: ${fmt(v.value, 2)} ${unit} (${SOURCES[v.source] || v.source}${v.date ? ', ' + v.date.split('-').reverse().join('/') : ''}).`
+      : `No se pudo leer el BCV y no hay valor manual: el cotizador no muestra el equivalente en ${name}.`;
+    if (v?.errors?.length) $(id).textContent += ` Lectura automática fallida (${v.errors.join(' · ')}).`;
+  }
 }
 
 function renderLinks() {
@@ -136,7 +140,7 @@ function renderLinks() {
 }
 
 $('save').onclick = async () => {
-  const body = { rates: {}, status: {}, bcv_manual: $('bcv').value.trim() || null };
+  const body = { rates: {}, status: {}, bcv_manual: $('bcv').value.trim() || null, bcv_manual_eur: $('bcv-eur').value.trim() || null };
   for (const r of ROUTES) { body.rates[r.id] = $('in-' + r.id).value.trim(); body.status[r.id] = $('st-' + r.id).value; }
   body.brl = { ref: $('prov-brl').value.trim(), margin_pct: $('prov-m').value.trim(), auto: $('prov-auto').checked,
     cal_cross: brlCross };  // calibración: el mercado en el momento en que anotaste a tu proveedor
@@ -149,9 +153,10 @@ $('save').onclick = async () => {
   bad.forEach((r) => $('in-' + r.id).classList.add('bad'));
   const msg = $('save-msg');
   msg.hidden = false;
-  if (bad.length || (body.bcv_manual && !rateNum(body.bcv_manual))) {
+  const badBcv = [[body.bcv_manual, 'Dólar BCV manual'], [body.bcv_manual_eur, 'Euro BCV manual']].filter(([v]) => v && !rateNum(v)).map(([, n]) => n);
+  if (bad.length || badBcv.length) {
     msg.className = 'msg bad';
-    msg.textContent = 'Revisa: ' + [...bad.map((r) => `${ORIGINS[r.from].name} → ${r.name}`), ...(body.bcv_manual && !rateNum(body.bcv_manual) ? ['Dólar BCV manual'] : [])].join(', ') + '.';
+    msg.textContent = 'Revisa: ' + [...bad.map((r) => `${ORIGINS[r.from].name} → ${r.name}`), ...badBcv].join(', ') + '.';
     return;
   }
   $('save').disabled = true;
@@ -163,7 +168,7 @@ $('save').onclick = async () => {
   msg.className = 'msg';
   msg.textContent = `Publicado (${new Date(res.updated).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}): el cotizador ya muestra estas tasas y los flyers están listos abajo.`;
   renderRoutes();
-  renderBcv(res.bcv);
+  renderBcv(res.bcv, res.bcv_eur);
   drawFlyers();
 };
 

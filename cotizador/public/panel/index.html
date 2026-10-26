@@ -52,6 +52,15 @@
       <div><h3>Valor manual</h3><span class="op">Solo se usa si no se puede leer el BCV. Déjalo vacío si no lo necesitas.</span></div>
       <input type="text" id="bcv" inputmode="decimal" aria-label="Dólar BCV manual" placeholder="—">
     </div>
+    <div>
+      <h3>Euro BCV</h3>
+      <span class="muted" id="bcv-eur-now">—</span>
+    </div>
+    <div class="route" style="border:0">
+      <span id="bcv-eur-flag"></span>
+      <div><h3>Valor manual</h3><span class="op">Solo se usa si no se puede leer el euro del BCV. Déjalo vacío si no lo necesitas.</span></div>
+      <input type="text" id="bcv-eur" inputmode="decimal" aria-label="Euro BCV manual" placeholder="—">
+    </div>
     <div class="msg" id="save-msg" hidden></div>
     <button class="btn" id="save">Guardar y publicar</button>
   </section>

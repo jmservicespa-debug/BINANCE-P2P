@@ -115,13 +115,15 @@ export function validate(body) {
     rates[r.id] = raw;
     status[r.id] = st;
   }
-  const bcv = body?.bcv_manual == null || String(body.bcv_manual).trim() === '' ? null : String(body.bcv_manual).trim();
+  const manual = (v) => (v == null || String(v).trim() === '' ? null : String(v).trim());
+  const bcv = manual(body?.bcv_manual), bcvEur = manual(body?.bcv_manual_eur);
   if (bcv !== null && !rateNum(bcv)) errors.push('bcv');
+  if (bcvEur !== null && !rateNum(bcvEur)) errors.push('bcv_eur');
   // Datos del proveedor para calcular Brasil: solo se guardan para el panel, nunca se publican.
   const brl = body?.brl && typeof body.brl === 'object'
     ? { ref: String(body.brl.ref ?? '').slice(0, 20), margin_pct: String(body.brl.margin_pct ?? '').slice(0, 10),
         auto: body.brl.auto === true, cal_cross: Number(body.brl.cal_cross) > 0 ? Number(body.brl.cal_cross) : null } : null;
-  return { errors, data: { rates, status, bcv_manual: bcv, ...(brl ? { brl } : {}) } };
+  return { errors, data: { rates, status, bcv_manual: bcv, bcv_manual_eur: bcvEur, ...(brl ? { brl } : {}) } };
 }
 
 export async function saveRates(request, env, now = Date.now()) {
@@ -138,9 +140,9 @@ export async function saveRates(request, env, now = Date.now()) {
 
 // ------------------------------------------------------------------ dólar BCV
 
-// La página del BCV muestra el dólar en <div id="dolar"> … <strong> 36,56230000 </strong>.
-export function parseBcv(html) {
-  const m = /id=["']dolar["'][\s\S]{0,600}?<strong>\s*([\d.,]+)\s*<\/strong>/i.exec(html || '');
+// La página del BCV muestra cada moneda en <div id="dolar"> / <div id="euro"> … <strong> 36,56230000 </strong>.
+export function parseBcv(html, id = 'dolar') {
+  const m = new RegExp(`id=["']${id}["'][\\s\\S]{0,600}?<strong>\\s*([\\d.,]+)\\s*<\\/strong>`, 'i').exec(html || '');
   if (!m) return null;
   const v = parseFloat(m[1].replace(/\./g, '').replace(',', '.'));
   if (!(v > 0)) return null;
@@ -158,15 +160,23 @@ export function parseDolarApi(text) {
   return { value: v, date: typeof d.fechaActualizacion === 'string' ? d.fechaActualizacion.slice(0, 10) : null };
 }
 
-const BCV_SOURCES = [
-  { name: 'bcv', url: BCV_URL, parse: parseBcv },
-  { name: 'dolarapi', url: 'https://ve.dolarapi.com/v1/dolares/oficial', parse: parseDolarApi },
-];
+// Dólar y euro oficiales: misma página del BCV y, de respaldo, la copia de DolarApi.
+const BCV_SOURCES = {
+  usd: [
+    { name: 'bcv', url: BCV_URL, parse: (t) => parseBcv(t, 'dolar') },
+    { name: 'dolarapi', url: 'https://ve.dolarapi.com/v1/dolares/oficial', parse: parseDolarApi },
+  ],
+  eur: [
+    { name: 'bcv', url: BCV_URL, parse: (t) => parseBcv(t, 'euro') },
+    { name: 'dolarapi', url: 'https://ve.dolarapi.com/v1/euros/oficial', parse: parseDolarApi },
+  ],
+};
+const BCV_KEYS = { usd: ['bcv', 'bcv_err'], eur: ['bcv_eur', 'bcv_eur_err'] };
 const BCV_RETRY_S = 600;  // si todas las fuentes fallan, no se reintenta en cada visita
 
-async function tryBcvSources() {
+async function tryBcvSources(cur) {
   const errors = [];
-  for (const s of BCV_SOURCES) {
+  for (const s of BCV_SOURCES[cur]) {
     try {
       const res = await fetch(s.url, { headers: { 'user-agent': 'Mozilla/5.0 (cotizador JM Cambios)', accept: '*/*' }, signal: AbortSignal.timeout(6000) });
       if (!res.ok) { errors.push(`${s.name}: respondió ${res.status}`); continue; }
@@ -180,20 +190,21 @@ async function tryBcvSources() {
   return { got: null, errors };
 }
 
-export async function bcv(env, manual, now = Date.now()) {
+export async function bcv(env, manual, now = Date.now(), cur = 'usd') {
+  const [key, errKey] = BCV_KEYS[cur];
   let cached = null, fail = null;
-  try { cached = JSON.parse((await env.TASAS.get('bcv')) || 'null'); } catch { cached = null; }
+  try { cached = JSON.parse((await env.TASAS.get(key)) || 'null'); } catch { cached = null; }
   if (cached && now - cached.ts < BCV_TTL_S * 1000) return { value: cached.value, date: cached.date, source: cached.source || 'bcv' };
-  try { fail = JSON.parse((await env.TASAS.get('bcv_err')) || 'null'); } catch { fail = null; }
+  try { fail = JSON.parse((await env.TASAS.get(errKey)) || 'null'); } catch { fail = null; }
   if (!fail || now - fail.ts >= BCV_RETRY_S * 1000) {
-    const { got, errors } = await tryBcvSources();
+    const { got, errors } = await tryBcvSources(cur);
     if (got) {
-      await env.TASAS.put('bcv', JSON.stringify({ ...got, ts: now }));
-      await env.TASAS.delete('bcv_err');
+      await env.TASAS.put(key, JSON.stringify({ ...got, ts: now }));
+      await env.TASAS.delete(errKey);
       return got;
     }
     fail = { ts: now, errors };
-    await env.TASAS.put('bcv_err', JSON.stringify(fail));
+    await env.TASAS.put(errKey, JSON.stringify(fail));
   }
   const why = fail?.errors || [];
   if (manual && rateNum(manual)) return { value: rateNum(manual), date: null, source: 'manual', errors: why };
@@ -225,6 +236,7 @@ export async function publicView(env, saved, now = Date.now()) {
       return out;
     }),
     bcv: await bcv(env, s.bcv_manual, now),
+    bcv_eur: await bcv(env, s.bcv_manual_eur, now, 'eur'),
   };
 }
 
