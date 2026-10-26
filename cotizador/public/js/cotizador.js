@@ -16,6 +16,9 @@ if (!ADVISORS[adv]) adv = null;
 
 let data = null, origin = 'CL', route = null, mode = 'send';
 const OTHER = 'OTHER';  // origen u otro destino fuera de las rutas principales: tasa por WhatsApp
+// Dólar y euro BCV con todos sus decimales (el BCV publica hasta 8; se quitan los ceros del final).
+const bcvFmt = (v) => new Intl.NumberFormat('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 8 }).format(v);
+const fmt2 = (v) => fmt(v, Number.isInteger(v) ? 0 : 2);  // 100 → "100"; 100,5 → "100,50"
 // Orígenes que se muestran con su bandera y el aviso "Próximamente", con los destinos que vendrán.
 const SOON = { BR: { name: 'Brasil', to: [['PE', 'Perú'], ['CO', 'Colombia'], ['VE', 'Venezuela'], ['USDT', 'USDT']] } };
 const GLOBE = '<svg class="flag" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--box)" stroke="var(--box-line)"/><path d="M1 12h22M12 1c3 3.2 4.5 7 4.5 11S15 19.8 12 23c-3-3.2-4.5-7-4.5-11S9 4.2 12 1z" fill="none" stroke="var(--accent)" stroke-width="1.4"/></svg>';
@@ -119,7 +122,7 @@ function calc() {
     const ves = r.cur === 'VES';
     $('g-label').textContent = `Recibe en ${r.name}`;
     $('g-amount').textContent = `${fmt(get, r.dec)} ${ves ? 'Bs' : r.cur}`;
-    $('g-sub').textContent = ref ? `Equivalen a ${fmt(usd, 0)} ${refName}` : ves ? 'Bolívares (VES)' : r.unit;
+    $('g-sub').textContent = ref ? `Equivalen a ${fmt2(usd)} ${refName}` : ves ? 'Bolívares (VES)' : r.unit;
   }
   $('r-rate').textContent = '';
   $('r-min').textContent = r.min ? `Envío mínimo: ${fmt(r.min, 0)} ${o.cur}` : '';
@@ -129,19 +132,19 @@ function calc() {
   $('b-usd-rows').hidden = !bcvOk;
   $('b-eur-rows').hidden = !eurOk;
   if (bcvOk) {
-    $('b-rate').textContent = `${fmt(bcv, 2)} Bs/USD`;
-    $('b-usd').textContent = `${fmt(Math.round(get / bcv), 0)} USD`;
+    $('b-rate').textContent = `${bcvFmt(bcv)} Bs/USD`;
+    $('b-usd').textContent = `${fmt(get / bcv, 2)} USD`;
     $('b-date').textContent = day(data.bcv);
   }
   if (eurOk) {
-    $('e-rate').textContent = `${fmt(eur, 2)} Bs/EUR`;
-    $('e-eur').textContent = `${fmt(Math.round(get / eur), 0)} EUR`;
+    $('e-rate').textContent = `${bcvFmt(eur)} Bs/EUR`;
+    $('e-eur').textContent = `${fmt(get / eur, 2)} EUR`;
     $('e-date').textContent = day(data.bcv_eur);
   }
   $('dest-note').textContent = r.note || '';
   const ok = Number.isFinite(send) && Number.isFinite(get) && send > 0;
   const text = !ok ? '' : ref
-    ? `Hola, necesito que lleguen ${fmt(get, 0)} Bs a ${r.name} (equivalentes a ${fmt(usd, 0)} ${refName}), enviando desde ${o.name}. Según el cotizador debo pagar ${fmt(send, 0)} ${o.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`
+    ? `Hola, necesito que lleguen ${fmt(get, 0)} Bs a ${r.name} (equivalentes a ${fmt2(usd)} ${refName}), enviando desde ${o.name}. Según el cotizador debo pagar ${fmt(send, 0)} ${o.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`
     : `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${dot(r.name)} Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`;
   $('wa').innerHTML = waButtons(text);
 }
@@ -179,7 +182,7 @@ function unstable(r, o) {
   $('r-min').textContent = r.min ? `Envío mínimo: ${fmt(r.min, 0)} ${o.cur}` : '';
   if (mode === 'send' && belowMin(r, x)) { minimum(r, o, x); return; }
   const amount = !(Number.isFinite(x) && x > 0) ? 'hacer un envío'
-    : mode === 'send' ? `enviar ${fmt(x, 0)} ${o.cur}` : mode === 'bcv' ? `que lleguen bolívares equivalentes a ${fmt(x, 0)} USD al dólar BCV` : mode === 'eur' ? `que lleguen bolívares equivalentes a ${fmt(x, 0)} EUR al euro BCV` : `que reciban ${fmt(x, r.dec)} ${r.cur}`;
+    : mode === 'send' ? `enviar ${fmt(x, 0)} ${o.cur}` : mode === 'bcv' ? `que lleguen bolívares equivalentes a ${fmt2(x)} USD al dólar BCV` : mode === 'eur' ? `que lleguen bolívares equivalentes a ${fmt2(x)} EUR al euro BCV` : `que reciban ${fmt(x, r.dec)} ${r.cur}`;
   $('wa').innerHTML = waButtons(`Hola, quiero ${amount} desde ${o.name} a ${dot(r.name)} ¿Me das la tasa de este momento?`, 'Pedir tasa');
 }
 
