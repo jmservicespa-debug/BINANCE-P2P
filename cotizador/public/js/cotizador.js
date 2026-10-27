@@ -16,8 +16,8 @@ if (!ADVISORS[adv]) adv = null;
 
 let data = null, origin = 'CL', route = null, mode = 'send';
 const OTHER = 'OTHER';  // origen u otro destino fuera de las rutas principales: tasa por WhatsApp
-// Dólar y euro BCV con todos sus decimales (el BCV publica hasta 8; se quitan los ceros del final).
-const bcvFmt = (v) => new Intl.NumberFormat('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 8 }).format(v);
+// Dólar y euro BCV con 2 decimales (el cálculo usa el valor completo que publica el BCV).
+const bcvFmt = (v) => fmt(v, 2);
 const fmt2 = (v) => fmt(v, Number.isInteger(v) ? 0 : 2);  // 100 → "100"; 100,5 → "100,50"
 // Orígenes que se muestran con su bandera y el aviso "Próximamente", con los destinos que vendrán.
 const SOON = { BR: { name: 'Brasil', to: [['PE', 'Perú'], ['CO', 'Colombia'], ['VE', 'Venezuela'], ['USDT', 'USDT']] } };
