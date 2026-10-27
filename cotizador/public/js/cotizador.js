@@ -63,7 +63,38 @@ function otherQuote() {
   $('wa').innerHTML = waButtons(text, 'Pedir tasa');
 }
 
+// Franja de indicadores que va pasando: los del destino elegido y los del país de origen (solo informativos).
+let ind = null, lastTicker = '';
+const TICK = {
+  VE: () => [['Dólar BCV', data?.bcv?.value, 'Bs', bcvFmt], ['Euro BCV', data?.bcv_eur?.value, 'Bs', bcvFmt],
+    ['USDT promedio', ind?.ve?.usdt?.value, 'Bs', (v) => fmt(v, 2)]],
+  CO: () => [['TRM', ind?.co?.trm?.value, 'COP', (v) => fmt(v, 2)], ['Euro', ind?.co?.eur?.value, 'COP', (v) => fmt(v, 2)],
+    ['Bitcoin', ind?.co?.btc?.value, 'COP', (v) => fmt(v, 0)]],
+  BR: () => [['Dólar', ind?.br?.usd?.value, 'BRL', (v) => fmt(v, 4)], ['Euro', ind?.br?.eur?.value, 'BRL', (v) => fmt(v, 4)]],
+};
+function ticker() {
+  const r = ALL.find((x) => x.id === route);
+  const countries = [...new Set([...(SOON[origin] ? [] : r?.to || []), origin])].filter((c) => TICK[c]);
+  const items = countries.flatMap((c) => TICK[c]().filter(([, v]) => v > 0)
+    .map(([name, v, unit, f]) => `<span class="tick">${flag(c)}${esc(name)} <b>${f(v)} ${unit}</b></span>`));
+  $('ticker').hidden = !items.length;
+  const html = items.join('');
+  if (!items.length || html === lastTicker) return;  // sin cambios: no se reinicia el movimiento
+  lastTicker = html;
+  $('ticker-track').style.setProperty('--dur', `${Math.max(14, items.length * 5)}s`);
+  $('ticker-track').innerHTML = `<div class="ticker-group">${html}</div><div class="ticker-group" aria-hidden="true">${html}</div>`;
+}
+
+async function loadIndicators() {
+  try {
+    const res = await fetch('/api/indicadores', { cache: 'no-store' });
+    if (res.ok) ind = await res.json();
+  } catch { /* sin indicadores: la franja muestra solo lo que haya */ }
+  ticker();
+}
+
 function calc() {
+  ticker();
   $('h-cot').textContent = 'Cotiza tu envío';
   const soon = Boolean(SOON[origin]);
   $('soon').hidden = !soon;
@@ -344,5 +375,5 @@ async function load() {
   if (origin !== OTHER && !SOON[origin] && route !== OTHER && (!route || !activeRoutes(origin).some((r) => r.id === route))) route = activeRoutes(origin)[0]?.id ?? null;
   render();
 }
-load();
-setInterval(load, 5 * 60 * 1000);  // si el cliente deja la página abierta, ve la tasa nueva
+load().then(loadIndicators);
+setInterval(() => load().then(loadIndicators), 5 * 60 * 1000);  // si el cliente deja la página abierta, ve la tasa nueva

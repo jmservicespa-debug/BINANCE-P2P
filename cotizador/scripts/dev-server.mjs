@@ -11,6 +11,7 @@ import * as logoutFn from '../functions/api/logout.js';
 import * as sesion from '../functions/api/sesion.js';
 import * as usdtFn from '../functions/api/usdt.js';
 import * as pausaFn from '../functions/api/pausa.js';
+import * as indicadoresFn from '../functions/api/indicadores.js';
 import { hashPassword } from '../lib/server.js';
 
 const ROOT = fileURLToPath(new URL('../public/', import.meta.url));
@@ -21,7 +22,7 @@ const env = {
   SESSION_SECRET: 'solo-para-pruebas-locales',
   ADMIN_PASSWORD_HASH: await hashPassword(process.env.DEV_PASSWORD || 'clave-de-prueba', crypto.getRandomValues(new Uint8Array(16))),
 };
-const API = { '/api/tasas': tasas, '/api/login': loginFn, '/api/logout': logoutFn, '/api/sesion': sesion, '/api/usdt': usdtFn, '/api/pausa': pausaFn };
+const API = { '/api/tasas': tasas, '/api/login': loginFn, '/api/logout': logoutFn, '/api/sesion': sesion, '/api/usdt': usdtFn, '/api/pausa': pausaFn, '/api/indicadores': indicadoresFn };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg' };
 
 createServer(async (req, res) => {
