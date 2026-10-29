@@ -15,7 +15,9 @@ try {
 if (!ADVISORS[adv]) adv = null;
 
 let data = null, origin = 'CL', route = null, mode = 'send';
-const OTHER = 'OTHER';  // origen u otro destino fuera de las rutas principales: tasa por WhatsApp
+const OTHER = 'OTHER';
+const CUR_NAME = { CLP: 'pesos', COP: 'pesos', VES: 'bolívares', PEN: 'soles', USD: 'dólares', BRL: 'reales' };
+const LONG_NAME = { CLP: 'pesos chilenos', COP: 'pesos colombianos' };  // origen u otro destino fuera de las rutas principales: tasa por WhatsApp
 // Dólar y euro BCV con 2 decimales (el cálculo usa el valor completo que publica el BCV).
 const bcvFmt = (v) => fmt(v, 2);
 const fmt2 = (v) => fmt(v, Number.isInteger(v) ? 0 : 2);  // 100 → "100"; 100,5 → "100,50"
@@ -130,6 +132,12 @@ function calc() {
   if (isUsdt) $('h-cot').textContent = 'Compra y venta de USDT';
   if (isUsdt) { usdtQuote(r); return; }
   if (!r) { $('r-get').hidden = true; $('r-free').hidden = true; $('r-break').hidden = true; $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
+  // Botones con la moneda, para que quede claro qué se escribe: "Yo envío pesos" · "Quiero que reciba bolívares".
+  // Chile → Colombia: los dos serían "pesos", así que se dice cuál es cuál.
+  let [give, take] = [CUR_NAME[ORIGINS[r.from]?.cur] || '', CUR_NAME[r.cur] || ''];
+  if (give && give === take) [give, take] = [LONG_NAME[ORIGINS[r.from].cur], LONG_NAME[r.cur]];
+  $('modes').querySelector('[data-mode="send"]').textContent = `Yo envío ${give}`.trim();
+  $('modes').querySelector('[data-mode="get"]').textContent = `Quiero que reciba ${take}`.trim();
   const bcv = data.bcv?.value, eur = data.bcv_eur?.value;
   // "Equivalente en dólares / euros BCV" (llegan bolívares): solo hacia Venezuela y con el valor BCV disponible.
   const bcvOk = r.to.includes('VE') && bcv > 0, eurOk = r.to.includes('VE') && eur > 0;
