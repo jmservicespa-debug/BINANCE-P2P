@@ -179,3 +179,6 @@ html.claro { color-scheme: light only; background: #FAF8FE }
 @media (prefers-reduced-motion: reduce) {
   .ticker { overflow-x: auto } .ticker-track { animation: none } .ticker-group[aria-hidden] { display: none }
 }
+
+/* Panel: texto para el estado de WhatsApp */
+textarea.estado { font: 15px/1.5 var(--body); color: var(--ink); background: var(--sunken); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; resize: vertical; width: 100% }

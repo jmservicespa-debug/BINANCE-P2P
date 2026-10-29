@@ -176,7 +176,38 @@ $('save').onclick = async () => {
 
 const loadImg = (src) => new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = src; });
 
+// Texto para el estado de WhatsApp: banderas (emoji) del país de origen y de los destinos activos, para copiar y pegar.
+const emojiFlag = (c) => String.fromCodePoint(...[...c].map((ch) => 0x1F1E6 + ch.charCodeAt(0) - 65));
+function autoStatusText(k) {
+  const dests = [...new Set(ROUTES.filter((r) => r.from === k && statusOf(r.id) !== 'off').flatMap((r) => r.to))];
+  return `${emojiFlag(k)} ➜ ${dests.map(emojiFlag).join(' ')}\n`
+    + `💱 Tasas del día · JM Cambios\n`
+    + `Cotiza tu envío aquí 👉 ${location.origin}/`;
+}
+const statusKey = (k) => `jmc_estado_${k}`;
+function renderStatusText() {
+  for (const k of ['CL', 'CO']) {
+    let mine = null;
+    try { mine = localStorage.getItem(statusKey(k)); } catch { /* sin almacenamiento: texto automático */ }
+    $('estado-' + k).value = mine || autoStatusText(k);
+  }
+}
+document.querySelectorAll('textarea.estado').forEach((t) => t.oninput = () => {
+  try { localStorage.setItem(statusKey(t.id.slice(-2)), t.value); } catch { /* no se pudo recordar */ }
+});
+document.querySelectorAll('[data-reset]').forEach((b) => b.onclick = () => {
+  try { localStorage.removeItem(statusKey(b.dataset.reset)); } catch { /* nada guardado */ }
+  renderStatusText();
+});
+document.querySelectorAll('[data-copy]').forEach((b) => b.onclick = async () => {
+  const t = $('estado-' + b.dataset.copy);
+  try { await navigator.clipboard.writeText(t.value); } catch { t.select(); document.execCommand('copy'); }
+  b.textContent = '¡Copiado!';
+  setTimeout(() => { b.textContent = 'Copiar texto'; }, 2000);
+});
+
 async function drawFlyers() {
+  renderStatusText();
   try { await document.fonts.load('800 60px Montserrat'); } catch { /* usa la letra de respaldo */ }
   for (const [k, f] of Object.entries(FLYERS)) {
     let img;
