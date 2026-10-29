@@ -48,14 +48,14 @@ export async function brlPerClp(fetchFn = fetch) {
 
 export const BRL_BRAKE = 0.02;  // si el mercado se movió más de 2 % desde la calibración: "Mercado inestable"
 
-// Colombia → Chile automático: los pesos colombianos compran USDT al precio que paga Vita Wallet en Colombia (bid)
+// Colombia → Chile automático: con los pesos colombianos se compran USDT al precio de compra de Vita Wallet en Colombia (ask)
 // y esos USDT se venden al precio que paga Vita Wallet en Chile (bid). Tasa = COP por cada CLP (COP ÷ tasa = CLP).
 export const USDT_COP_URL = 'https://criptoya.com/api/usdt/cop/1';
-export function vitaBid(text, range) {
+export function vitaPrice(text, side, range) {
   let d;
   try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }
   const key = d && typeof d === 'object' ? Object.keys(d).find((k) => /vita/i.test(k)) : null;
-  const v = Number(key && d[key]?.bid);
+  const v = Number(key && d[key]?.[side]);
   return Number.isFinite(v) && v >= range[0] && v <= range[1] ? v : null;
 }
 const COP_RANGE = [1500, 8000];  // COP por USDT fuera de este rango = dato absurdo
@@ -63,7 +63,7 @@ const CLP_RANGE = [300, 3000];
 // COP por cada CLP con la ganancia ya incluida (más alta = llegan menos CLP). null si falta algún precio.
 export async function copPerClp(marginPct, fetchFn = fetch) {
   const [c, l] = await Promise.all([USDT_COP_URL, USDT_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
-  const cop = c && vitaBid(c, COP_RANGE), clp = l && vitaBid(l, CLP_RANGE);
+  const cop = c && vitaPrice(c, 'ask', COP_RANGE), clp = l && vitaPrice(l, 'bid', CLP_RANGE);
   if (!cop || !clp) return null;
   const rate = (cop / clp) * (1 + Number(marginPct || 0) / 100);
   return rate >= 1 && rate <= 10 ? { rate, cop, clp } : null;

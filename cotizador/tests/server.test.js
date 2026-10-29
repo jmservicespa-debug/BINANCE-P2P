@@ -254,10 +254,11 @@ test('apagar todo: un interruptor oculta todas las tasas sin borrarlas', async (
 });
 
 test('Colombia → Chile automático: Vita Colombia ÷ Vita Chile + ganancia; activa sin tasa escrita', async () => {
-  const { copPerClp, vitaBid, USDT_COP_URL, USDT_URL } = await import('../public/js/criptoya.js');
-  assert.equal(vitaBid('{"vitawallet":{"ask":3250,"bid":3196}}', [1500, 8000]), 3196);
-  assert.equal(vitaBid('{"binancep2p":{"bid":3196}}', [1500, 8000]), null);  // sin Vita: no se inventa
-  const bodies = { [USDT_COP_URL]: '{"vitawallet":{"ask":3250,"bid":3196}}', [USDT_URL]: '{"vitawallet":{"ask":950,"bid":940}}' };
+  const { copPerClp, vitaPrice, USDT_COP_URL, USDT_URL } = await import('../public/js/criptoya.js');
+  assert.equal(vitaPrice('{"vitawallet":{"ask":3196,"bid":3190}}', 'ask', [1500, 8000]), 3196);
+  assert.equal(vitaPrice('{"binancep2p":{"ask":3196}}', 'ask', [1500, 8000]), null);  // sin Vita: no se inventa
+  // Colombia: precio de COMPRA de Vita (ask 3.196). Chile: lo que PAGA Vita (bid 940).
+  const bodies = { [USDT_COP_URL]: '{"vitawallet":{"ask":3196,"bid":3190}}', [USDT_URL]: '{"vitawallet":{"ask":950,"bid":940}}' };
   const fake = async (u) => new Response(bodies[u]);
   const got = await copPerClp('3', fake);
   assert.equal(got.cop, 3196); assert.equal(got.clp, 940);
