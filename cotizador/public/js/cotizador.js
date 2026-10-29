@@ -133,12 +133,10 @@ function calc() {
   if (isUsdt) $('h-cot').textContent = 'USDT · dólar Binance';
   if (isUsdt) { usdtQuote(r); return; }
   if (!r) { $('r-get').hidden = true; $('r-free').hidden = true; $('r-break').hidden = true; $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
-  // Botones con la moneda, para que quede claro qué se escribe: "Yo envío pesos" · "Quiero que reciba bolívares".
-  // Chile → Colombia: los dos serían "pesos", así que se dice cuál es cuál.
-  let [give, take] = [CUR_NAME[ORIGINS[r.from]?.cur] || '', CUR_NAME[r.cur] || ''];
-  if (give && give === take) [give, take] = [LONG_NAME[ORIGINS[r.from].cur], LONG_NAME[r.cur]];
-  $('modes').querySelector('[data-mode="send"]').textContent = `Yo envío ${give}`.trim();
-  $('modes').querySelector('[data-mode="get"]').textContent = `Quiero que reciba ${take}`.trim();
+  // Opciones con la moneda, para que quede claro qué se escribe: "Pesos que envío" · "Bolívares que llegan".
+  const [give, take] = curNames(r);
+  $('modes').querySelector('[data-mode="send"] b').textContent = `${cap(give)} que envío`;
+  $('modes').querySelector('[data-mode="get"] b').textContent = `${cap(take)} que llegan`;
   const bcv = data.bcv?.value, eur = data.bcv_eur?.value;
   // "Equivalente en dólares / euros BCV" (llegan bolívares): solo hacia Venezuela y con el valor BCV disponible.
   const bcvOk = r.to.includes('VE') && bcv > 0, eurOk = r.to.includes('VE') && eur > 0;
@@ -242,9 +240,19 @@ function unstable(r, o) {
   $('wa').innerHTML = waButtons(`Hola, quiero ${amount} desde ${o.name} a ${dot(r.name)} ¿Me das la tasa de este momento?`, 'Pedir tasa');
 }
 
+// Nombre de las monedas en palabras. Chile → Colombia: las dos serían "pesos", así que se dice cuál es cuál.
+function curNames(r) {
+  let [give, take] = [CUR_NAME[ORIGINS[r.from]?.cur] || 'monto', CUR_NAME[r.cur] || r.cur];
+  if (give === take && LONG_NAME[ORIGINS[r.from]?.cur]) [give, take] = [LONG_NAME[ORIGINS[r.from].cur], LONG_NAME[r.cur]];
+  return [give, take];
+}
+const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+
 function amountLabels(r, o) {
   placeholder(r, o);
-  $('amount-label').textContent = { send: 'Monto que envías', get: 'Monto que debe recibir', bcv: 'Los bolívares deben equivaler a', eur: 'Los bolívares deben equivaler a' }[mode];
+  const [give, take] = curNames(r);
+  $('amount-label').textContent = { send: `Escribe los ${give} que envías`, get: `Escribe los ${take} que deben llegar`,
+    bcv: 'Escribe los dólares BCV (te decimos los bolívares)', eur: 'Escribe los euros BCV (te decimos los bolívares)' }[mode];
   $('amount-cur').textContent = mode === 'send' ? o.cur : mode === 'bcv' ? 'USD BCV' : mode === 'eur' ? 'EUR BCV' : r.cur;
 }
 

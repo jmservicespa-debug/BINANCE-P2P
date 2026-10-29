@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" href="/assets/icon.png">
 <link rel="apple-touch-icon" href="/assets/icon.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=7">
+<link rel="stylesheet" href="/css/estilo.css?v=8">
 </head>
 <body class="tema-flyer">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -72,12 +72,12 @@
       <div class="u-line" id="u-line" aria-live="polite"></div>
     </div>
     <div id="std">
-    <span class="step"><b>3</b> Elige y escribe el monto</span>
-    <div class="mode" id="modes">
-      <button data-mode="send" aria-pressed="true">Yo envío</button>
-      <button data-mode="get" aria-pressed="false">Quiero que reciba</button>
-      <button data-mode="bcv" aria-pressed="false" id="mode-bcv" hidden>Equivalente en dólares BCV</button>
-      <button data-mode="eur" aria-pressed="false" id="mode-eur" hidden>Equivalente en euros BCV</button>
+    <span class="step"><b>3</b> ¿Qué monto vas a escribir?</span>
+    <div class="mode" id="modes" role="group" aria-label="Qué monto vas a escribir">
+      <button data-mode="send" aria-pressed="true"><b>Lo que envío</b><small>Lo que tú pagas</small></button>
+      <button data-mode="get" aria-pressed="false"><b>Lo que llega</b><small>Lo que recibe</small></button>
+      <button data-mode="bcv" aria-pressed="false" id="mode-bcv" hidden><b>Dólares BCV</b><small>Su equivalente en bolívares</small></button>
+      <button data-mode="eur" aria-pressed="false" id="mode-eur" hidden><b>Euros BCV</b><small>Su equivalente en bolívares</small></button>
     </div>
     <label class="f" for="amount"><span id="amount-label">Monto que envías</span>
       <span class="amount"><input id="amount" inputmode="decimal" autocomplete="off" value="" placeholder="Ej. 100.000"><span id="amount-cur">CLP</span></span>

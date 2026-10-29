@@ -212,3 +212,13 @@ table.stats tr.sub td { color: var(--muted); font-size: 13px }
 .step b { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--brand); color: var(--brand-ink); font-size: 13px; flex: none }
 #to-q { margin-top: 6px }
 #std > .step { margin: 2px 0 12px }
+
+/* Paso 3: "¿Qué monto vas a escribir?" en cuadrícula de 2 × 2, opciones parejas; la elegida en morado (para gente mayor: grande y claro). */
+.tema-flyer .mode { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px }
+.tema-flyer .mode button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; border-radius: 16px; padding: 12px 14px; min-height: 64px; border: 2px solid var(--line); background: #fff }
+.tema-flyer .mode button b { font-family: var(--display); font-weight: 700; font-size: 15px; line-height: 1.2; color: var(--ink) }
+.tema-flyer .mode button small { font-size: 12.5px; color: var(--muted) }
+.tema-flyer .mode button[aria-pressed="true"] { background: var(--brand); border-color: #45206A; box-shadow: 0 6px 16px rgba(69,32,106,.3) }
+.tema-flyer .mode button[aria-pressed="true"] b, .tema-flyer .mode button[aria-pressed="true"] small { color: #fff }
+.tema-flyer #amount-label { font-weight: 600; color: var(--ink) }
+.tema-flyer #std .mode { margin-bottom: 12px }
