@@ -162,7 +162,7 @@ function sugBox() {
   return `<details class="sug" id="sug-cl-ve"${lsGet('jmc_sug_open', '1') === '1' ? ' open' : ''}>
     <summary>Ver tasa sugerida (mercado)</summary>
     <div class="row2">
-      <label class="f" for="sug-m">Tu ganancia (%)<span class="amount"><input id="sug-m" inputmode="decimal" value="${esc(lsGet('jmc_sug_cl-ve', '7'))}"></span></label>
+      <label class="f" for="sug-m">Tu ganancia (%)<span class="amount"><input id="sug-m" inputmode="decimal" value="${esc(lsGet('jmc_sug_cl-ve', '8'))}"></span></label>
       <div class="sug-out"><span class="muted">Sugerida</span><b id="sug-rate">—</b></div>
     </div>
     <span class="muted" id="sug-detail">Leyendo el mercado…</span>
@@ -187,7 +187,7 @@ async function sugLoad() {
   $('sug-detail').textContent = 'Leyendo el mercado…';
   market = await marketClVe();
   $('sug-detail').textContent = market
-    ? `Base 30.000 CLP: compras USDT en Chile a ${fmt(market.clp.value, 2)} CLP (${market.clp.source === 'binancep2p' ? 'Binance P2P' : 'Vita Wallet'}) y los vendes en Venezuela a ${fmt(market.ves.value, 2)} Bs (Binance P2P, ~30 USDT, sin filtro de Pago Móvil). Sin ganancia: ${market.cross.toFixed(4)}.`
+    ? `Base 30.000 CLP: compras USDT en Chile a ${fmt(market.clp.value, 2)} CLP (${market.clp.source === 'binancep2p' ? 'Binance P2P' : 'Vita Wallet'}) y los vendes en Venezuela a ${fmt(market.ves.value, 2)} Bs (Binance P2P, ~30 USDT, sin filtro de Pago Móvil: por eso se usa 8 % = tu 7 % + ~1 % de Pago Móvil). Sin ganancia: ${market.cross.toFixed(4)}.`
     : 'No se pudo leer el mercado ahora (CriptoYa). Usa tu tasa de siempre.';
   sugCalc();
 }
