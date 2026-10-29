@@ -196,3 +196,7 @@ table.stats tr.sub td { color: var(--muted); font-size: 13px }
 .day { display: grid; grid-template-columns: 48px 1fr 44px; align-items: center; gap: 8px; font-size: 13px; font-variant-numeric: tabular-nums }
 .day i { display: block; height: 10px; border-radius: 999px; background: var(--brand); min-width: 2px }
 .day b { text-align: right }
+
+/* Botones de "¿Desde dónde envías?": el nombre del país nunca se sale del cuadro en celulares angostos. */
+.tema-flyer .seg button { padding: 10px 2px; font-size: clamp(11px, 3.1vw, 14px); letter-spacing: -.01em; overflow: hidden }
+@media (max-width: 359px) { .tema-flyer .seg { grid-template-columns: repeat(2, minmax(0, 1fr)) } .tema-flyer .seg button { font-size: 14px } }
