@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" href="/assets/icon.png">
 <link rel="apple-touch-icon" href="/assets/icon.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=6">
+<link rel="stylesheet" href="/css/estilo.css?v=7">
 </head>
 <body class="tema-flyer">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -34,8 +34,9 @@
       <b>Actualizando tasas</b>
       <p>Estamos actualizando las tasas del día. Vuelve en un rato o escríbenos por WhatsApp.</p>
     </div>
-    <span class="muted" id="from-q">¿Desde dónde envías?</span>
+    <span class="step" id="from-q"><b>1</b> ¿Desde dónde envías?</span>
     <div class="seg" id="origins"></div>
+    <span class="step" id="to-q"><b>2</b> ¿A qué país envías?</span>
     <div class="dest" id="dests"></div>
     <div class="soon" id="soon" hidden>
       <b>Próximamente</b>
@@ -71,6 +72,7 @@
       <div class="u-line" id="u-line" aria-live="polite"></div>
     </div>
     <div id="std">
+    <span class="step"><b>3</b> Elige y escribe el monto</span>
     <div class="mode" id="modes">
       <button data-mode="send" aria-pressed="true">Yo envío</button>
       <button data-mode="get" aria-pressed="false">Quiero que reciba</button>

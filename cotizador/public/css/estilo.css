@@ -206,3 +206,9 @@ table.stats tr.sub td { color: var(--muted); font-size: 13px }
 
 /* Cinco orígenes (Chile, Colombia, Europa, Brasil, Otro país): se acomodan en filas según el ancho */
 .tema-flyer .seg { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)) }
+
+/* Pasos del cotizador: 1 ¿Desde dónde envías? · 2 ¿A qué país envías? */
+.step { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--ink); margin-bottom: -4px }
+.step b { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--brand); color: var(--brand-ink); font-size: 13px; flex: none }
+#to-q { margin-top: 6px }
+#std > .step { margin: 2px 0 12px }

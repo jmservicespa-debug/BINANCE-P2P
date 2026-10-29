@@ -45,6 +45,7 @@ function renderOrigins() {
 
 function renderDests() {
   $('dests').hidden = origin === OTHER || Boolean(SOON[origin]);
+  $('to-q').hidden = $('dests').hidden;
   if ($('dests').hidden) return;
   const list = activeRoutes(origin);
   $('dests').innerHTML = list.map((r) => `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${r.cur === 'USDT' ? BNB : ''}${esc(r.unit)} (${r.cur})${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`).join('')
@@ -346,7 +347,7 @@ const allOff = () => data.paused || !ALL.some((r) => ['on', 'ask'].includes(stat
 function render() {
   const off = Boolean(data) && allOff();
   $('paused').hidden = !off;
-  ['from-q', 'origins', 'dests', 'other', 'quote', 'soon'].forEach((id) => { if (off) $(id).hidden = true; });
+  ['from-q', 'origins', 'to-q', 'dests', 'other', 'quote', 'soon'].forEach((id) => { if (off) $(id).hidden = true; });
   $('from-q').hidden = off; $('origins').hidden = off;
   if (off) { $('wa').hidden = false; $('dest-note').textContent = ''; $('wa').innerHTML = waButtons('Hola, quiero cotizar un envío. ¿Qué tasas tienen hoy?'); return; }
   renderOrigins(); renderDests(); calc();
