@@ -1,6 +1,6 @@
 import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js';
 import { esc, flag, flags } from './ui.js';
-import { BRL_BRAKE, USDT_URL, brlPerClp, copPerClp, parseCriptoYa } from './criptoya.js';
+import { BRL_BRAKE, USDT_URL, brlPerClp, copPerClp, marketClVe, parseCriptoYa } from './criptoya.js';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -111,7 +111,7 @@ function renderRoutes() {
         <div><h3>${esc(o.name)} → ${esc(r.name)}</h3><span class="op">${r.auto ? 'Automática (Vita Wallet) · escribe tu ganancia en %' : `${esc(r.unit)} · ${o.cur} ${r.op === 'mul' ? '× tasa' : '÷ tasa'}`}</span></div>
         <input type="text" id="in-${r.id}" value="${esc(r.auto ? (saved.cocl?.margin_pct ?? '3') : (saved.rates[r.id] || ''))}" inputmode="decimal" aria-label="${r.auto ? 'Ganancia %' : 'Tasa'} ${esc(o.name)} a ${esc(r.name)}">
         <span class="ex"><span id="ex-${r.id}"></span><select id="st-${r.id}" aria-label="Estado ${esc(o.name)} a ${esc(r.name)}">${STATUS.map(([v, t]) => `<option value="${v}"${v === st ? ' selected' : ''}>${t}</option>`).join('')}</select></span>
-      </div>${r.id === 'cl-br' ? provBox() : ''}`;
+      </div>${r.id === 'cl-br' ? provBox() : ''}${r.id === 'cl-ve' ? sugBox() : ''}`;
     }).join('')).join('');
   for (const r of ROUTES) {
     if (r.auto) {  // Colombia → Chile: muestra la tasa de ahora con la ganancia escrita
@@ -150,9 +150,56 @@ function renderRoutes() {
   $('prov-auto').onchange = () => brlLive();
   provCalc(false);
   brlLive();
+  sugWire();
 }
 
 // Brasil: la tasa sale de lo que da el proveedor por 100.000 CLP más tu ganancia (el cliente solo ve la tasa final).
+// ------------------------------------------------------------------ tasa sugerida Chile → Venezuela
+
+const lsGet = (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } };
+function sugBox() {
+  return `<details class="sug" id="sug-cl-ve"${lsGet('jmc_sug_open', '1') === '1' ? ' open' : ''}>
+    <summary>Ver tasa sugerida (mercado)</summary>
+    <div class="row2">
+      <label class="f" for="sug-m">Tu ganancia (%)<span class="amount"><input id="sug-m" inputmode="decimal" value="${esc(lsGet('jmc_sug_cl-ve', '3'))}"></span></label>
+      <div class="sug-out"><span class="muted">Sugerida</span><b id="sug-rate">—</b></div>
+    </div>
+    <span class="muted" id="sug-detail">Leyendo el mercado…</span>
+    <span class="muted" id="sug-mine"></span>
+    <button class="btn ghost" id="sug-use" disabled>Usar la sugerida</button>
+  </details>`;
+}
+let market = null;
+function sugCalc() {
+  const m = Number(String($('sug-m').value).replace(',', '.'));
+  const mine = rateNum($('in-cl-ve').value);
+  if (!market) { $('sug-rate').textContent = '—'; $('sug-use').disabled = true; $('sug-mine').textContent = ''; return; }
+  const sug = Number.isFinite(m) && m >= 0 && m < 50 ? market.cross * (1 - m / 100) : NaN;
+  $('sug-rate').textContent = Number.isFinite(sug) ? sug.toFixed(4) : '—';
+  $('sug-use').disabled = !Number.isFinite(sug);
+  $('sug-use').dataset.v = Number.isFinite(sug) ? sug.toFixed(4) : '';
+  // Cuánto deja la tasa que tienes escrita, frente al mismo mercado.
+  $('sug-mine').textContent = mine ? `Tu tasa ${$('in-cl-ve').value} deja ≈ ${fmt((1 - mine / market.cross) * 100, 1)} % frente al mercado.` : '';
+}
+async function sugLoad() {
+  if (!$('sug-cl-ve')) return;
+  $('sug-detail').textContent = 'Leyendo el mercado…';
+  market = await marketClVe();
+  $('sug-detail').textContent = market
+    ? `Compras USDT en Chile a ${fmt(market.clp.value, 2)} CLP (${market.clp.source === 'binancep2p' ? 'Binance P2P' : 'Vita Wallet'}) y los vendes en Venezuela a ${fmt(market.ves.value, 2)} Bs (Binance P2P). Sin ganancia: ${market.cross.toFixed(4)}.`
+    : 'No se pudo leer el mercado ahora (CriptoYa). Usa tu tasa de siempre.';
+  sugCalc();
+}
+function sugWire() {
+  if (!$('sug-cl-ve')) return;
+  $('sug-cl-ve').ontoggle = () => { lsSet('jmc_sug_open', $('sug-cl-ve').open ? '1' : '0'); if ($('sug-cl-ve').open && !market) sugLoad(); };
+  $('sug-m').oninput = () => { lsSet('jmc_sug_cl-ve', $('sug-m').value); sugCalc(); };
+  $('in-cl-ve').addEventListener('input', sugCalc);
+  $('sug-use').onclick = () => { $('in-cl-ve').value = $('sug-use').dataset.v; $('in-cl-ve').dispatchEvent(new Event('input')); };
+  if ($('sug-cl-ve').open) sugLoad();
+}
+
 function provBox() {
   const b = saved.brl || {};
   return `<div class="prov">

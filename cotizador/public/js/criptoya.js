@@ -68,3 +68,27 @@ export async function copPerClp(marginPct, fetchFn = fetch) {
   const rate = (cop / clp) * (1 + Number(marginPct || 0) / 100);
   return rate >= 1 && rate <= 10 ? { rate, cop, clp } : null;
 }
+
+// Tasa SUGERIDA Chile → Venezuela (solo para el panel; la que se publica la decides tú):
+// compras USDT en Chile al precio de venta de Vita Wallet (ask) y los vendes en Venezuela a lo que pagan en Binance P2P (bid).
+// Se piden los precios para 100 USDT (no para 1), así los anuncios "carnada" con muy poca plata pesan menos.
+export const SUG_CLP_URL = 'https://criptoya.com/api/usdt/clp/100';
+export const SUG_VES_URL = 'https://criptoya.com/api/usdt/ves/100';
+function pick(text, side, prefer, range) {
+  let d;
+  try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }
+  if (!d || typeof d !== 'object') return null;
+  const ok = (v) => Number.isFinite(v) && v >= range[0] && v <= range[1];
+  for (const re of prefer) {
+    const k = Object.keys(d).find((x) => re.test(x));
+    const v = Number(k && d[k]?.[side]);
+    if (ok(v)) return { value: v, source: k };
+  }
+  return null;
+}
+export async function marketClVe(fetchFn = fetch) {
+  const [c, v] = await Promise.all([SUG_CLP_URL, SUG_VES_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
+  const clp = c && pick(c, 'ask', [/vita/i, /^binancep2p$/i], [300, 3000]);
+  const ves = v && pick(v, 'bid', [/^binancep2p$/i], [10, 1e6]);
+  return clp && ves ? { clp, ves, cross: ves.value / clp.value } : null;  // cross = Bs por cada CLP, sin ganancia
+}

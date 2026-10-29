@@ -270,3 +270,14 @@ test('Colombia → Chile automático: Vita Colombia ÷ Vita Chile + ganancia; ac
   assert.deepEqual(v.errors, []);
   assert.deepEqual(validate({ rates: RATES, cocl: { margin_pct: '80' } }).errors, ['co-cl-margen']);
 });
+
+test('tasa sugerida Chile → Venezuela: compra en Vita Chile (ask) y venta en Binance P2P Venezuela (bid)', async () => {
+  const { marketClVe, SUG_CLP_URL, SUG_VES_URL } = await import('../public/js/criptoya.js');
+  const bodies = { [SUG_CLP_URL]: '{"vitawallet":{"ask":950,"bid":940},"binancep2p":{"ask":955,"bid":945}}',
+    [SUG_VES_URL]: '{"binancep2p":{"ask":905,"bid":890},"otro":{"ask":2,"bid":1}}' };
+  const m = await marketClVe(async (u) => new Response(bodies[u]));
+  assert.equal(m.clp.value, 950); assert.equal(m.clp.source, 'vitawallet');
+  assert.equal(m.ves.value, 890);
+  assert.equal(m.cross.toFixed(4), (890 / 950).toFixed(4));  // ≈ 0,9368 Bs por CLP, sin ganancia
+  assert.equal(await marketClVe(async () => new Response('caído', { status: 503 })), null);
+});
