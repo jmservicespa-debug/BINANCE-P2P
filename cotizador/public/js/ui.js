@@ -10,6 +10,8 @@ const FLAGS = {
   US: Array.from({ length: 7 }, (_, i) => `<rect y="${i * 4.6}" width="30" height="2.3" fill="#B22234"/>`).join('') + '<rect width="14" height="14" fill="#3C3B6E"/>',
   BR: '<rect width="30" height="30" fill="#009C3B"/><polygon points="15,5 27,15 15,25 3,15" fill="#FFDF00"/><circle cx="15" cy="15" r="5.5" fill="#002776"/>',
   PA: '<rect width="30" height="30" fill="#fff"/><rect x="15" width="15" height="15" fill="#D21034"/><rect y="15" width="15" height="15" fill="#005293"/><circle cx="7.5" cy="7.5" r="2.5" fill="#005293"/><circle cx="22.5" cy="22.5" r="2.5" fill="#D21034"/>',
+  EU: '<rect width="30" height="30" fill="#003399"/>'
+    + Array.from({ length: 12 }, (_, i) => { const a = (Math.PI * i) / 6; return `<circle cx="${(15 + 8 * Math.cos(a)).toFixed(2)}" cy="${(15 + 8 * Math.sin(a)).toFixed(2)}" r="1.3" fill="#FFCC00"/>`; }).join(''),
   USDT: '<rect width="30" height="30" fill="#26A17B"/><path d="M8 9h14v3.4h-5.2V23h-3.6V12.4H8z" fill="#fff"/><ellipse cx="15" cy="15.4" rx="7" ry="1.9" fill="none" stroke="#fff" stroke-width="1.4"/>',
   EC: '<rect width="30" height="15" fill="#FFDD00"/><rect y="15" width="30" height="7.5" fill="#034EA2"/><rect y="22.5" width="30" height="7.5" fill="#ED1C24"/><circle cx="15" cy="15" r="3" fill="#8B5A2B"/>',
 };

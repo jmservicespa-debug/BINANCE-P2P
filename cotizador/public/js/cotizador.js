@@ -13,7 +13,7 @@ try { localStorage.removeItem('jmc_asesor'); } catch { /* lo recordado por la ve
 
 let data = null, origin = 'CL', route = null, mode = 'send';
 const OTHER = 'OTHER';  // origen u otro destino fuera de las rutas principales: tasa por WhatsApp
-const CUR_NAME = { CLP: 'pesos', COP: 'pesos', VES: 'bolívares', PEN: 'soles', USD: 'dólares', BRL: 'reales' };
+const CUR_NAME = { CLP: 'pesos', COP: 'pesos', EUR: 'euros', VES: 'bolívares', PEN: 'soles', USD: 'dólares', BRL: 'reales' };
 const LONG_NAME = { CLP: 'pesos chilenos', COP: 'pesos colombianos' };
 // Dólar y euro BCV con 2 decimales (el cálculo usa el valor completo que publica el BCV).
 const bcvFmt = (v) => fmt(v, 2);
@@ -313,7 +313,7 @@ $('u-top').oninput = () => { edited = 'top'; calc(); };
 $('u-bot').oninput = () => { edited = 'bot'; calc(); };
 
 // Casilla vacía al inicio: se muestra la tasa del día y un ejemplo en gris según la moneda.
-const EXAMPLES = { CLP: '100.000', COP: '200.000', VES: '100.000', PEN: '300', USD: '100', USDT: '100', BRL: '500' };
+const EXAMPLES = { CLP: '100.000', COP: '200.000', EUR: '100', VES: '100.000', PEN: '300', USD: '100', USDT: '100', BRL: '500' };
 function placeholder(r, o) {
   const cur = mode === 'send' ? o.cur : mode === 'bcv' || mode === 'eur' ? 'BCV' : r.cur;
   $('amount').placeholder = `Ej. ${cur === 'BCV' ? '20' : EXAMPLES[cur] || '100'}`;

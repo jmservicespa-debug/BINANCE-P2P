@@ -7,7 +7,7 @@ const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi,
 let saved = null;
 const flyerBlobs = {};
 const STATUS = [['on', 'Activa'], ['ask', 'Inestable · tasa por WhatsApp'], ['off', 'Apagada']];
-const statusOf = (id) => saved.status?.[id] ?? (saved.active?.[id] === false ? 'off' : 'on');
+const statusOf = (id) => saved.status?.[id] ?? (!String(saved.rates?.[id] ?? '').trim() || saved.active?.[id] === false ? 'off' : 'on');
 
 async function api(path, opts = {}) {
   const res = await fetch(path, { ...opts, headers: { 'content-type': 'application/json' }, credentials: 'same-origin', cache: 'no-store' });
@@ -115,8 +115,9 @@ function renderRoutes() {
     }).join('')).join('');
   for (const r of ROUTES) {
     const upd = () => {
-      const v = convert(r, $('in-' + r.id).value, 100000);
-      $('ex-' + r.id).textContent = Number.isFinite(v) ? `100.000 ${ORIGINS[r.from].cur} → ${fmt(v, r.dec)} ${r.cur}` : 'escribe una tasa válida';
+      const amt = ORIGINS[r.from].cur === 'EUR' ? 100 : 100000;  // ejemplo con un monto típico de cada moneda
+      const v = convert(r, $('in-' + r.id).value, amt);
+      $('ex-' + r.id).textContent = Number.isFinite(v) ? `${fmt(amt, 0)} ${ORIGINS[r.from].cur} → ${fmt(v, r.dec)} ${r.cur}` : 'escribe una tasa válida';
       $('in-' + r.id).classList.remove('bad');
     };
     $('in-' + r.id).oninput = upd;

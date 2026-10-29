@@ -102,6 +102,7 @@ export const STATUSES = ['on', 'ask', 'off'];
 export function statusOf(saved, id) {
   const s = saved?.status?.[id];
   if (STATUSES.includes(s)) return s;
+  if (!String(saved?.rates?.[id] ?? '').trim()) return 'off';  // ruta nueva sin tasa todavía: apagada hasta que se active
   return saved?.active?.[id] === false ? 'off' : 'on';  // datos guardados antes de existir los estados
 }
 
