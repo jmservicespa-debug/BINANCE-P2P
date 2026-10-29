@@ -69,11 +69,11 @@ export async function copPerClp(marginPct, fetchFn = fetch) {
   return rate >= 1 && rate <= 10 ? { rate, cop, clp } : null;
 }
 
-// Tasa SUGERIDA Chile → Venezuela (solo para el panel; la que se publica la decides tú):
-// compras USDT en Chile al precio de venta de Vita Wallet (ask) y los vendes en Venezuela a lo que pagan en Binance P2P (bid).
-// Se piden los precios para 100 USDT (no para 1), así los anuncios "carnada" con muy poca plata pesan menos.
-export const SUG_CLP_URL = 'https://criptoya.com/api/usdt/clp/100';
-export const SUG_VES_URL = 'https://criptoya.com/api/usdt/ves/100';
+// Tasa SUGERIDA Chile → Venezuela (solo para el panel; la que se publica la decides tú), como la calcula JM Cambios:
+// base 30.000 CLP (≈ 30 USDT), compra de USDT en Vita Wallet Chile (ask, su proveedor) y venta en Binance P2P Venezuela (bid)
+// para un monto de ~30 USDT. CriptoYa no filtra por Pago Móvil: es una aproximación (Pago Móvil suele pagar algo menos).
+export const SUG_CLP_URL = 'https://criptoya.com/api/usdt/clp/30';
+export const SUG_VES_URL = 'https://criptoya.com/api/usdt/ves/30';
 function pick(text, side, prefer, range) {
   let d;
   try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }
