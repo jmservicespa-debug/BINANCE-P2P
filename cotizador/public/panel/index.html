@@ -38,6 +38,16 @@
     <button class="btn" id="power-btn">—</button>
   </section>
 
+  <section class="card" id="mkt" hidden aria-labelledby="h-mkt">
+    <div>
+      <h2 id="h-mkt">Aviso del mercado</h2>
+      <span class="muted">Chile → Venezuela: compara tu tasa publicada con la sugerida (mismo mercado y el % de la sugerida). Se revisa cada 5 minutos mientras el panel está abierto.</span>
+    </div>
+    <div class="msg" id="mkt-msg">Revisando el mercado…</div>
+    <label class="f" for="mkt-th">Avisarme si la diferencia pasa de (%)
+      <span class="amount"><input id="mkt-th" inputmode="decimal"></span></label>
+  </section>
+
   <section class="card" id="editor" hidden aria-labelledby="h-tasas">
     <div>
       <h2 id="h-tasas">Tasas del día</h2>

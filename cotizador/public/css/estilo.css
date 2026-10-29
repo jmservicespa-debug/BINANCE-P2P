@@ -229,3 +229,5 @@ table.stats tr.sub td { color: var(--muted); font-size: 13px }
 .sug[open] { gap: 10px }
 .sug .sug-out { display: flex; flex-direction: column; justify-content: flex-end }
 .sug .sug-out b { font-family: var(--display); font-size: 24px; font-weight: 800; color: var(--accent) }
+
+.msg.ok { background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--ink); border-color: transparent }

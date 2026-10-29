@@ -18,7 +18,7 @@ async function api(path, opts = {}) {
 
 function showEditor(on) {
   $('login').hidden = on;
-  ['power', 'editor', 'usdt', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  ['power', 'mkt', 'editor', 'usdt', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
 }
 
 async function start() {
@@ -33,6 +33,7 @@ async function start() {
   drawFlyers();
   loadUsdt(true);
   loadStats();
+  checkMarket();
 }
 
 // ------------------------------------------------------------------ visitas del cotizador
@@ -186,6 +187,10 @@ async function sugLoad() {
   if (!$('sug-cl-ve')) return;
   $('sug-detail').textContent = 'Leyendo el mercado…';
   market = await marketClVe();
+  sugShow();
+}
+function sugShow() {
+  if (!$('sug-cl-ve')) return;
   $('sug-detail').textContent = market
     ? `Base 30.000 CLP: compras USDT en Chile a ${fmt(market.clp.value, 2)} CLP (${market.clp.source === 'binancep2p' ? 'Binance P2P' : 'Vita Wallet'}) y los vendes en Venezuela a ${fmt(market.ves.value, 2)} Bs (Binance P2P, ~30 USDT, sin filtro de Pago Móvil: por eso se usa 8 % = tu 7 % + ~1 % de Pago Móvil). Sin ganancia: ${market.cross.toFixed(4)}.`
     : 'No se pudo leer el mercado ahora (CriptoYa). Usa tu tasa de siempre.';
@@ -199,6 +204,37 @@ function sugWire() {
   $('sug-use').onclick = () => { $('in-cl-ve').value = $('sug-use').dataset.v; $('in-cl-ve').dispatchEvent(new Event('input')); };
   if ($('sug-cl-ve').open) sugLoad();
 }
+
+// ------------------------------------------------------------------ aviso del mercado (Chile → Venezuela)
+
+const sugPct = () => Number(String(lsGet('jmc_sug_cl-ve', '8')).replace(',', '.'));
+async function checkMarket() {
+  if (!saved) return;
+  $('mkt-th').value = lsGet('jmc_mkt_th', '2');
+  const th = Number(String($('mkt-th').value).replace(',', '.')) || 2;
+  market = await marketClVe();
+  sugShow();
+  const mine = statusOf('cl-ve') === 'on' ? rateNum(saved.rates['cl-ve']) : null;
+  const box = $('mkt-msg');
+  document.title = document.title.replace(/^⚠️ /, '');
+  if (!market) { box.className = 'msg'; box.textContent = 'No se pudo leer el mercado ahora (CriptoYa). Se vuelve a intentar en 5 minutos.'; return; }
+  const sug = market.cross * (1 - sugPct() / 100);
+  if (!mine) { box.className = 'msg'; box.textContent = `Chile → Venezuela no está activa. Sugerida ahora: ${sug.toFixed(4)}.`; return; }
+  const diff = (mine / sug - 1) * 100, real = (1 - mine / market.cross) * 100;
+  const at = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+  if (Math.abs(diff) <= th) {
+    box.className = 'msg ok';
+    box.textContent = `✅ ${at}: tu tasa ${saved.rates['cl-ve']} está a ${fmt(Math.abs(diff), 1)} % de la sugerida (${sug.toFixed(4)}). Todo en orden.`;
+    return;
+  }
+  document.title = '⚠️ ' + document.title;
+  box.className = 'msg warn';
+  box.textContent = diff > 0
+    ? `⚠️ ${at}: estás dando de más. Tu tasa ${saved.rates['cl-ve']} está ${fmt(diff, 1)} % por encima de la sugerida (${sug.toFixed(4)}); tu ganancia real bajó a ≈ ${fmt(real, 1)} %. Revisa y considera bajarla.`
+    : `⚠️ ${at}: el mercado subió. Tu tasa ${saved.rates['cl-ve']} está ${fmt(-diff, 1)} % por debajo de la sugerida (${sug.toFixed(4)}); ganas ≈ ${fmt(real, 1)} %, pero puedes quedar menos competitivo. Considera subirla.`;
+}
+$('mkt-th').oninput = () => { lsSet('jmc_mkt_th', $('mkt-th').value); checkMarket(); };
+setInterval(() => { if (saved && !$('mkt').hidden) checkMarket(); }, 5 * 60 * 1000);
 
 function provBox() {
   const b = saved.brl || {};
@@ -276,6 +312,7 @@ $('save').onclick = async () => {
   msg.textContent = `Publicado (${new Date(res.updated).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}): el cotizador ya muestra estas tasas y los flyers están listos abajo.`;
   renderRoutes();
   renderBcv(res.bcv, res.bcv_eur);
+  checkMarket();
   drawFlyers();
 };
 
