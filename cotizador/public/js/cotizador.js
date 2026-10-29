@@ -19,7 +19,7 @@ const LONG_NAME = { CLP: 'pesos chilenos', COP: 'pesos colombianos' };
 const bcvFmt = (v) => fmt(v, 2);
 const fmt2 = (v) => fmt(v, Number.isInteger(v) ? 0 : 2);  // 100 → "100"; 100,5 → "100,50"
 // Orígenes que se muestran con su bandera y el aviso "Próximamente", con los destinos que vendrán.
-const SOON = { BR: { name: 'Brasil', to: [['PE', 'Perú'], ['CO', 'Colombia'], ['VE', 'Venezuela'], ['USDT', 'USDT']] } };
+const SOON = { BR: { name: 'Brasil', to: [['PE', 'Perú'], ['CO', 'Colombia'], ['VE', 'Venezuela'], ['USDT', 'USDT (dólar Binance)']] } };
 const GLOBE = '<svg class="flag" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--box)" stroke="var(--box-line)"/><path d="M1 12h22M12 1c3 3.2 4.5 7 4.5 11S15 19.8 12 23c-3-3.2-4.5-7-4.5-11S9 4.2 12 1z" fill="none" stroke="var(--accent)" stroke-width="1.4"/></svg>';
 const rateOf = (id) => data?.routes.find((r) => r.id === id);
 const statusOf = (id) => rateOf(id)?.status ?? (rateOf(id)?.active ? 'on' : 'off');
@@ -126,7 +126,7 @@ function calc() {
   const isUsdt = r?.cur === 'USDT';
   $('usdt-ui').hidden = !isUsdt;
   $('std').hidden = isUsdt;
-  if (isUsdt) $('h-cot').textContent = 'Compra y venta de USDT';
+  if (isUsdt) $('h-cot').textContent = 'USDT · dólar Binance';
   if (isUsdt) { usdtQuote(r); return; }
   if (!r) { $('r-get').hidden = true; $('r-free').hidden = true; $('r-break').hidden = true; $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
   // Botones con la moneda, para que quede claro qué se escribe: "Yo envío pesos" · "Quiero que reciba bolívares".
