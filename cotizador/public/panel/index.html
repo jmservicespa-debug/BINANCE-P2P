@@ -112,6 +112,25 @@
     <button class="btn ghost" id="u-save">Guardar</button>
   </section>
 
+  <section class="card" id="usdtco" hidden aria-labelledby="h-usdtco">
+    <div>
+      <h2 id="h-usdtco">USDT Colombia (venta al cliente)</h2>
+      <span class="muted">El cliente te compra USDT con pesos colombianos. Precio = USDT en Binance P2P Colombia (vía CriptoYa, donde recompras) + tu ganancia.</span>
+    </div>
+    <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="uc-ref">—</b><span class="muted" id="uc-src"></span></div>
+    <div class="row2">
+      <label class="f" for="uc-margin">Tu ganancia (%)
+        <span class="amount"><input id="uc-margin" inputmode="decimal" autocomplete="off"></span></label>
+      <label class="f" for="uc-min">Mínimo (COP)
+        <span class="amount"><input id="uc-min" inputmode="numeric" autocomplete="off"></span></label>
+    </div>
+    <div class="usdt-price">Tu precio de venta: <b class="num" id="uc-price">—</b> COP por USDT <span class="muted" id="uc-trm"></span></div>
+    <div class="msg" id="uc-msg" hidden></div>
+    <label class="switch"><input type="checkbox" id="uc-pub"> <b>USDT activo en el cotizador (desde Colombia)</b></label>
+    <span class="muted">Marcado: los clientes ven "USDT" al elegir Colombia. Sin marcar: no aparece.</span>
+    <button class="btn ghost" id="uc-save">Guardar</button>
+  </section>
+
   <section class="card" id="flyers" hidden aria-labelledby="h-fly">
     <div>
       <h2 id="h-fly">Flyers del día</h2>

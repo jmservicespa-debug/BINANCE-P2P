@@ -1,5 +1,5 @@
-import { ADVISORS, ORIGINS, ROUTES, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js';
-import { BRL_BRAKE, USDT_URL, brlPerClp, copPerClp, parseCriptoYa } from './criptoya.js';
+import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js';
+import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, copPerClp, parseCriptoYa, usdtCopRef } from './criptoya.js';
 import { esc, flag, flags } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
@@ -24,7 +24,7 @@ const GLOBE = '<svg class="flag" viewBox="0 0 24 24" aria-hidden="true"><circle 
 const rateOf = (id) => data?.routes.find((r) => r.id === id);
 const statusOf = (id) => rateOf(id)?.status ?? (rateOf(id)?.active ? 'on' : 'off');
 // Se muestran las rutas activas y las de mercado inestable (estas sin tasa: se pide por WhatsApp).
-const ALL = [...ROUTES, USDT_ROUTE];
+const ALL = [...ROUTES, USDT_ROUTE, USDT_CO_ROUTE];
 // Marca de Binance junto a "dólar Binance" (la gente conoce el USDT así). JM Cambios es comerciante independiente.
 const BNB = '<svg class="bnb" viewBox="0 0 126 126" aria-hidden="true"><g fill="#F0B90B"><path d="M63 46 80 63 63 80 46 63z"/>'
   + '<path d="M28 54 37 63 28 72 19 63zM98 54 107 63 98 72 89 63z"/><path d="M63 9 96 42 84 54 63 33 42 54 30 42z"/><path d="M63 117 30 84 42 72 63 93 84 72 96 84z"/></g></svg>';
@@ -268,26 +268,30 @@ function setMode(m) {
 let side = 'buy', edited = 'top';
 const usdtFmt = (v) => fmt(v, 2), clpFmt = (v) => fmt(v, 0);
 function usdtQuote(r) {
+  const cur = ORIGINS[r.from].cur;  // pesos chilenos o colombianos
+  const sellOk = Boolean(r.buyMin);  // Colombia: solo se le vende USDT al cliente
+  $('u-tabs').hidden = !sellOk;
+  if (!sellOk) side = 'buy';
   const buy = side === 'buy';
   const price = Number(buy ? rateOf(r.id)?.rate : rateOf(r.id)?.buyRate);
   const ok = statusOf(r.id) === 'on' && price > 0;
   // Casilla de arriba: lo que entrega el cliente; abajo: lo que recibe.
   $('u-top-l').textContent = buy ? 'Pagas' : 'Entregas';
-  $('u-top-c').textContent = buy ? 'CLP' : 'USDT';
+  $('u-top-c').textContent = buy ? cur : 'USDT';
   $('u-bot-l').textContent = 'Recibes';
-  $('u-bot-c').textContent = buy ? 'USDT' : 'CLP';
-  $('u-top').placeholder = buy ? 'Ej. 100.000' : 'Ej. 100';
-  $('u-bot').placeholder = buy ? 'Ej. 100' : 'Ej. 100.000';
+  $('u-bot-c').textContent = buy ? 'USDT' : cur;
+  $('u-top').placeholder = buy ? `Ej. ${cur === 'COP' ? '200.000' : '100.000'}` : 'Ej. 100';
+  $('u-bot').placeholder = buy ? 'Ej. 100' : `Ej. ${cur === 'COP' ? '200.000' : '100.000'}`;
   $('dest-note').textContent = buy ? r.note : 'Envías los USDT a la wallet o cuenta de Binance que te indiquemos (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente, no es Binance.';
   if (!ok) {
     $('u-line').innerHTML = '<b>Mercado inestable</b><span>El precio se confirma por WhatsApp.</span>';
     $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} USDT. ¿Me das el precio de este momento?`, 'Pedir precio');
     return;
   }
-  $('u-line').innerHTML = `<b class="num">1 USDT = ${fmt(price, 2)} CLP</b><span>Comisión 0 % · Sin cargos extras · Mínimo ${clpFmt(buy ? r.min : r.buyMin)} CLP</span>`;
+  $('u-line').innerHTML = `<b class="num">1 USDT = ${fmt(price, 2)} ${cur}</b><span>Comisión 0 % · Sin cargos extras · Mínimo ${clpFmt(buy ? r.min : r.buyMin)} ${cur}</span>`;
   const src = $(edited === 'top' ? 'u-top' : 'u-bot'), dst = $(edited === 'top' ? 'u-bot' : 'u-top');
   if (!src.value.trim()) { dst.value = ''; $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} USDT.`); return; }
-  // Lo que escribe el cliente está en USDT o en CLP según la casilla y el lado.
+  // Lo que escribe el cliente está en USDT o en pesos según la casilla y el lado.
   const srcIsUsdt = (edited === 'top') !== buy;
   const x = (srcIsUsdt ? usdtNum : amountNum)(src.value);
   let usdt, clp;
@@ -305,13 +309,13 @@ function usdtQuote(r) {
   const min = buy ? r.min : r.buyMin;
   if (good && clp < min) {
     dst.value = '';  // bajo el mínimo no se cotiza
-    $('u-line').innerHTML = `<b>Mínimo ${clpFmt(min)} CLP</b><span>${buy ? 'Compra' : 'Venta'} desde ${clpFmt(min)} CLP${buy ? '' : ` (unos ${usdtFmt(Math.ceil((min / price) * 100) / 100)} USDT)`}.</span>`;
+    $('u-line').innerHTML = `<b>Mínimo ${clpFmt(min)} ${cur}</b><span>${buy ? 'Compra' : 'Venta'} desde ${clpFmt(min)} ${cur}${buy ? '' : ` (unos ${usdtFmt(Math.ceil((min / price) * 100) / 100)} USDT)`}.</span>`;
     $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} USDT.`);
     return;
   }
   $('wa').innerHTML = waButtons(!good ? `Hola, quiero ${buy ? 'comprar' : 'vender'} USDT.` : buy
-    ? `Hola, quiero comprar ${usdtFmt(usdt)} USDT pagando ${clpFmt(clp)} CLP (precio ${fmt(price, 2)} CLP por USDT, sin comisión). ¿Me confirmas?`
-    : `Hola, quiero vender ${usdtFmt(usdt)} USDT y recibir ${clpFmt(clp)} CLP (precio ${fmt(price, 2)} CLP por USDT, sin comisión). ¿Me confirmas?`);
+    ? `Hola, quiero comprar ${usdtFmt(usdt)} USDT pagando ${clpFmt(clp)} ${cur} (precio ${fmt(price, 2)} ${cur} por USDT, sin comisión). ¿Me confirmas?`
+    : `Hola, quiero vender ${usdtFmt(usdt)} USDT y recibir ${clpFmt(clp)} ${cur} (precio ${fmt(price, 2)} ${cur} por USDT, sin comisión). ¿Me confirmas?`);
 }
 document.querySelectorAll('#u-tabs button').forEach((b) => b.onclick = () => {
   side = b.dataset.side; edited = 'top';
@@ -393,6 +397,16 @@ async function loadCoCl() {
   if (!got) { r.status = 'ask'; r.rate = ''; r.active = false; return; }
   r.rate = got.rate.toFixed(2);
 }
+// USDT desde Colombia: precio de Binance P2P Colombia (CriptoYa, leído en el navegador) + la ganancia del panel.
+async function loadUsdtCo() {
+  data.routes = data.routes.filter((x) => x.id !== USDT_CO_ROUTE.id);
+  if (!data?.usdt_co) return;
+  USDT_CO_ROUTE.min = Number(data.usdt_co.min) || 50000;
+  let ref = null;
+  try { const res = await fetch(USDT_COP_URL, { cache: 'no-store' }); ref = res.ok ? usdtCopRef(await res.text()) : null; } catch { ref = null; }
+  const price = ref ? ref.value * (1 + Number(data.usdt_co.margin_pct) / 100) : NaN;
+  data.routes.push({ id: USDT_CO_ROUTE.id, status: Number.isFinite(price) ? 'on' : 'ask', rate: Number.isFinite(price) ? price.toFixed(2) : '', buyRate: '' });
+}
 async function loadBrl() {
   const r = data?.routes.find((x) => x.id === 'cl-br' && x.auto);
   if (!r) return;
@@ -410,7 +424,7 @@ async function load() {
   } catch {
     if (!data) { $('error').hidden = false; $('error').textContent = 'No pudimos cargar las tasas. Revisa tu conexión o escríbenos por WhatsApp.'; data = { routes: [], bcv: null, bcv_eur: null }; }
   }
-  await Promise.all([loadUsdt(), loadBrl(), loadCoCl()]);
+  await Promise.all([loadUsdt(), loadUsdtCo(), loadBrl(), loadCoCl()]);
   $('updated').textContent = data.paused ? 'Tasas en actualización' : data.updated
     ? 'Tasas del ' + new Date(data.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
     : 'Tasas aún no publicadas';

@@ -318,3 +318,27 @@ export async function saveUsdtCfg(request, env, now = Date.now()) {
   await env.TASAS.put('usdt_cfg', JSON.stringify(cfg));
   return json({ ...cfg, ref: await usdtRef(env, manual, now) });
 }
+
+// ------------------------------------------------------------------ USDT/COP (venta al cliente en Colombia)
+
+const COP_CFG = { margin_pct: '2', min: '50000', published: false };
+export async function loadUsdtCoCfg(env) {
+  try { return { ...COP_CFG, ...JSON.parse((await env.TASAS.get('usdt_co_cfg')) || '{}') }; } catch { return { ...COP_CFG }; }
+}
+export async function usdtCoView(request, env, now = Date.now()) {
+  if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
+  return json(await loadUsdtCoCfg(env));
+}
+export async function saveUsdtCoCfg(request, env, now = Date.now()) {
+  if (!sameOrigin(request)) return json({ error: 'origen no permitido' }, 403);
+  if (!(await isAdmin(request, env, now))) return json({ error: 'Inicia sesión de nuevo.' }, 401);
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'datos inválidos' }, 400); }
+  const m = String(body?.margin_pct ?? '').trim().replace(',', '.');
+  if (!(m !== '' && Number(m) >= 0 && Number(m) <= 50)) return json({ error: 'La ganancia debe estar entre 0 y 50 %.' }, 400);
+  const min = String(body?.min ?? '').replace(/\D/g, '');
+  if (!(Number(min) >= 1000 && Number(min) <= 100000000)) return json({ error: 'El mínimo no es válido.' }, 400);
+  const cfg = { margin_pct: m, min, published: body?.published === true };
+  await env.TASAS.put('usdt_co_cfg', JSON.stringify(cfg));
+  return json(cfg);
+}

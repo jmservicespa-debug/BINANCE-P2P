@@ -92,3 +92,19 @@ export async function marketClVe(fetchFn = fetch) {
   const ves = v && pick(v, 'bid', [/^binancep2p$/i], [10, 1e6]);
   return clp && ves ? { clp, ves, cross: ves.value / clp.value } : null;  // cross = Bs por cada CLP, sin ganancia
 }
+
+// USDT en pesos colombianos para vender al cliente: precio de venta (ask) de Binance P2P Colombia (donde se recompra);
+// si no viene, Vita Wallet; si tampoco, la mediana de los demás.
+export function usdtCopRef(text) {
+  let d;
+  try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }
+  if (!d || typeof d !== 'object') return null;
+  const ok = (v) => Number.isFinite(v) && v >= COP_RANGE[0] && v <= COP_RANGE[1];
+  const b = Number(d.binancep2p?.ask);
+  if (ok(b)) return { value: b, source: 'binancep2p' };
+  const vk = Object.keys(d).find((k) => /vita/i.test(k));
+  const v = Number(vk && d[vk]?.ask);
+  if (ok(v)) return { value: v, source: 'vita' };
+  const all = Object.values(d).map((x) => Number(x?.ask)).filter(ok).sort((a, z) => a - z);
+  return all.length ? { value: all[Math.floor(all.length / 2)], source: 'mediana' } : null;
+}

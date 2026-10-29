@@ -281,3 +281,20 @@ test('tasa sugerida Chile → Venezuela: compra en Vita Chile (ask) y venta en B
   assert.equal(m.cross.toFixed(4), (890 / 950).toFixed(4));  // ≈ 0,9368 Bs por CLP, sin ganancia
   assert.equal(await marketClVe(async () => new Response('caído', { status: 503 })), null);
 });
+
+test('USDT Colombia: referencia de Binance P2P Colombia y configuración del panel', async () => {
+  const { usdtCopRef } = await import('../public/js/criptoya.js');
+  assert.deepEqual(usdtCopRef('{"binancep2p":{"ask":3180,"bid":3150},"vitawallet":{"ask":3196}}'), { value: 3180, source: 'binancep2p' });
+  assert.deepEqual(usdtCopRef('{"vitawallet":{"ask":3196,"bid":3190}}'), { value: 3196, source: 'vita' });
+  assert.equal(usdtCopRef('{"binancep2p":{"ask":5}}'), null);  // dato absurdo
+  const { onRequestGet: getCo, onRequestPut: putCo } = await import('../functions/api/usdt-co.js');
+  noBcv();
+  const e = await env();
+  const login = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = login.headers.get('set-cookie').split(';')[0];
+  assert.equal((await (await getRates({ request: req('/api/tasas'), env: e })).json()).usdt_co, undefined);  // apagado al inicio
+  assert.equal((await putCo({ request: req('/api/usdt-co', { method: 'PUT', body: { margin_pct: '2', min: '50.000', published: true }, cookie }), env: e })).status, 200);
+  assert.deepEqual((await (await getRates({ request: req('/api/tasas'), env: e })).json()).usdt_co, { margin_pct: '2', min: 50000 });
+  assert.equal((await putCo({ request: req('/api/usdt-co', { method: 'PUT', body: { margin_pct: '90', min: '50000' }, cookie }), env: e })).status, 400);
+  assert.equal((await getCo({ request: req('/api/usdt-co'), env: e })).status, 401);
+});

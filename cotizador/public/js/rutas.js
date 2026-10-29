@@ -64,6 +64,8 @@ export function fmt(v, dec) {
 export const USDT_ROUTE = { id: 'cl-usdt', from: 'CL', to: ['USDT'], name: 'USDT', cur: 'USDT', unit: 'Dólar Binance', op: 'div', dec: 2,
   min: 10000, buyMin: 15000,  // mínimos en CLP: cliente compra (nosotros vendemos) 10.000 · cliente vende (nosotros compramos) 15.000
   note: 'Recibes los USDT en tu wallet o cuenta de Binance (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente, no es Binance.' };
+// USDT desde Colombia: solo venta al cliente. Precio = USDT en Binance P2P Colombia (CriptoYa) + ganancia; mínimo editable en el panel.
+export const USDT_CO_ROUTE = { ...USDT_ROUTE, id: 'co-usdt', from: 'CO', min: 50000, buyMin: null };
 
 // USDT admite decimales: "100,5" o "100.5" = cien y medio; "1.000" o "1.000,25" = mil.
 export function usdtNum(v) {
