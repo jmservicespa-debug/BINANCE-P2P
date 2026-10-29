@@ -23,6 +23,7 @@ export async function track(request, env, now = Date.now()) {
   try { body = await request.json(); } catch { return json({ error: 'datos inválidos' }, 400); }
   const e = body?.e, r = body?.r;
   if (!EVENTS.includes(e)) return json({ error: 'evento desconocido' }, 400);
+  if (await isAdmin(request, env, now)) return json({ ok: true, contado: false });  // el dueño con sesión del panel no se cuenta
   const day = chileDay(now);
   const s = await load(env, day);
   s[e] += 1;

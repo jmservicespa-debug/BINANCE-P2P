@@ -98,6 +98,7 @@ async function loadIndicators() {
 
 // Seguimiento (solo conteos, sin datos de la persona): una visita y una cotización por ruta en cada sesión, y cada clic en WhatsApp.
 function track(e, r) {
+  try { if (localStorage.getItem('jmc_no_contar') === '1') return; } catch { /* sin almacenamiento: se cuenta */ }  // equipo del dueño (se marca en el panel)
   const k = `jmc_${e}_${r || ''}`;
   try { if (e !== 'whatsapp') { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); } } catch { /* sin almacenamiento: se cuenta igual */ }
   fetch('/api/evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ e, r }), keepalive: true }).catch(() => {});

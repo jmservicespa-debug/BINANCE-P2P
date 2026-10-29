@@ -33,6 +33,7 @@ async function start() {
   drawFlyers();
   loadUsdt(true);
   loadStats();
+  renderSelf();
   checkMarket();
 }
 
@@ -73,6 +74,14 @@ async function loadStats() {
     </tbody></table>` : '<span class="muted">Todavía no hay cotizaciones.</span>'}`;
 }
 $('stats-reload').onclick = loadStats;
+
+// Tus propias visitas: con sesión del panel ya no se cuentan; además este equipo se puede marcar para siempre.
+function renderSelf() {
+  const off = lsGet('jmc_no_contar', '0') === '1';
+  $('self-txt').textContent = off ? '✅ Este equipo no se cuenta en las visitas.' : 'Con la sesión del panel abierta tus visitas no se cuentan. Para no contarlas nunca desde este equipo:';
+  $('self-btn').textContent = off ? 'Volver a contar este equipo' : 'No contar mis visitas en este equipo';
+}
+$('self-btn').onclick = () => { lsSet('jmc_no_contar', lsGet('jmc_no_contar', '0') === '1' ? '0' : '1'); renderSelf(); };
 
 $('login').onsubmit = async (e) => {
   e.preventDefault();

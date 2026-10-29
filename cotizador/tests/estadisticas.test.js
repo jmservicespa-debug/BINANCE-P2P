@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import { onRequestGet as getStats } from '../functions/api/estadisticas.js';
 import { onRequestPost as postEvent } from '../functions/api/evento.js';
 import { chileDay, report, track } from '../lib/estadisticas.js';
+import { hashPassword, sessionCookie } from '../lib/server.js';
 
 const ORIGIN = 'https://jmcambios.pages.dev';
 const kv = () => { const m = new Map(); return { get: async (k) => m.get(k) ?? null, put: async (k, v) => { m.set(k, v); }, delete: async (k) => { m.delete(k); } }; };
@@ -26,4 +27,14 @@ test('estadísticas: cuenta visitas, cotizaciones y WhatsApp por día y por ruta
 test('estadísticas: el día se corta a medianoche de Chile', () => {
   assert.equal(chileDay(Date.UTC(2026, 10, 2, 2)), '2026-11-01');  // 23:00 en Chile
   assert.equal(chileDay(Date.UTC(2026, 10, 2, 4)), '2026-11-02');
+});
+
+test('estadísticas: las visitas del dueño con sesión del panel no se cuentan', async () => {
+  const env = { TASAS: kv(), SESSION_SECRET: 'secreto', ADMIN_PASSWORD_HASH: await hashPassword('x', new Uint8Array(16), 1000) };
+  const now = Date.UTC(2026, 10, 1, 15);
+  const cookie = (await sessionCookie(env, now)).split(';')[0];
+  const mine = new Request(ORIGIN + '/api/evento', { method: 'POST', body: JSON.stringify({ e: 'visita' }), headers: { 'content-type': 'application/json', origin: ORIGIN, cookie } });
+  assert.deepEqual(await (await track(mine, env, now)).json(), { ok: true, contado: false });
+  await track(ev({ e: 'visita' }), env, now);  // un cliente
+  assert.equal(JSON.parse(await env.TASAS.get('stats:' + chileDay(now))).visita, 1);
 });
