@@ -18,7 +18,7 @@ async function api(path, opts = {}) {
 
 function showEditor(on) {
   $('login').hidden = on;
-  ['power', 'editor', 'usdt', 'flyers', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  ['power', 'editor', 'usdt', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
 }
 
 async function start() {
@@ -32,7 +32,46 @@ async function start() {
   renderLinks();
   drawFlyers();
   loadUsdt(true);
+  loadStats();
 }
+
+// ------------------------------------------------------------------ visitas del cotizador
+
+const routeName = (id) => {
+  if (id === 'otro') return 'Otro país';
+  if (id === 'cl-usdt') return 'Chile → USDT';
+  const r = ROUTES.find((x) => x.id === id);
+  return r ? `${ORIGINS[r.from].name} → ${r.name}` : id;
+};
+const pct = (a, b) => (b ? `${Math.round((a / b) * 100)} %` : '—');
+async function loadStats() {
+  const { status, body } = await api('/api/estadisticas');
+  if (status !== 200) { $('stats-body').textContent = 'No se pudieron leer las visitas.'; return; }
+  const d = body.days, sum = (k, n) => d.slice(0, n).reduce((t, x) => t + (x[k] || 0), 0);
+  const cols = [['Hoy', 1, 0], ['Ayer', 1, 1], ['7 días', 7, 0]];
+  const val = (k, [, n, from]) => (from ? d[1][k] : sum(k, n));
+  const rows = [['👀 Visitas', 'visita'], ['🧮 Cotizaron', 'cotiza'], ['💬 Clic en WhatsApp', 'whatsapp']];
+  const rutas = {};
+  for (const x of d) for (const [id, v] of Object.entries(x.rutas || {})) {
+    rutas[id] = rutas[id] || { cotiza: 0, whatsapp: 0 };
+    rutas[id].cotiza += v.cotiza || 0; rutas[id].whatsapp += v.whatsapp || 0;
+  }
+  const top = Object.entries(rutas).sort((a, b) => b[1].cotiza - a[1].cotiza);
+  const max = Math.max(1, ...d.map((x) => x.visita || 0));
+  $('stats-body').innerHTML = `
+    <table class="stats"><thead><tr><th></th>${cols.map(([n]) => `<th>${n}</th>`).join('')}</tr></thead><tbody>
+      ${rows.map(([n, k]) => `<tr><td>${n}</td>${cols.map((c) => `<td>${fmt(val(k, c), 0)}</td>`).join('')}</tr>`).join('')}
+      <tr class="sub"><td>De cada 100 visitas, escriben</td>${cols.map((c) => `<td>${pct(val('whatsapp', c), val('visita', c))}</td>`).join('')}</tr>
+    </tbody></table>
+    <h3>Últimos 7 días</h3>
+    <div class="days">${d.slice().reverse().map((x) => `<div class="day"><span>${x.day.slice(8)}/${x.day.slice(5, 7)}</span>
+      <i style="width:${Math.round(((x.visita || 0) / max) * 100)}%"></i><b>${fmt(x.visita || 0, 0)}</b></div>`).join('')}</div>
+    <h3>Rutas más cotizadas (7 días)</h3>
+    ${top.length ? `<table class="stats"><thead><tr><th>Ruta</th><th>Cotizaron</th><th>WhatsApp</th></tr></thead><tbody>
+      ${top.map(([id, v]) => `<tr><td>${esc(routeName(id))}</td><td>${fmt(v.cotiza, 0)}</td><td>${fmt(v.whatsapp, 0)}</td></tr>`).join('')}
+    </tbody></table>` : '<span class="muted">Todavía no hay cotizaciones.</span>'}`;
+}
+$('stats-reload').onclick = loadStats;
 
 $('login').onsubmit = async (e) => {
   e.preventDefault();

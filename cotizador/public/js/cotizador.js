@@ -93,8 +93,24 @@ async function loadIndicators() {
   ticker();
 }
 
+// Seguimiento (solo conteos, sin datos de la persona): una visita y una cotización por ruta en cada sesión, y cada clic en WhatsApp.
+function track(e, r) {
+  const k = `jmc_${e}_${r || ''}`;
+  try { if (e !== 'whatsapp') { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); } } catch { /* sin almacenamiento: se cuenta igual */ }
+  fetch('/api/evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ e, r }), keepalive: true }).catch(() => {});
+}
+const currentRoute = () => (SOON[origin] ? null : origin === OTHER || route === OTHER ? 'otro' : route);
+let cotizaTimer = null;
+function maybeCotiza() {  // cuenta cuando el cliente deja escrito un monto (no cada tecla)
+  clearTimeout(cotizaTimer);
+  const id = currentRoute();
+  if (id && ['amount', 'u-top', 'u-bot', 'o-amount'].some((x) => $(x).value.trim())) cotizaTimer = setTimeout(() => track('cotiza', id), 1500);
+}
+$('wa').addEventListener('click', (ev) => { if (ev.target.closest('a')) track('whatsapp', currentRoute()); });
+
 function calc() {
   ticker();
+  maybeCotiza();
   $('h-cot').textContent = 'Cotiza tu envío';
   const soon = Boolean(SOON[origin]);
   $('soon').hidden = !soon;
@@ -330,7 +346,7 @@ function render() {
 
 document.querySelectorAll('#modes button').forEach((b) => b.onclick = () => { setMode(b.dataset.mode); calc(); });
 $('amount').oninput = calc;
-['o-from', 'o-to', 'o-amount'].forEach((id) => { $(id).oninput = otherQuote; });
+['o-from', 'o-to', 'o-amount'].forEach((id) => { $(id).oninput = () => { otherQuote(); maybeCotiza(); }; });
 
 // USDT: el precio de Vita (CriptoYa) se lee desde el navegador del cliente y se le suma la ganancia.
 async function loadUsdt() {
@@ -375,5 +391,6 @@ async function load() {
   if (origin !== OTHER && !SOON[origin] && route !== OTHER && (!route || !activeRoutes(origin).some((r) => r.id === route))) route = activeRoutes(origin)[0]?.id ?? null;
   render();
 }
+track('visita');
 load().then(loadIndicators);
 setInterval(() => load().then(loadIndicators), 5 * 60 * 1000);  // si el cliente deja la página abierta, ve la tasa nueva

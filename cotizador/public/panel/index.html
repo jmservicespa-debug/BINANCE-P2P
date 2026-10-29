@@ -114,6 +114,15 @@
     <div class="row2"><button class="btn ghost" data-reset="CO">Texto automático</button><button class="btn" data-copy="CO">Copiar texto</button></div>
   </section>
 
+  <section class="card" id="stats" hidden aria-labelledby="h-stats">
+    <div class="row-between">
+      <div><h2 id="h-stats">Visitas del cotizador</h2>
+        <span class="muted">Conteo por día (hora de Chile). Cada persona cuenta una vez por visita; los números son aproximados.</span></div>
+      <button class="btn ghost" id="stats-reload">Actualizar</button>
+    </div>
+    <div id="stats-body" class="muted">Cargando…</div>
+  </section>
+
   <section class="card" id="links" hidden>
     <h3>Enlaces para tus clientes</h3>
     <div id="advisors"></div>

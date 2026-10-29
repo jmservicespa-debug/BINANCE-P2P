@@ -182,3 +182,17 @@ html.claro { color-scheme: light only; background: #FAF8FE }
 
 /* Panel: texto para el estado de WhatsApp */
 textarea.estado { font: 15px/1.5 var(--body); color: var(--ink); background: var(--sunken); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; resize: vertical; width: 100% }
+
+/* Panel: visitas del cotizador */
+.row-between { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap }
+table.stats { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--ink) }
+table.stats th, table.stats td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: right }
+table.stats th:first-child, table.stats td:first-child { text-align: left }
+table.stats th { font-family: var(--display); font-size: 13px; color: var(--muted) }
+table.stats td { font-weight: 600 } table.stats td:first-child { font-weight: 400 }
+table.stats tr.sub td { color: var(--muted); font-size: 13px }
+#stats h3 { margin-top: 10px }
+.days { display: flex; flex-direction: column; gap: 6px; color: var(--ink) }
+.day { display: grid; grid-template-columns: 48px 1fr 44px; align-items: center; gap: 8px; font-size: 13px; font-variant-numeric: tabular-nums }
+.day i { display: block; height: 10px; border-radius: 999px; background: var(--brand); min-width: 2px }
+.day b { text-align: right }
