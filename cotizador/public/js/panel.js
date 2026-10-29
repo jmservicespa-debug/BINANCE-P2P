@@ -176,12 +176,12 @@ $('save').onclick = async () => {
 
 const loadImg = (src) => new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = src; });
 
-// Texto para el estado de WhatsApp: banderas (emoji) del país de origen y de los destinos activos, para copiar y pegar.
+// Texto para el estado de WhatsApp, como lo publica JM Cambios: origen ➡️ banderas de los destinos, para copiar y pegar.
 const emojiFlag = (c) => String.fromCodePoint(...[...c].map((ch) => 0x1F1E6 + ch.charCodeAt(0) - 65));
+const STATUS_FLAGS = ['EC', 'CO', 'VE', 'DO', 'PE', 'AR', 'PA', 'MX', 'BR', 'UY', 'EU', 'ES', 'US'];
 function autoStatusText(k) {
-  const dests = [...new Set(ROUTES.filter((r) => r.from === k && statusOf(r.id) !== 'off').flatMap((r) => r.to))];
-  return `${emojiFlag(k)} ➜ ${dests.map(emojiFlag).join(' ')}\n`
-    + `💱 Tasas del día · JM Cambios\n`
+  return `${emojiFlag(k)}➡️${STATUS_FLAGS.filter((c) => c !== k).map(emojiFlag).join('')}💱\n`
+    + `Pago Rápido y Seguro\n`
     + `Cotiza tu envío aquí 👉 ${location.origin}/`;
 }
 const statusKey = (k) => `jmc_estado_${k}`;
