@@ -55,9 +55,9 @@ export function fmt(v, dec) {
 }
 
 // USDT desde Chile: el precio no se escribe en el panel; sale de Vita (CriptoYa) + la ganancia configurada.
-export const USDT_ROUTE = { id: 'cl-usdt', from: 'CL', to: ['USDT'], name: 'USDT', cur: 'USDT', unit: 'Dólar Binance · Tether', op: 'div', dec: 2,
+export const USDT_ROUTE = { id: 'cl-usdt', from: 'CL', to: ['USDT'], name: 'USDT', cur: 'USDT', unit: 'Dólar Binance', op: 'div', dec: 2,
   min: 10000, buyMin: 15000,  // mínimos en CLP: cliente compra (nosotros vendemos) 10.000 · cliente vende (nosotros compramos) 15.000
-  note: 'Recibes los USDT en tu wallet o cuenta de Binance (la red se confirma por WhatsApp)' };
+  note: 'Recibes los USDT en tu wallet o cuenta de Binance (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente, no es Binance.' };
 
 // USDT admite decimales: "100,5" o "100.5" = cien y medio; "1.000" o "1.000,25" = mil.
 export function usdtNum(v) {
