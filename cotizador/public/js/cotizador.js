@@ -6,18 +6,15 @@ const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
 const dot = (t) => (t.endsWith('.') ? t : `${t}.`);  // "EE. UU." ya termina en punto  // a quién escribe quien llega sin enlace de asesor
 
-// Asesor: viene en el enlace (?a=jamer) y se recuerda en este celular para la próxima visita.
+// Asesor: solo cuando viene en el enlace (?a=jamer). El enlace general muestra siempre "Escribir por WhatsApp", sin nombre.
 let adv = new URLSearchParams(location.search).get('a');
-try {
-  if (adv && ADVISORS[adv]) localStorage.setItem('jmc_asesor', adv);
-  else adv = localStorage.getItem('jmc_asesor');
-} catch { /* sin almacenamiento: se muestran los dos asesores */ }
 if (!ADVISORS[adv]) adv = null;
+try { localStorage.removeItem('jmc_asesor'); } catch { /* lo recordado por la versión anterior ya no se usa */ }
 
 let data = null, origin = 'CL', route = null, mode = 'send';
-const OTHER = 'OTHER';
+const OTHER = 'OTHER';  // origen u otro destino fuera de las rutas principales: tasa por WhatsApp
 const CUR_NAME = { CLP: 'pesos', COP: 'pesos', VES: 'bolívares', PEN: 'soles', USD: 'dólares', BRL: 'reales' };
-const LONG_NAME = { CLP: 'pesos chilenos', COP: 'pesos colombianos' };  // origen u otro destino fuera de las rutas principales: tasa por WhatsApp
+const LONG_NAME = { CLP: 'pesos chilenos', COP: 'pesos colombianos' };
 // Dólar y euro BCV con 2 decimales (el cálculo usa el valor completo que publica el BCV).
 const bcvFmt = (v) => fmt(v, 2);
 const fmt2 = (v) => fmt(v, Number.isInteger(v) ? 0 : 2);  // 100 → "100"; 100,5 → "100,50"
