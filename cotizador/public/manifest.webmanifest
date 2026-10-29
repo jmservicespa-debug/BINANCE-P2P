@@ -1,0 +1,12 @@
+{
+  "name": "JM Cambios · Cotizador",
+  "short_name": "JM Cambios",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#FAF8FE",
+  "theme_color": "#531463",
+  "icons": [
+    { "src": "/assets/icono-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/assets/icono-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
