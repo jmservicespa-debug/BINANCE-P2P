@@ -279,7 +279,11 @@ async function drawFlyers() {
     g.fillStyle = '#3D1A5E'; g.textAlign = 'center'; g.textBaseline = 'middle';
     for (const [id, cx, cy] of f.slots) {
       const st = statusOf(id);
-      const text = st === 'ask' ? 'CONSULTAR' : st === 'on' && rateNum(saved.rates[id]) ? saved.rates[id] : '—';
+      let text = st === 'ask' ? 'CONSULTAR' : st === 'on' && rateNum(saved.rates[id]) ? saved.rates[id] : '—';
+      if (ROUTES.find((r) => r.id === id)?.auto && st === 'on') {  // Colombia → Chile: la tasa de este momento (Vita + ganancia)
+        const got = await copPerClp(saved.cocl?.margin_pct ?? '3');
+        text = got ? got.rate.toFixed(2) : 'CONSULTAR';
+      }
       let size = f.size;
       do { g.font = `800 ${size}px Montserrat, sans-serif`; size -= 2; } while (g.measureText(text).width > f.maxW && size > 20);
       g.fillText(text, cx, cy + 3);
