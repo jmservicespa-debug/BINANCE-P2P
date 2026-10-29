@@ -32,6 +32,7 @@ export const ADVISORS = {
 export const FLYERS = {
   CL: { file: '/assets/flyer-chile.png', maxW: 280, size: 58, slots: [['cl-ve', 862, 311], ['cl-pe', 862, 421], ['cl-co', 862, 531], ['cl-us', 862, 641], ['cl-br', 862, 751], ['cl-pa', 862, 861]] },
   CO: { file: '/assets/flyer-colombia.png', maxW: 420, size: 84, slots: [['co-ve', 540, 686]] },
+  EU: { file: '/assets/flyer-europa.png', maxW: 420, size: 84, slots: [['eu-ve', 540, 686]] },
 };
 
 // Tasa escrita como en el flyer: "0.9320", "0,9320", "1085". Devuelve NaN si no es válida.

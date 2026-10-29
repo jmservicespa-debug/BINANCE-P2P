@@ -226,7 +226,7 @@ function autoStatusText(k) {
 }
 const statusKey = (k) => `jmc_estado_${k}`;
 function renderStatusText() {
-  for (const k of ['CL', 'CO']) {
+  for (const k of Object.keys(FLYERS)) {
     let mine = null;
     try { mine = localStorage.getItem(statusKey(k)); } catch { /* sin almacenamiento: texto automático */ }
     $('estado-' + k).value = mine || autoStatusText(k);
@@ -270,7 +270,8 @@ async function drawFlyers() {
   }
 }
 
-const flyerName = (k) => `tasas-${k === 'CL' ? 'chile' : 'colombia'}-${new Date().toISOString().slice(0, 10)}.png`;
+const FLYER_SLUG = { CL: 'chile', CO: 'colombia', EU: 'europa' };
+const flyerName = (k) => `tasas-${FLYER_SLUG[k] || k.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.png`;
 document.querySelectorAll('[data-dl]').forEach((b) => b.onclick = () => {
   const k = b.dataset.dl;
   if (!flyerBlobs[k]) return;
