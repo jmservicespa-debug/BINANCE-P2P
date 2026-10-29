@@ -1,5 +1,5 @@
 import { ADVISORS, ORIGINS, ROUTES, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js';
-import { BRL_BRAKE, USDT_URL, brlPerClp, parseCriptoYa } from './criptoya.js';
+import { BRL_BRAKE, USDT_URL, brlPerClp, copPerClp, parseCriptoYa } from './criptoya.js';
 import { esc, flag, flags } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
@@ -384,6 +384,14 @@ async function loadUsdt() {
 
 // Brasil automático: la tasa sigue al mercado (CriptoYa, leído desde este navegador).
 // Si no hay dato o el mercado se movió más de 2 % desde la calibración: "Mercado inestable".
+// Colombia → Chile: la tasa sale en vivo de Vita Wallet (CriptoYa) + la ganancia del panel. Si no se puede leer: "Mercado inestable".
+async function loadCoCl() {
+  const r = data?.routes.find((x) => x.id === 'co-cl' && x.status === 'on');
+  if (!r) return;
+  const got = await copPerClp(r.margin_pct);
+  if (!got) { r.status = 'ask'; r.rate = ''; r.active = false; return; }
+  r.rate = got.rate.toFixed(2);
+}
 async function loadBrl() {
   const r = data?.routes.find((x) => x.id === 'cl-br' && x.auto);
   if (!r) return;
@@ -401,7 +409,7 @@ async function load() {
   } catch {
     if (!data) { $('error').hidden = false; $('error').textContent = 'No pudimos cargar las tasas. Revisa tu conexión o escríbenos por WhatsApp.'; data = { routes: [], bcv: null, bcv_eur: null }; }
   }
-  await Promise.all([loadUsdt(), loadBrl()]);
+  await Promise.all([loadUsdt(), loadBrl(), loadCoCl()]);
   $('updated').textContent = data.paused ? 'Tasas en actualización' : data.updated
     ? 'Tasas del ' + new Date(data.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
     : 'Tasas aún no publicadas';

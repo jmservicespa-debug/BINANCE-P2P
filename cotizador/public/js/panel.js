@@ -1,6 +1,6 @@
 import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js';
 import { esc, flag, flags } from './ui.js';
-import { BRL_BRAKE, USDT_URL, brlPerClp, parseCriptoYa } from './criptoya.js';
+import { BRL_BRAKE, USDT_URL, brlPerClp, copPerClp, parseCriptoYa } from './criptoya.js';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -108,12 +108,30 @@ function renderRoutes() {
       const st = statusOf(r.id);
       return `<div class="route${st === 'on' ? '' : ' off'}" id="row-${r.id}">
         ${flags(r.to)}
-        <div><h3>${esc(o.name)} → ${esc(r.name)}</h3><span class="op">${esc(r.unit)} · ${o.cur} ${r.op === 'mul' ? '× tasa' : '÷ tasa'}</span></div>
-        <input type="text" id="in-${r.id}" value="${esc(saved.rates[r.id] || '')}" inputmode="decimal" aria-label="Tasa ${esc(o.name)} a ${esc(r.name)}">
+        <div><h3>${esc(o.name)} → ${esc(r.name)}</h3><span class="op">${r.auto ? 'Automática (Vita Wallet) · escribe tu ganancia en %' : `${esc(r.unit)} · ${o.cur} ${r.op === 'mul' ? '× tasa' : '÷ tasa'}`}</span></div>
+        <input type="text" id="in-${r.id}" value="${esc(r.auto ? (saved.cocl?.margin_pct ?? '3') : (saved.rates[r.id] || ''))}" inputmode="decimal" aria-label="${r.auto ? 'Ganancia %' : 'Tasa'} ${esc(o.name)} a ${esc(r.name)}">
         <span class="ex"><span id="ex-${r.id}"></span><select id="st-${r.id}" aria-label="Estado ${esc(o.name)} a ${esc(r.name)}">${STATUS.map(([v, t]) => `<option value="${v}"${v === st ? ' selected' : ''}>${t}</option>`).join('')}</select></span>
       </div>${r.id === 'cl-br' ? provBox() : ''}`;
     }).join('')).join('');
   for (const r of ROUTES) {
+    if (r.auto) {  // Colombia → Chile: muestra la tasa de ahora con la ganancia escrita
+      let seq = 0;
+      const live = async () => {
+        const n = ++seq, m = $('in-' + r.id).value.trim().replace(',', '.');
+        $('in-' + r.id).classList.remove('bad');
+        if (!(m !== '' && Number(m) >= 0 && Number(m) <= 50)) { $('ex-' + r.id).textContent = 'la ganancia va entre 0 y 50 %'; return; }
+        $('ex-' + r.id).textContent = 'leyendo Vita Wallet…';
+        const got = await copPerClp(m);
+        if (n !== seq) return;
+        $('ex-' + r.id).textContent = got
+          ? `Vita: ${fmt(got.cop, 2)} COP y ${fmt(got.clp, 2)} CLP por USDT → tasa ${got.rate.toFixed(2)} · 100.000 COP → ${fmt(100000 / Number(got.rate.toFixed(2)), 0)} CLP`
+          : 'no se pudo leer Vita Wallet ahora: el cotizador mostrará "Mercado inestable"';
+      };
+      $('in-' + r.id).oninput = live;
+      live();
+      $('st-' + r.id).onchange = (e) => $('row-' + r.id).classList.toggle('off', e.target.value !== 'on');
+      continue;
+    }
     const upd = () => {
       const amt = ORIGINS[r.from].cur === 'EUR' ? 100 : 100000;  // ejemplo con un monto típico de cada moneda
       const v = convert(r, $('in-' + r.id).value, amt);
@@ -181,7 +199,8 @@ function renderLinks() {
 
 $('save').onclick = async () => {
   const body = { rates: {}, status: {}, bcv_manual: $('bcv').value.trim() || null, bcv_manual_eur: $('bcv-eur').value.trim() || null };
-  for (const r of ROUTES) { body.rates[r.id] = $('in-' + r.id).value.trim(); body.status[r.id] = $('st-' + r.id).value; }
+  for (const r of ROUTES) { body.rates[r.id] = r.auto ? '' : $('in-' + r.id).value.trim(); body.status[r.id] = $('st-' + r.id).value; }
+  body.cocl = { margin_pct: $('in-co-cl').value.trim() };
   body.brl = { ref: $('prov-brl').value.trim(), margin_pct: $('prov-m').value.trim(), auto: $('prov-auto').checked,
     cal_cross: brlCross };  // calibración: el mercado en el momento en que anotaste a tu proveedor
   if (body.brl.auto && !brlCross) {
@@ -189,7 +208,8 @@ $('save').onclick = async () => {
     $('save-msg').textContent = 'Reales automático necesita el precio del mercado y no se pudo leer. Desmarca la casilla o inténtalo de nuevo.';
     return;
   }
-  const bad = ROUTES.filter((r) => body.status[r.id] === 'on' && !rateNum(body.rates[r.id]));
+  const okPct = (v) => { const t = String(v).replace(',', '.'); return t !== '' && Number(t) >= 0 && Number(t) <= 50; };
+  const bad = ROUTES.filter((r) => (r.auto ? !okPct(body.cocl.margin_pct) : body.status[r.id] === 'on' && !rateNum(body.rates[r.id])));
   bad.forEach((r) => $('in-' + r.id).classList.add('bad'));
   const msg = $('save-msg');
   msg.hidden = false;

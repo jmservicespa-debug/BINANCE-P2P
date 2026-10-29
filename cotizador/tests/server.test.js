@@ -39,7 +39,7 @@ test('cálculos con las tasas del flyer', () => {
   assert.equal(amountNum('1.250,50'), 1250.5);
   assert.equal(amountNum('100.000'), 100000);
   assert.ok(Number.isNaN(rateNum('1.0.5')) && Number.isNaN(rateNum('')) && Number.isNaN(rateNum('-3')));
-  assert.equal(ROUTES.length, 8);
+  assert.equal(ROUTES.length, 9);
   assert.equal(convert(r('eu-ve'), '256,80', 100), 25680);  // Europa → Venezuela: euros × tasa = bolívares
   // Sin decimales en ninguna ruta (montos completos para pagar por P2P).
   assert.ok(ROUTES.every((x) => x.dec === 0));
@@ -251,4 +251,21 @@ test('apagar todo: un interruptor oculta todas las tasas sin borrarlas', async (
   const on = await (await getRates({ request: req('/api/tasas'), env: e })).json();
   assert.equal(on.paused, undefined);
   assert.equal(on.routes.find((r) => r.id === 'cl-ve').rate, '0.9320');
+});
+
+test('Colombia → Chile automático: Vita Colombia ÷ Vita Chile + ganancia; activa sin tasa escrita', async () => {
+  const { copPerClp, vitaBid, USDT_COP_URL, USDT_URL } = await import('../public/js/criptoya.js');
+  assert.equal(vitaBid('{"vitawallet":{"ask":3250,"bid":3196}}', [1500, 8000]), 3196);
+  assert.equal(vitaBid('{"binancep2p":{"bid":3196}}', [1500, 8000]), null);  // sin Vita: no se inventa
+  const bodies = { [USDT_COP_URL]: '{"vitawallet":{"ask":3250,"bid":3196}}', [USDT_URL]: '{"vitawallet":{"ask":950,"bid":940}}' };
+  const fake = async (u) => new Response(bodies[u]);
+  const got = await copPerClp('3', fake);
+  assert.equal(got.cop, 3196); assert.equal(got.clp, 940);
+  assert.equal(got.rate.toFixed(4), ((3196 / 940) * 1.03).toFixed(4));  // ≈ 3,50 COP por CLP
+  assert.equal(Math.round(convert(routeById('co-cl'), got.rate.toFixed(2), 100000)), 28571);  // 100.000 COP ÷ 3,50
+  assert.equal(await copPerClp('3', async () => new Response('caído', { status: 503 })), null);
+  // En el panel se activa sin escribir tasa (solo la ganancia), y la vista pública manda la ganancia.
+  const v = validate({ rates: RATES, status: { 'co-cl': 'on' }, cocl: { margin_pct: '3' } });
+  assert.deepEqual(v.errors, []);
+  assert.deepEqual(validate({ rates: RATES, cocl: { margin_pct: '80' } }).errors, ['co-cl-margen']);
 });

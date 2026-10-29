@@ -112,7 +112,7 @@ export function validate(body) {
   for (const r of ROUTES) {
     const raw = String(body?.rates?.[r.id] ?? '').trim();
     const st = statusOf(body, r.id);
-    if (st === 'on' && !rateNum(raw)) errors.push(r.id);  // la tasa se guarda aunque esté en pausa
+    if (st === 'on' && !r.auto && !rateNum(raw)) errors.push(r.id);  // la tasa se guarda aunque esté en pausa (las automáticas no la llevan)
     rates[r.id] = raw;
     status[r.id] = st;
   }
@@ -124,7 +124,10 @@ export function validate(body) {
   const brl = body?.brl && typeof body.brl === 'object'
     ? { ref: String(body.brl.ref ?? '').slice(0, 20), margin_pct: String(body.brl.margin_pct ?? '').slice(0, 10),
         auto: body.brl.auto === true, cal_cross: Number(body.brl.cal_cross) > 0 ? Number(body.brl.cal_cross) : null } : null;
-  return { errors, data: { rates, status, bcv_manual: bcv, bcv_manual_eur: bcvEur, ...(brl ? { brl } : {}) } };
+  // Colombia → Chile automático: solo se guarda la ganancia (%).
+  const m = String(body?.cocl?.margin_pct ?? '3').trim().replace(',', '.');
+  if (!(m !== '' && Number(m) >= 0 && Number(m) <= 50)) errors.push('co-cl-margen');
+  return { errors, data: { rates, status, bcv_manual: bcv, bcv_manual_eur: bcvEur, cocl: { margin_pct: m }, ...(brl ? { brl } : {}) } };
 }
 
 export async function saveRates(request, env, now = Date.now()) {
@@ -231,8 +234,9 @@ export async function publicView(env, saved, now = Date.now()) {
     // Con mercado inestable no se publica la tasa guardada: el cliente la pide por WhatsApp.
     routes: ROUTES.map((r) => {
       let status = statusOf(s, r.id);
-      if (status === 'on' && !rateNum(s.rates[r.id])) status = 'off';
-      const out = { id: r.id, status, rate: status === 'on' ? s.rates[r.id] : '', active: status === 'on' };
+      if (status === 'on' && !r.auto && !rateNum(s.rates[r.id])) status = 'off';
+      const out = { id: r.id, status, rate: status === 'on' && !r.auto ? s.rates[r.id] : '', active: status === 'on' };
+      if (r.auto && status === 'on') out.margin_pct = s.cocl?.margin_pct ?? '3';  // la tasa la calcula el navegador con CriptoYa
       if (r.id === 'cl-br' && status === 'on') { const a = brlAuto(s.brl); if (a) out.auto = a; }
       return out;
     }),
