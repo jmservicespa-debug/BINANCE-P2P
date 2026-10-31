@@ -249,3 +249,5 @@ table.stats tr.sub td { color: var(--muted); font-size: 13px }
 .jmr small { display: block; font-size: 13px; color: var(--muted); line-height: 1.35 }
 .jmr-go { margin-left: auto; font-size: 26px; font-weight: 700; color: var(--brand) }
 .jmr small .jmr-hl { display: inline; font-size: inherit; color: #4B2370; font-weight: 800 }
+.jmr-cl { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 3px 10px 3px 4px; border-radius: 999px; background: #fff; border: 1px solid var(--box-line); font-size: 12px; font-weight: 600; color: #4B2370 }
+.jmr-cl .flag { width: 18px; height: 18px; box-shadow: 0 0 0 1px rgba(0,0,0,.12) }
