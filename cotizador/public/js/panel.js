@@ -18,7 +18,7 @@ async function api(path, opts = {}) {
 
 function showEditor(on) {
   $('login').hidden = on;
-  ['power', 'mkt', 'editor', 'usdt', 'usdtco', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  ['power', 'mkt', 'editor', 'usdt', 'usdtco', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
 }
 
 async function start() {
@@ -33,6 +33,7 @@ async function start() {
   drawFlyers();
   loadUsdt(true);
   loadUsdtCo();
+  loadRewards();
   loadStats();
   renderSelf();
   checkMarket();
@@ -528,6 +529,20 @@ async function saveUsdtCo() {
   if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
   msg.className = 'msg'; msg.textContent = body.published ? 'Guardado: los clientes ya ven USDT desde Colombia.' : 'Guardado (USDT Colombia apagado en el cotizador).';
 }
+// ------------------------------------------------------------------ JM Rewards: botón en el cotizador (parte apagado)
+
+async function loadRewards() {
+  const { status, body } = await api('/api/rewards');
+  if (status === 200) $('jr-pub').checked = !!body.published;
+}
+$('jr-pub').onchange = async () => {
+  const msg = $('jr-msg');
+  const { status, body } = await api('/api/rewards', { method: 'PUT', body: JSON.stringify({ published: $('jr-pub').checked }) });
+  msg.hidden = false;
+  if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; $('jr-pub').checked = !$('jr-pub').checked; return; }
+  msg.className = 'msg'; msg.textContent = body.published ? 'Activado: los clientes ya ven el botón de JM Rewards.' : 'Apagado: el botón de JM Rewards no aparece en el cotizador.';
+};
+
 $('uc-margin').oninput = ucCalc;
 $('uc-save').onclick = saveUsdtCo;
 $('uc-pub').onchange = saveUsdtCo;

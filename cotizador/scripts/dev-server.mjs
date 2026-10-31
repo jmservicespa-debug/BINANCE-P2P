@@ -14,6 +14,7 @@ import * as pausaFn from '../functions/api/pausa.js';
 import * as indicadoresFn from '../functions/api/indicadores.js';
 import * as eventoFn from '../functions/api/evento.js';
 import * as usdtCoFn from '../functions/api/usdt-co.js';
+import * as rewardsFn from '../functions/api/rewards.js';
 import * as estadisticasFn from '../functions/api/estadisticas.js';
 import { hashPassword } from '../lib/server.js';
 
@@ -25,7 +26,7 @@ const env = {
   SESSION_SECRET: 'solo-para-pruebas-locales',
   ADMIN_PASSWORD_HASH: await hashPassword(process.env.DEV_PASSWORD || 'clave-de-prueba', crypto.getRandomValues(new Uint8Array(16))),
 };
-const API = { '/api/tasas': tasas, '/api/login': loginFn, '/api/logout': logoutFn, '/api/sesion': sesion, '/api/usdt': usdtFn, '/api/pausa': pausaFn, '/api/indicadores': indicadoresFn, '/api/evento': eventoFn, '/api/usdt-co': usdtCoFn, '/api/estadisticas': estadisticasFn };
+const API = { '/api/tasas': tasas, '/api/login': loginFn, '/api/logout': logoutFn, '/api/sesion': sesion, '/api/usdt': usdtFn, '/api/pausa': pausaFn, '/api/indicadores': indicadoresFn, '/api/evento': eventoFn, '/api/usdt-co': usdtCoFn, '/api/rewards': rewardsFn, '/api/estadisticas': estadisticasFn };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg' };
 
 createServer(async (req, res) => {

@@ -342,3 +342,24 @@ export async function saveUsdtCoCfg(request, env, now = Date.now()) {
   await env.TASAS.put('usdt_co_cfg', JSON.stringify(cfg));
   return json(cfg);
 }
+
+// ------------------------------------------------------------------ JM Rewards (botón de registro en el cotizador)
+
+// La dirección es fija (la app de JM Rewards); desde el panel solo se enciende o apaga el botón. Parte apagado.
+export const REWARDS_URL = 'https://jm-rewards.jmservicespa.workers.dev/';
+export async function loadRewardsCfg(env) {
+  try { return { published: false, ...JSON.parse((await env.TASAS.get('rewards_cfg')) || '{}') }; } catch { return { published: false }; }
+}
+export async function rewardsView(request, env, now = Date.now()) {
+  if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
+  return json({ ...(await loadRewardsCfg(env)), url: REWARDS_URL });
+}
+export async function saveRewardsCfg(request, env, now = Date.now()) {
+  if (!sameOrigin(request)) return json({ error: 'origen no permitido' }, 403);
+  if (!(await isAdmin(request, env, now))) return json({ error: 'Inicia sesión de nuevo.' }, 401);
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'datos inválidos' }, 400); }
+  const cfg = { published: body?.published === true };
+  await env.TASAS.put('rewards_cfg', JSON.stringify(cfg));
+  return json({ ...cfg, url: REWARDS_URL });
+}

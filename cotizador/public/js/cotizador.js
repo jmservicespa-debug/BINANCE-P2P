@@ -425,6 +425,9 @@ async function load() {
     if (!data) { $('error').hidden = false; $('error').textContent = 'No pudimos cargar las tasas. Revisa tu conexión o escríbenos por WhatsApp.'; data = { routes: [], bcv: null, bcv_eur: null }; }
   }
   await Promise.all([loadUsdt(), loadUsdtCo(), loadBrl(), loadCoCl()]);
+  // Botón de JM Rewards: solo aparece si se activó en el panel.
+  $('jmr').hidden = !data.rewards?.url;
+  if (data.rewards?.url) $('jmr').href = data.rewards.url;
   $('updated').textContent = data.paused ? 'Tasas en actualización' : data.updated
     ? 'Tasas del ' + new Date(data.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
     : 'Tasas aún no publicadas';

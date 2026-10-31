@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=9">
+<link rel="stylesheet" href="/css/estilo.css?v=10">
 </head>
 <body class="tema-flyer panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -129,6 +129,16 @@
     <label class="switch"><input type="checkbox" id="uc-pub"> <b>USDT activo en el cotizador (desde Colombia)</b></label>
     <span class="muted">Marcado: los clientes ven "USDT" al elegir Colombia. Sin marcar: no aparece.</span>
     <button class="btn ghost" id="uc-save">Guardar</button>
+  </section>
+
+  <section class="card" id="rewards" hidden aria-labelledby="h-rewards">
+    <div>
+      <h2 id="h-rewards">JM Rewards en el cotizador</h2>
+      <span class="muted">Muestra el botón "Cada vez que envías, ganas algo" bajo el botón de WhatsApp, que lleva al registro de JM Rewards.</span>
+    </div>
+    <label class="switch"><input type="checkbox" id="jr-pub"> <b>Botón de JM Rewards visible en el cotizador</b></label>
+    <span class="muted">Sin marcar: los clientes no lo ven. Se guarda al instante.</span>
+    <div class="msg" id="jr-msg" hidden></div>
   </section>
 
   <section class="card" id="flyers" hidden aria-labelledby="h-fly">

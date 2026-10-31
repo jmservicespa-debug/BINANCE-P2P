@@ -298,3 +298,18 @@ test('USDT Colombia: referencia de Binance P2P Colombia y configuración del pan
   assert.equal((await putCo({ request: req('/api/usdt-co', { method: 'PUT', body: { margin_pct: '90', min: '50000' }, cookie }), env: e })).status, 400);
   assert.equal((await getCo({ request: req('/api/usdt-co'), env: e })).status, 401);
 });
+
+test('JM Rewards: el botón del cotizador parte apagado y solo el panel lo enciende', async () => {
+  const { onRequestGet: getJr, onRequestPut: putJr } = await import('../functions/api/rewards.js');
+  noBcv();
+  const e = await env();
+  const login = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = login.headers.get('set-cookie').split(';')[0];
+  assert.equal((await (await getRates({ request: req('/api/tasas'), env: e })).json()).rewards, undefined);  // apagado al inicio
+  assert.equal((await getJr({ request: req('/api/rewards'), env: e })).status, 401);
+  assert.equal((await putJr({ request: req('/api/rewards', { method: 'PUT', body: { published: true } }), env: e })).status, 401);
+  assert.equal((await putJr({ request: req('/api/rewards', { method: 'PUT', body: { published: true }, cookie }), env: e })).status, 200);
+  assert.deepEqual((await (await getRates({ request: req('/api/tasas'), env: e })).json()).rewards, { url: 'https://jm-rewards.jmservicespa.workers.dev/' });
+  assert.equal((await putJr({ request: req('/api/rewards', { method: 'PUT', body: { published: false }, cookie }), env: e })).status, 200);
+  assert.equal((await (await getRates({ request: req('/api/tasas'), env: e })).json()).rewards, undefined);
+});
