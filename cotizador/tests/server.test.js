@@ -328,3 +328,15 @@ test('Colombia → Chile con tasa fija: se publica la fija y no la automática',
   const a = (await publicView(e, { ...auto.data, updated: 1 })).routes.find((x) => x.id === 'co-cl');
   assert.deepEqual([a.rate, a.fixed, a.margin_pct], ['', undefined, '3']);
 });
+
+test('la dirección antigua y www llevan a jmcambios.cl con la misma página', async () => {
+  const { onRequest } = await import('../functions/_middleware.js');
+  const next = async () => new Response('sitio');
+  const go = (u) => onRequest({ request: new Request(u), next });
+  const r1 = await go('https://jmcambios.pages.dev/?a=jamer');
+  assert.equal(r1.status, 301); assert.equal(r1.headers.get('location'), 'https://jmcambios.cl/?a=jamer');
+  const r2 = await go('https://www.jmcambios.cl/panel/');
+  assert.equal(r2.headers.get('location'), 'https://jmcambios.cl/panel/');
+  assert.equal(await (await go('https://jmcambios.cl/')).text(), 'sitio');               // la principal no se redirige
+  assert.equal(await (await go('https://abc123.jmcambios.pages.dev/')).text(), 'sitio');  // vistas previas tampoco
+});
