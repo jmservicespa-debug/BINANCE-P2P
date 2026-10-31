@@ -13,6 +13,7 @@ export const ROUTES = [
   { id: 'cl-ve', from: 'CL', to: ['VE'], name: 'Venezuela', cur: 'VES', unit: 'Bolívares', op: 'mul', dec: 0, min: 10000 },
   { id: 'cl-pe', from: 'CL', to: ['PE'], name: 'Perú', cur: 'PEN', unit: 'Soles', op: 'mul', dec: 0, min: 10000 },
   { id: 'cl-co', from: 'CL', to: ['CO'], name: 'Colombia', cur: 'COP', unit: 'Pesos colombianos', op: 'mul', dec: 0, min: 10000 },
+  { id: 'cl-ar', from: 'CL', to: ['AR'], name: 'Argentina', cur: 'ARS', unit: 'Pesos argentinos', op: 'mul', dec: 0, min: 10000 },
   { id: 'cl-us', from: 'CL', to: ['US'], name: 'EE. UU.', cur: 'USD', unit: 'Dólares Zelle', op: 'div', dec: 0, min: 40000,
     note: 'Pago solo por Zelle (no se paga a cuenta bancaria)' },
   { id: 'cl-br', from: 'CL', to: ['BR'], name: 'Brasil', cur: 'BRL', unit: 'Reales Pix', op: 'mul', dec: 0, min: 10000,
@@ -34,6 +35,8 @@ export const ADVISORS = {
 // Casillas de las plantillas de flyer (1080×1080): [ruta, centro x, centro y].
 export const FLYERS = {
   CL: { file: '/assets/flyer-chile.png', maxW: 280, size: 58, slots: [['cl-ve', 862, 311], ['cl-pe', 862, 421], ['cl-co', 862, 531], ['cl-us', 862, 641], ['cl-br', 862, 751], ['cl-pa', 862, 861]] },
+  // Segundo flyer de Chile (misma plantilla que Colombia): Colombia y Argentina con la tasa en grande.
+  CL2: { from: 'CL', file: '/assets/flyer-chile-2.png', maxW: 280, size: 60, slots: [['cl-co', 686, 432], ['cl-ar', 686, 688]] },
   CO: { file: '/assets/flyer-colombia.png', maxW: 280, size: 60, slots: [['co-ve', 686, 432], ['co-cl', 686, 688]] },
   EU: { file: '/assets/flyer-europa.png', maxW: 420, size: 84, slots: [['eu-ve', 540, 686]] },
 };

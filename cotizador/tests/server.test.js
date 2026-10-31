@@ -39,7 +39,7 @@ test('cálculos con las tasas del flyer', () => {
   assert.equal(amountNum('1.250,50'), 1250.5);
   assert.equal(amountNum('100.000'), 100000);
   assert.ok(Number.isNaN(rateNum('1.0.5')) && Number.isNaN(rateNum('')) && Number.isNaN(rateNum('-3')));
-  assert.equal(ROUTES.length, 9);
+  assert.equal(ROUTES.length, 10);
   assert.equal(convert(r('eu-ve'), '256,80', 100), 25680);  // Europa → Venezuela: euros × tasa = bolívares
   // Sin decimales en ninguna ruta (montos completos para pagar por P2P).
   assert.ok(ROUTES.every((x) => x.dec === 0));
