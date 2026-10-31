@@ -384,8 +384,7 @@ const loadImg = (src) => new Promise((ok, ko) => { const i = new Image(); i.onlo
 const emojiFlag = (c) => String.fromCodePoint(...[...c].map((ch) => 0x1F1E6 + ch.charCodeAt(0) - 65));
 const STATUS_FLAGS = ['EC', 'CO', 'VE', 'DO', 'PE', 'AR', 'PA', 'MX', 'BR', 'UY', 'EU', 'ES', 'US'];
 function autoStatusText(k) {
-  const from = FLYERS[k]?.from ?? k;  // CL2 es el segundo flyer de Chile
-  return `${emojiFlag(from)}➡️${STATUS_FLAGS.filter((c) => c !== from).map(emojiFlag).join('')}💱\n`
+  return `${emojiFlag(k)}➡️${STATUS_FLAGS.filter((c) => c !== k).map(emojiFlag).join('')}💱\n`
     + `Pago Rápido y Seguro\n`
     + `Cotiza tu envío aquí 👉 ${location.origin}/`;
 }
@@ -439,7 +438,7 @@ async function drawFlyers() {
   }
 }
 
-const FLYER_SLUG = { CL: 'chile', CL2: 'chile-colombia-argentina', CO: 'colombia', EU: 'europa' };
+const FLYER_SLUG = { CL: 'chile', CO: 'colombia', EU: 'europa' };
 const flyerName = (k) => `tasas-${FLYER_SLUG[k] || k.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.png`;
 document.querySelectorAll('[data-dl]').forEach((b) => b.onclick = () => {
   const k = b.dataset.dl;
