@@ -34,7 +34,7 @@ export const ADVISORS = {
 
 // Casillas de las plantillas de flyer (1080×1080): [ruta, centro x, centro y].
 export const FLYERS = {
-  CL: { file: '/assets/flyer-chile.png', maxW: 280, size: 50, slots: [['cl-ve', 862, 304], ['cl-pe', 862, 398], ['cl-co', 862, 492], ['cl-ar', 862, 586], ['cl-us', 862, 680], ['cl-br', 862, 774], ['cl-pa', 862, 868]] },
+  CL: { file: '/assets/flyer-chile.png', maxW: 290, size: 52, slots: [['cl-ve', 867, 305], ['cl-pe', 867, 400], ['cl-co', 867, 495], ['cl-us', 867, 590], ['cl-br', 867, 685], ['cl-pa', 867, 780], ['cl-ar', 867, 875]] },
   CO: { file: '/assets/flyer-colombia.png', maxW: 280, size: 60, slots: [['co-ve', 686, 432], ['co-cl', 686, 688]] },
   EU: { file: '/assets/flyer-europa.png', maxW: 420, size: 84, slots: [['eu-ve', 540, 686]] },
 };
