@@ -244,8 +244,7 @@ table.stats tr.sub td { color: var(--muted); font-size: 13px }
 .jmr { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; text-decoration: none; color: var(--ink);
   background: var(--box); border: 2px solid var(--box-line) }
 .jmr[hidden] { display: none }
-.jmr-coin { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #7A45B0, #45206A);
-  color: #fff; font-family: var(--display); font-weight: 800; font-size: 11px; box-shadow: 0 0 0 3px #fff, 0 4px 10px rgba(69,32,106,.3) }
+.jmr-coin { flex: none; width: 48px; height: 55px; filter: drop-shadow(0 4px 8px rgba(69,32,106,.3)) }
 .jmr b { display: block; font-family: var(--display); font-size: 15px; color: #4B2370 }
 .jmr small { display: block; font-size: 13px; color: var(--muted); line-height: 1.35 }
 .jmr-go { margin-left: auto; font-size: 26px; font-weight: 700; color: var(--brand) }
