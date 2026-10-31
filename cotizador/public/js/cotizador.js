@@ -392,7 +392,7 @@ async function loadUsdt() {
 // Colombia → Chile: la tasa sale en vivo de Vita Wallet (CriptoYa) + la ganancia del panel. Si no se puede leer: "Mercado inestable".
 async function loadCoCl() {
   const r = data?.routes.find((x) => x.id === 'co-cl' && x.status === 'on');
-  if (!r) return;
+  if (!r || r.fixed) return;  // tasa fija del panel: se usa tal cual
   const got = await copPerClp(r.margin_pct);
   if (!got) { r.status = 'ask'; r.rate = ''; r.active = false; return; }
   r.rate = got.rate.toFixed(2);

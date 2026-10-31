@@ -313,3 +313,18 @@ test('JM Rewards: el botón del cotizador parte apagado y solo el panel lo encie
   assert.equal((await putJr({ request: req('/api/rewards', { method: 'PUT', body: { published: false }, cookie }), env: e })).status, 200);
   assert.equal((await (await getRates({ request: req('/api/tasas'), env: e })).json()).rewards, undefined);
 });
+
+test('Colombia → Chile con tasa fija: se publica la fija y no la automática', async () => {
+  const { publicView } = await import('../lib/server.js');
+  noBcv();
+  const e = await env();
+  assert.deepEqual(validate({ rates: RATES, status: { 'co-cl': 'on' }, cocl: { margin_pct: '3', fixed: 'abc' } }).errors, ['co-cl-fija']);
+  const fija = validate({ rates: RATES, status: { 'co-cl': 'on' }, cocl: { margin_pct: '3', fixed: '3.25' } });
+  assert.deepEqual(fija.errors, []);
+  const r = (await publicView(e, { ...fija.data, updated: 1 })).routes.find((x) => x.id === 'co-cl');
+  assert.deepEqual([r.rate, r.fixed, r.margin_pct], ['3.25', true, undefined]);
+  // Sin tasa fija: sigue automática (el navegador la calcula con la ganancia).
+  const auto = validate({ rates: RATES, status: { 'co-cl': 'on' }, cocl: { margin_pct: '3', fixed: '' } });
+  const a = (await publicView(e, { ...auto.data, updated: 1 })).routes.find((x) => x.id === 'co-cl');
+  assert.deepEqual([a.rate, a.fixed, a.margin_pct], ['', undefined, '3']);
+});

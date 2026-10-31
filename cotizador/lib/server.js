@@ -124,10 +124,12 @@ export function validate(body) {
   const brl = body?.brl && typeof body.brl === 'object'
     ? { ref: String(body.brl.ref ?? '').slice(0, 20), margin_pct: String(body.brl.margin_pct ?? '').slice(0, 10),
         auto: body.brl.auto === true, cal_cross: Number(body.brl.cal_cross) > 0 ? Number(body.brl.cal_cross) : null } : null;
-  // Colombia → Chile automático: solo se guarda la ganancia (%).
+  // Colombia → Chile: la ganancia (%) calcula la sugerida; la tasa fija (si la hay) es la que se publica.
   const m = String(body?.cocl?.margin_pct ?? '3').trim().replace(',', '.');
   if (!(m !== '' && Number(m) >= 0 && Number(m) <= 50)) errors.push('co-cl-margen');
-  return { errors, data: { rates, status, bcv_manual: bcv, bcv_manual_eur: bcvEur, cocl: { margin_pct: m }, ...(brl ? { brl } : {}) } };
+  const fixed = manual(body?.cocl?.fixed);
+  if (fixed !== null && !rateNum(fixed)) errors.push('co-cl-fija');
+  return { errors, data: { rates, status, bcv_manual: bcv, bcv_manual_eur: bcvEur, cocl: { margin_pct: m, fixed }, ...(brl ? { brl } : {}) } };
 }
 
 export async function saveRates(request, env, now = Date.now()) {
@@ -236,7 +238,10 @@ export async function publicView(env, saved, now = Date.now()) {
       let status = statusOf(s, r.id);
       if (status === 'on' && !r.auto && !rateNum(s.rates[r.id])) status = 'off';
       const out = { id: r.id, status, rate: status === 'on' && !r.auto ? s.rates[r.id] : '', active: status === 'on' };
-      if (r.auto && status === 'on') out.margin_pct = s.cocl?.margin_pct ?? '3';  // la tasa la calcula el navegador con CriptoYa
+      if (r.auto && status === 'on') {
+        // Con tasa fija se publica esa; sin ella, el navegador la calcula en vivo con CriptoYa (Vita + ganancia).
+        if (rateNum(s.cocl?.fixed)) { out.rate = s.cocl.fixed; out.fixed = true; } else out.margin_pct = s.cocl?.margin_pct ?? '3';
+      }
       if (r.id === 'cl-br' && status === 'on') { const a = brlAuto(s.brl); if (a) out.auto = a; }
       return out;
     }),
