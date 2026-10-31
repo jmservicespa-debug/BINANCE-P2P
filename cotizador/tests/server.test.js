@@ -309,7 +309,7 @@ test('JM Rewards: el botón del cotizador parte apagado y solo el panel lo encie
   assert.equal((await getJr({ request: req('/api/rewards'), env: e })).status, 401);
   assert.equal((await putJr({ request: req('/api/rewards', { method: 'PUT', body: { published: true } }), env: e })).status, 401);
   assert.equal((await putJr({ request: req('/api/rewards', { method: 'PUT', body: { published: true }, cookie }), env: e })).status, 200);
-  assert.deepEqual((await (await getRates({ request: req('/api/tasas'), env: e })).json()).rewards, { url: 'https://jm-rewards.jmservicespa.workers.dev/' });
+  assert.deepEqual((await (await getRates({ request: req('/api/tasas'), env: e })).json()).rewards, { url: 'https://rewards.jmcambios.cl/' });
   assert.equal((await putJr({ request: req('/api/rewards', { method: 'PUT', body: { published: false }, cookie }), env: e })).status, 200);
   assert.equal((await (await getRates({ request: req('/api/tasas'), env: e })).json()).rewards, undefined);
 });

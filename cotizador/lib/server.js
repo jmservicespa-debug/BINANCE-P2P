@@ -282,7 +282,7 @@ export async function usdtRef(env, manual, now = Date.now()) {
   let error;
   try {
     const res = await fetch(USDT_URL, {
-      headers: { accept: 'application/json', 'user-agent': 'JMCambios-cotizador/1.0 (+https://jmcambios.pages.dev)' },
+      headers: { accept: 'application/json', 'user-agent': 'JMCambios-cotizador/1.0 (+https://jmcambios.cl)' },
       signal: AbortSignal.timeout(6000),
     });
     const got = res.ok ? parseCriptoYa(await res.text()) : null;
@@ -351,7 +351,7 @@ export async function saveUsdtCoCfg(request, env, now = Date.now()) {
 // ------------------------------------------------------------------ JM Rewards (botón de registro en el cotizador)
 
 // La dirección es fija (la app de JM Rewards); desde el panel solo se enciende o apaga el botón. Parte apagado.
-export const REWARDS_URL = 'https://jm-rewards.jmservicespa.workers.dev/';
+export const REWARDS_URL = 'https://rewards.jmcambios.cl/';
 export async function loadRewardsCfg(env) {
   try { return { published: false, ...JSON.parse((await env.TASAS.get('rewards_cfg')) || '{}') }; } catch { return { published: false }; }
 }
