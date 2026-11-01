@@ -34,9 +34,9 @@ export const ADVISORS = {
 
 // Casillas de las plantillas de flyer (1080×1080): [ruta, centro x, centro y].
 export const FLYERS = {
-  CL: { file: '/assets/flyer-chile.png', maxW: 290, size: 52, slots: [['cl-ve', 867, 305], ['cl-pe', 867, 400], ['cl-co', 867, 495], ['cl-us', 867, 590], ['cl-br', 867, 685], ['cl-pa', 867, 780], ['cl-ar', 867, 875]] },
+  CL: { file: '/assets/flyer-chile.png', maxW: 300, size: 54, slots: [['cl-ve', 848, 314], ['cl-pe', 848, 406], ['cl-co', 848, 498], ['cl-us', 848, 590], ['cl-br', 848, 682], ['cl-pa', 848, 774], ['cl-ar', 848, 866]] },
   CO: { file: '/assets/flyer-colombia.png', maxW: 350, size: 84, slots: [['co-ve', 808, 459], ['co-cl', 808, 689]] },
-  EU: { file: '/assets/flyer-europa.png', maxW: 420, size: 84, slots: [['eu-ve', 540, 686]] },
+  EU: { file: '/assets/flyer-europa.png', maxW: 440, size: 96, slots: [['eu-ve', 540, 700]] },
 };
 
 // Tasa escrita como en el flyer: "0.9320", "0,9320", "1085". Devuelve NaN si no es válida.
