@@ -1,6 +1,6 @@
 import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js';
 import { esc, flag, flags } from './ui.js';
-import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, copPerClp, marketClVe, parseCriptoYa, usdtCopRef } from './criptoya.js';
+import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, usdtCopRef } from './criptoya.js';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -133,18 +133,18 @@ function renderRoutes() {
         $('in-' + r.id).classList.remove('bad');
         if (!(m !== '' && Number(m) >= 0 && Number(m) <= 50)) { $('ex-' + r.id).textContent = 'la ganancia va entre 0 y 50 %'; return; }
         $('ex-' + r.id).textContent = 'leyendo Vita Wallet…';
-        const got = await copPerClp(m);
+        const got = await clpPerCop(m);
         if (n !== seq) return;
-        coclSug = got ? Number(got.rate.toFixed(2)) : null;
+        coclSug = got ? Number(got.rate.toFixed(4)) : null;
         $('ex-' + r.id).textContent = got
-          ? `Sugerida: ${got.rate.toFixed(2)} (Vita: ${fmt(got.cop, 2)} COP y ${fmt(got.clp, 2)} CLP por USDT + tu ganancia)`
+          ? `Sugerida: ${got.rate.toFixed(4)} (Vita: ${fmt(got.cop, 2)} COP y ${fmt(got.clp, 2)} CLP por USDT + tu ganancia)`
           : 'no se pudo leer Vita Wallet ahora';
         $('fx-use').hidden = !got;
         fixShow();
       };
       $('in-' + r.id).oninput = live;
       $('fx-co-cl').oninput = fixShow;
-      $('fx-use').onclick = () => { if (coclSug) { $('fx-co-cl').value = coclSug.toFixed(2); fixShow(); } };
+      $('fx-use').onclick = () => { if (coclSug) { $('fx-co-cl').value = coclSug.toFixed(4); fixShow(); } };
       live();
       $('st-' + r.id).onchange = (e) => $('row-' + r.id).classList.toggle('off', e.target.value !== 'on');
       continue;
@@ -226,10 +226,10 @@ function sugWire() {
 // La tasa fija es la que ven los clientes y el flyer (no se mueve sola). La ganancia de arriba solo calcula la sugerida.
 let coclSug = null;
 function fixBox() {
-  return `<div class="sug fix"><b>Tasa fija Colombia → Chile (la que ven los clientes y el flyer) · COP ÷ tasa = CLP</b>
+  return `<div class="sug fix"><b>Tasa fija Colombia → Chile (la que ven los clientes y el flyer) · COP × tasa = CLP, con cero adelante</b>
     <div class="row2">
       <label class="f" for="fx-co-cl">Tu tasa fija
-        <span class="amount"><input id="fx-co-cl" inputmode="decimal" autocomplete="off" value="${esc(saved.cocl?.fixed || '')}" placeholder="Ej. 3.25"></span></label>
+        <span class="amount"><input id="fx-co-cl" inputmode="decimal" autocomplete="off" value="${esc(saved.cocl?.fixed || '')}" placeholder="Ej. 0.2850"></span></label>
       <div class="sug-out"><button type="button" class="btn ghost" id="fx-use" hidden>Usar la sugerida</button></div>
     </div>
     <span class="muted" id="fx-ex"></span>
@@ -240,8 +240,9 @@ function fixShow() {
   $('fx-co-cl').classList.remove('bad');
   $('fx-ex').textContent = !$('fx-co-cl').value.trim()
     ? 'Vacía: el cotizador usa la tasa automática, que cambia todo el día. Escribe una tasa para dejarla fija.'
-    : v ? `100.000 COP ÷ ${$('fx-co-cl').value.trim()} = ${fmt(100000 / v, 0)} CLP${coclSug ? ` · está a ${fmt(Math.abs((v / coclSug - 1) * 100), 1)} % de la sugerida` : ''}. Se publica al guardar.`
-      : 'escribe una tasa válida (ej. 3.25)';
+    : v >= 1 ? 'va con cero adelante, como la publican todas las casas de cambio (ej. 0.2850)'
+    : v ? `100.000 COP × ${$('fx-co-cl').value.trim()} = ${fmt(100000 * v, 0)} CLP${coclSug ? ` · está a ${fmt(Math.abs((v / coclSug - 1) * 100), 1)} % de la sugerida` : ''}. Se publica al guardar.`
+      : 'escribe una tasa válida (ej. 0.2850)';
 }
 
 // ------------------------------------------------------------------ aviso del mercado (Chile → Venezuela)
@@ -273,25 +274,25 @@ async function checkMarket() {
     ? `⚠️ ${at}: estás dando de más. Tu tasa ${saved.rates['cl-ve']} está ${fmt(diff, 1)} % por encima de la sugerida (${sug.toFixed(4)}); tu ganancia real bajó a ≈ ${fmt(real, 1)} %. Revisa y considera bajarla.`
     : `⚠️ ${at}: el mercado subió. Tu tasa ${saved.rates['cl-ve']} está ${fmt(-diff, 1)} % por debajo de la sugerida (${sug.toFixed(4)}); ganas ≈ ${fmt(real, 1)} %, pero puedes quedar menos competitivo. Considera subirla.`;
 }
-// Colombia → Chile: compara tu tasa fija con la sugerida de ahora (Vita + tu ganancia). Tasa más alta = llegan menos CLP.
+// Colombia → Chile: compara tu tasa fija con la sugerida de ahora (Vita + tu ganancia). Tasa más alta = llegan MÁS CLP.
 async function checkCoCl(th) {
   const box = $('mkt-co'), fixed = statusOf('co-cl') === 'on' ? rateNum(saved.cocl?.fixed) : null;
   if (!fixed) { box.hidden = true; return; }
   box.hidden = false;
-  const got = await copPerClp(saved.cocl?.margin_pct ?? '3');
+  const got = await clpPerCop(saved.cocl?.margin_pct ?? '3');
   if (!got) { box.className = 'msg'; box.textContent = 'Colombia → Chile: no se pudo leer Vita Wallet ahora. Se vuelve a intentar en 5 minutos.'; return; }
-  const sug = Number(got.rate.toFixed(2)), diff = (fixed / sug - 1) * 100;
+  const sug = Number(got.rate.toFixed(4)), diff = (fixed / sug - 1) * 100;
   const at = new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
   if (Math.abs(diff) <= th) {
     box.className = 'msg ok';
-    box.textContent = `✅ ${at} · Colombia → Chile: tu tasa fija ${saved.cocl.fixed} está a ${fmt(Math.abs(diff), 1)} % de la sugerida (${sug.toFixed(2)}). Todo en orden.`;
+    box.textContent = `✅ ${at} · Colombia → Chile: tu tasa fija ${saved.cocl.fixed} está a ${fmt(Math.abs(diff), 1)} % de la sugerida (${sug.toFixed(4)}). Todo en orden.`;
     return;
   }
   if (!document.title.startsWith('⚠️')) document.title = '⚠️ ' + document.title;
   box.className = 'msg warn';
-  box.textContent = diff < 0
-    ? `⚠️ ${at} · Colombia → Chile: estás dando de más. Tu tasa fija ${saved.cocl.fixed} está ${fmt(-diff, 1)} % por debajo de la sugerida (${sug.toFixed(2)}): llegan más pesos chilenos de los que deberían. Actualízala.`
-    : `⚠️ ${at} · Colombia → Chile: el mercado se movió a tu favor. Tu tasa fija ${saved.cocl.fixed} está ${fmt(diff, 1)} % por encima de la sugerida (${sug.toFixed(2)}): ganas más, pero puedes quedar menos competitivo. Considera actualizarla.`;
+  box.textContent = diff > 0
+    ? `⚠️ ${at} · Colombia → Chile: estás dando de más. Tu tasa fija ${saved.cocl.fixed} está ${fmt(diff, 1)} % por encima de la sugerida (${sug.toFixed(4)}): llegan más pesos chilenos de los que deberían. Actualízala.`
+    : `⚠️ ${at} · Colombia → Chile: el mercado se movió a tu favor. Tu tasa fija ${saved.cocl.fixed} está ${fmt(-diff, 1)} % por debajo de la sugerida (${sug.toFixed(4)}): ganas más, pero puedes quedar menos competitivo. Considera actualizarla.`;
 }
 $('mkt-th').oninput = () => { lsSet('jmc_mkt_th', $('mkt-th').value); checkMarket(); };
 setInterval(() => { if (saved && !$('mkt').hidden) checkMarket(); }, 5 * 60 * 1000);
@@ -352,7 +353,7 @@ $('save').onclick = async () => {
     return;
   }
   const okPct = (v) => { const t = String(v).replace(',', '.'); return t !== '' && Number(t) >= 0 && Number(t) <= 50; };
-  const bad = ROUTES.filter((r) => (r.auto ? !okPct(body.cocl.margin_pct) || (body.cocl.fixed && !rateNum(body.cocl.fixed)) : body.status[r.id] === 'on' && !rateNum(body.rates[r.id])));
+  const bad = ROUTES.filter((r) => (r.auto ? !okPct(body.cocl.margin_pct) || (body.cocl.fixed && !(rateNum(body.cocl.fixed) < 1)) : body.status[r.id] === 'on' && !rateNum(body.rates[r.id])));
   bad.forEach((r) => $('in-' + r.id).classList.add('bad'));
   const msg = $('save-msg');
   msg.hidden = false;
@@ -426,7 +427,7 @@ async function drawFlyers() {
       let text = st === 'ask' ? 'CONSULTAR' : st === 'on' && rateNum(saved.rates[id]) ? saved.rates[id] : '—';
       if (ROUTES.find((r) => r.id === id)?.auto && st === 'on') {  // Colombia → Chile: tu tasa fija; sin ella, la de este momento (Vita + ganancia)
         if (rateNum(saved.cocl?.fixed)) text = saved.cocl.fixed;
-        else { const got = await copPerClp(saved.cocl?.margin_pct ?? '3'); text = got ? got.rate.toFixed(2) : 'CONSULTAR'; }
+        else { const got = await clpPerCop(saved.cocl?.margin_pct ?? '3'); text = got ? got.rate.toFixed(4) : 'CONSULTAR'; }
       }
       let size = f.size;
       do { g.font = `800 ${size}px Montserrat, sans-serif`; size -= 2; } while (g.measureText(text).width > f.maxW && size > 20);

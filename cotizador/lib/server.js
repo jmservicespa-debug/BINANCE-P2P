@@ -92,8 +92,16 @@ export async function login(request, env) {
 // ------------------------------------------------------------------ tasas
 
 export async function loadRates(env) {
-  try { return JSON.parse((await env.TASAS.get('tasas')) || 'null') || { rates: {}, status: {}, bcv_manual: null, updated: null }; }
-  catch { return { rates: {}, status: {}, bcv_manual: null, updated: null }; }
+  let s;
+  try { s = JSON.parse((await env.TASAS.get('tasas')) || 'null'); } catch { s = null; }
+  return coclZero(s || { rates: {}, status: {}, bcv_manual: null, updated: null });
+}
+// Colombia → Chile pasó a la tasa "con cero adelante" (COP × 0,2850 = CLP). Una tasa fija guardada al estilo
+// antiguo (COP ÷ 3,50) se convierte sola a su equivalente (1 ÷ 3,50 = 0,2857): el cliente recibe exactamente lo mismo.
+export function coclZero(s) {
+  const f = rateNum(s?.cocl?.fixed);
+  if (f && f >= 1) s.cocl = { ...s.cocl, fixed: (1 / f).toFixed(4) };
+  return s;
 }
 
 // Estado de cada ruta: 'on' calcula con la tasa · 'ask' mercado inestable, tasa por WhatsApp · 'off' no se muestra.
@@ -128,7 +136,7 @@ export function validate(body) {
   const m = String(body?.cocl?.margin_pct ?? '3').trim().replace(',', '.');
   if (!(m !== '' && Number(m) >= 0 && Number(m) <= 50)) errors.push('co-cl-margen');
   const fixed = manual(body?.cocl?.fixed);
-  if (fixed !== null && !rateNum(fixed)) errors.push('co-cl-fija');
+  if (fixed !== null && !(rateNum(fixed) < 1)) errors.push('co-cl-fija');  // con cero adelante (ej. 0.2850)
   return { errors, data: { rates, status, bcv_manual: bcv, bcv_manual_eur: bcvEur, cocl: { margin_pct: m, fixed }, ...(brl ? { brl } : {}) } };
 }
 

@@ -254,17 +254,19 @@ test('apagar todo: un interruptor oculta todas las tasas sin borrarlas', async (
 });
 
 test('Colombia → Chile automático: Vita Colombia ÷ Vita Chile + ganancia; activa sin tasa escrita', async () => {
-  const { copPerClp, vitaPrice, USDT_COP_URL, USDT_URL } = await import('../public/js/criptoya.js');
+  const { clpPerCop, vitaPrice, USDT_COP_URL, USDT_URL } = await import('../public/js/criptoya.js');
   assert.equal(vitaPrice('{"vitawallet":{"ask":3196,"bid":3190}}', 'ask', [1500, 8000]), 3196);
   assert.equal(vitaPrice('{"binancep2p":{"ask":3196}}', 'ask', [1500, 8000]), null);  // sin Vita: no se inventa
   // Colombia: precio de COMPRA de Vita (ask 3.196). Chile: lo que PAGA Vita (bid 940).
   const bodies = { [USDT_COP_URL]: '{"vitawallet":{"ask":3196,"bid":3190}}', [USDT_URL]: '{"vitawallet":{"ask":950,"bid":940}}' };
   const fake = async (u) => new Response(bodies[u]);
-  const got = await copPerClp('3', fake);
+  const got = await clpPerCop('3', fake);
   assert.equal(got.cop, 3196); assert.equal(got.clp, 940);
-  assert.equal(got.rate.toFixed(4), ((3196 / 940) * 1.03).toFixed(4));  // ≈ 3,50 COP por CLP
-  assert.equal(Math.round(convert(routeById('co-cl'), got.rate.toFixed(2), 100000)), 28571);  // 100.000 COP ÷ 3,50
-  assert.equal(await copPerClp('3', async () => new Response('caído', { status: 503 })), null);
+  assert.equal(got.rate.toFixed(4), (940 / 3196 / 1.03).toFixed(4));  // ≈ 0,2855 CLP por COP (cero adelante)
+  assert.equal(Math.round(convert(routeById('co-cl'), '0.2857', 100000)), 28570);  // 100.000 COP × 0,2857
+  // Mismo resultado que la forma antigua (100.000 COP ÷ 3,50 ≈ 28.571 CLP): solo cambia cómo se escribe la tasa.
+  assert.ok(Math.abs(100000 * got.rate - 100000 / ((3196 / 940) * 1.03)) < 0.01);
+  assert.equal(await clpPerCop('3', async () => new Response('caído', { status: 503 })), null);
   // En el panel se activa sin escribir tasa (solo la ganancia), y la vista pública manda la ganancia.
   const v = validate({ rates: RATES, status: { 'co-cl': 'on' }, cocl: { margin_pct: '3' } });
   assert.deepEqual(v.errors, []);
@@ -319,14 +321,27 @@ test('Colombia → Chile con tasa fija: se publica la fija y no la automática',
   noBcv();
   const e = await env();
   assert.deepEqual(validate({ rates: RATES, status: { 'co-cl': 'on' }, cocl: { margin_pct: '3', fixed: 'abc' } }).errors, ['co-cl-fija']);
-  const fija = validate({ rates: RATES, status: { 'co-cl': 'on' }, cocl: { margin_pct: '3', fixed: '3.25' } });
+  assert.deepEqual(validate({ rates: RATES, status: { 'co-cl': 'on' }, cocl: { margin_pct: '3', fixed: '3.25' } }).errors, ['co-cl-fija']);  // sin cero adelante: no
+  const fija = validate({ rates: RATES, status: { 'co-cl': 'on' }, cocl: { margin_pct: '3', fixed: '0.2850' } });
   assert.deepEqual(fija.errors, []);
   const r = (await publicView(e, { ...fija.data, updated: 1 })).routes.find((x) => x.id === 'co-cl');
-  assert.deepEqual([r.rate, r.fixed, r.margin_pct], ['3.25', true, undefined]);
+  assert.deepEqual([r.rate, r.fixed, r.margin_pct], ['0.2850', true, undefined]);
   // Sin tasa fija: sigue automática (el navegador la calcula con la ganancia).
   const auto = validate({ rates: RATES, status: { 'co-cl': 'on' }, cocl: { margin_pct: '3', fixed: '' } });
   const a = (await publicView(e, { ...auto.data, updated: 1 })).routes.find((x) => x.id === 'co-cl');
   assert.deepEqual([a.rate, a.fixed, a.margin_pct], ['', undefined, '3']);
+});
+
+test('una tasa fija guardada al estilo antiguo (÷ 3,50) se convierte sola a la de cero adelante', async () => {
+  const { coclZero, loadRates } = await import('../lib/server.js');
+  assert.equal(coclZero({ cocl: { margin_pct: '3', fixed: '3.50' } }).cocl.fixed, '0.2857');
+  assert.equal(coclZero({ cocl: { margin_pct: '3', fixed: '0.2850' } }).cocl.fixed, '0.2850');  // ya nueva: no se toca
+  assert.equal(coclZero({ cocl: { margin_pct: '3', fixed: null } }).cocl.fixed, null);
+  const e = await env();
+  await e.TASAS.put('tasas', JSON.stringify({ rates: {}, status: { 'co-cl': 'on' }, cocl: { margin_pct: '3', fixed: '3,50' } }));
+  const s = await loadRates(e);
+  assert.equal(s.cocl.fixed, '0.2857');
+  assert.equal(Math.round(convert(routeById('co-cl'), s.cocl.fixed, 100000)), 28570);  // ≈ lo mismo que 100.000 ÷ 3,50
 });
 
 test('la dirección antigua y www llevan a jmcambios.cl con la misma página', async () => {

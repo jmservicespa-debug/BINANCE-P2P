@@ -1,5 +1,5 @@
 import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js';
-import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, copPerClp, parseCriptoYa, usdtCopRef } from './criptoya.js';
+import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js';
 import { esc, flag, flags } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
@@ -394,9 +394,9 @@ async function loadUsdt() {
 async function loadCoCl() {
   const r = data?.routes.find((x) => x.id === 'co-cl' && x.status === 'on');
   if (!r || r.fixed) return;  // tasa fija del panel: se usa tal cual
-  const got = await copPerClp(r.margin_pct);
+  const got = await clpPerCop(r.margin_pct);
   if (!got) { r.status = 'ask'; r.rate = ''; r.active = false; return; }
-  r.rate = got.rate.toFixed(2);
+  r.rate = got.rate.toFixed(4);
 }
 // USDT desde Colombia: precio de Binance P2P Colombia (CriptoYa, leído en el navegador) + la ganancia del panel.
 async function loadUsdtCo() {

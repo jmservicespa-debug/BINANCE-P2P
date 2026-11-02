@@ -60,13 +60,14 @@ export function vitaPrice(text, side, range) {
 }
 const COP_RANGE = [1500, 8000];  // COP por USDT fuera de este rango = dato absurdo
 const CLP_RANGE = [300, 3000];
-// COP por cada CLP con la ganancia ya incluida (más alta = llegan menos CLP). null si falta algún precio.
-export async function copPerClp(marginPct, fetchFn = fetch) {
+// CLP por cada COP ("cero adelante", ej. 0,2850) con la ganancia ya incluida (más baja = llegan menos CLP).
+// La ganancia se aplica igual que antes (COP por CLP × (1 + %)), solo que expresada al revés. null si falta algún precio.
+export async function clpPerCop(marginPct, fetchFn = fetch) {
   const [c, l] = await Promise.all([USDT_COP_URL, USDT_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
   const cop = c && vitaPrice(c, 'ask', COP_RANGE), clp = l && vitaPrice(l, 'bid', CLP_RANGE);
   if (!cop || !clp) return null;
-  const rate = (cop / clp) * (1 + Number(marginPct || 0) / 100);
-  return rate >= 1 && rate <= 10 ? { rate, cop, clp } : null;
+  const rate = (clp / cop) / (1 + Number(marginPct || 0) / 100);
+  return rate >= 0.1 && rate < 1 ? { rate, cop, clp } : null;
 }
 
 // Tasa SUGERIDA Chile → Venezuela (solo para el panel; la que se publica la decides tú), como la calcula JM Cambios:

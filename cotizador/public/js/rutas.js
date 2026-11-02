@@ -21,8 +21,9 @@ export const ROUTES = [
   { id: 'cl-pa', from: 'CL', to: ['PA', 'EC'], name: 'Panamá · Ecuador', cur: 'USD', unit: 'Dólares', op: 'div', dec: 0, min: 15000 },
   { id: 'co-ve', from: 'CO', to: ['VE'], name: 'Venezuela', cur: 'VES', unit: 'Bolívares', op: 'div', dec: 0, min: 20000,
     note: 'Pago en bolívares a cuenta bancaria o pago móvil · Su pago llega en minutos' },
-  // Automática: tasa = (precio de compra del USDT en Vita Colombia ÷ lo que paga Vita Chile por USDT) + ganancia del panel.
-  { id: 'co-cl', from: 'CO', to: ['CL'], name: 'Chile', cur: 'CLP', unit: 'Pesos chilenos', op: 'div', dec: 0, min: 50000, auto: true,
+  // Automática, con "cero adelante" como la publican todas las casas de cambio (ej. 0,2850): COP × tasa = CLP.
+  // Tasa = (lo que paga Vita Chile por USDT ÷ precio de compra del USDT en Vita Colombia), menos la ganancia del panel.
+  { id: 'co-cl', from: 'CO', to: ['CL'], name: 'Chile', cur: 'CLP', unit: 'Pesos chilenos', op: 'mul', dec: 0, min: 50000, auto: true,
     note: 'Recibe por transferencia bancaria en cualquier banco de Chile' },
   { id: 'eu-ve', from: 'EU', to: ['VE'], name: 'Venezuela', cur: 'VES', unit: 'Bolívares', op: 'mul', dec: 0, min: 20 },  // euros × tasa = bolívares
 ];
