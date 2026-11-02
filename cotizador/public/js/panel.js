@@ -120,7 +120,7 @@ function renderRoutes() {
       const st = statusOf(r.id);
       return `<div class="route${st === 'on' ? '' : ' off'}" id="row-${r.id}">
         ${flags(r.to)}
-        <div><h3>${esc(o.name)} → ${esc(r.name)}</h3><span class="op">${r.auto ? 'Tu ganancia en % (calcula la sugerida con Vita Wallet) · la tasa fija va abajo' : `${esc(r.unit)} · ${o.cur} ${r.op === 'mul' ? '× tasa' : '÷ tasa'}`}</span></div>
+        <div><h3>${esc(o.name)} → ${esc(r.name)}</h3><span class="op"><b class="formula">${o.cur} ${r.op === 'mul' ? '×' : '÷'} tasa = ${r.cur}</b> · ${r.auto ? 'aquí va tu ganancia en % (calcula la sugerida con Vita Wallet) · la tasa fija va abajo' : esc(r.unit)}</span></div>
         <input type="text" id="in-${r.id}" value="${esc(r.auto ? (saved.cocl?.margin_pct ?? '3') : (saved.rates[r.id] || ''))}" inputmode="decimal" aria-label="${r.auto ? 'Ganancia %' : 'Tasa'} ${esc(o.name)} a ${esc(r.name)}">
         <span class="ex"><span id="ex-${r.id}"></span><select id="st-${r.id}" aria-label="Estado ${esc(o.name)} a ${esc(r.name)}">${STATUS.map(([v, t]) => `<option value="${v}"${v === st ? ' selected' : ''}>${t}</option>`).join('')}</select></span>
       </div>${r.id === 'cl-br' ? provBox() : ''}${r.id === 'cl-ve' ? sugBox() : ''}${r.auto ? fixBox() : ''}`;
@@ -152,7 +152,7 @@ function renderRoutes() {
     const upd = () => {
       const amt = ORIGINS[r.from].cur === 'EUR' ? 100 : 100000;  // ejemplo con un monto típico de cada moneda
       const v = convert(r, $('in-' + r.id).value, amt);
-      $('ex-' + r.id).textContent = Number.isFinite(v) ? `${fmt(amt, 0)} ${ORIGINS[r.from].cur} → ${fmt(v, r.dec)} ${r.cur}` : 'escribe una tasa válida';
+      $('ex-' + r.id).textContent = Number.isFinite(v) ? `${fmt(amt, 0)} ${ORIGINS[r.from].cur} ${r.op === 'mul' ? '×' : '÷'} ${$('in-' + r.id).value.trim()} = ${fmt(v, r.dec)} ${r.cur}` : 'escribe una tasa válida';
       $('in-' + r.id).classList.remove('bad');
     };
     $('in-' + r.id).oninput = upd;
@@ -226,7 +226,7 @@ function sugWire() {
 // La tasa fija es la que ven los clientes y el flyer (no se mueve sola). La ganancia de arriba solo calcula la sugerida.
 let coclSug = null;
 function fixBox() {
-  return `<div class="sug fix"><b>Tasa fija Colombia → Chile (la que ven los clientes y el flyer)</b>
+  return `<div class="sug fix"><b>Tasa fija Colombia → Chile (la que ven los clientes y el flyer) · COP ÷ tasa = CLP</b>
     <div class="row2">
       <label class="f" for="fx-co-cl">Tu tasa fija
         <span class="amount"><input id="fx-co-cl" inputmode="decimal" autocomplete="off" value="${esc(saved.cocl?.fixed || '')}" placeholder="Ej. 3.25"></span></label>
@@ -240,7 +240,7 @@ function fixShow() {
   $('fx-co-cl').classList.remove('bad');
   $('fx-ex').textContent = !$('fx-co-cl').value.trim()
     ? 'Vacía: el cotizador usa la tasa automática, que cambia todo el día. Escribe una tasa para dejarla fija.'
-    : v ? `100.000 COP → ${fmt(100000 / v, 0)} CLP${coclSug ? ` · está a ${fmt(Math.abs((v / coclSug - 1) * 100), 1)} % de la sugerida` : ''}. Se publica al guardar.`
+    : v ? `100.000 COP ÷ ${$('fx-co-cl').value.trim()} = ${fmt(100000 / v, 0)} CLP${coclSug ? ` · está a ${fmt(Math.abs((v / coclSug - 1) * 100), 1)} % de la sugerida` : ''}. Se publica al guardar.`
       : 'escribe una tasa válida (ej. 3.25)';
 }
 

@@ -166,6 +166,7 @@ function calc() {
     ['Comisión', `0 ${o.cur}`],
     ['Cargos extras', `0 ${o.cur}`],
     ['Tasa del día', rate],
+    ['Cálculo', `${fmt(send, 0)} ${o.cur} ${r.op === 'mul' ? '×' : '÷'} ${rate} ${mode === 'send' ? '=' : '≈'} ${fmt(get, r.dec)} ${r.cur}`],
   ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')
     + `<dt class="total">Total a pagar</dt><dd class="total">${fmt(send, 0)} ${o.cur}</dd>`;
   $('r-label').textContent = mode === 'send' ? `Recibe en ${r.name}` : 'Debes enviar';
