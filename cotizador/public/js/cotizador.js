@@ -451,10 +451,13 @@ function paisBg() {
   if (id === rutaNow) return;
   rutaNow = id;
   document.querySelectorAll('#mapa-bg .on').forEach((e) => e.classList.remove('on'));
-  if (!r) return;
+  if (!r) { const t = document.getElementById('mm-ruta'); if (t) t.textContent = ''; return; }
   document.getElementById(`ln-${id}`)?.classList.add('on');
   document.getElementById(`nd-${r.from}`)?.classList.add('on');
   document.getElementById(`nd-${r.to[0]}`)?.classList.add('on');
+  const city = { CL: 'Santiago', CO: 'Bogotá', VE: 'Caracas', PE: 'Lima', BR: 'São Paulo', AR: 'Buenos Aires', US: 'EE. UU.', PA: 'Panamá', EU: 'Europa' };
+  const t = document.getElementById('mm-ruta');
+  if (t) t.textContent = city[r.from] && city[r.to[0]] ? `${city[r.from]} → ${city[r.to[0]]}` : '';
 }
 
 

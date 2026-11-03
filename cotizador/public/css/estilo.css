@@ -295,16 +295,22 @@ table.stats tr.sub td { color: var(--muted); font-size: 13px }
 .dat { padding: 10px 0; border-bottom: 1px solid var(--line) } .dat ul { margin: 6px 0 0; padding-left: 20px; color: var(--muted) }
 .other { text-align: center; color: var(--muted); margin: 16px 0; line-height: 1.6 } .other a { display: inline; color: var(--accent); font-weight: 700 }
 
-/* Mapa del mundo con nodos conectados, al fondo de la página */
+/* Mapa pequeño a la derecha del cotizador (computador y tablet en horizontal) */
 .card.cot { position: relative }
-.mapa-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .8; overflow: hidden }
-/* América a la izquierda y Europa a la derecha del cotizador: 1 grado ≈ 0,75 % del ancho de la pantalla. */
-.mapa-bg svg { position: absolute; width: 142.5vw; height: auto; left: -22vw; top: max(-23vw, -260px) }
-.mapa-bg .ln { fill: none; stroke: #9C7BD3; stroke-width: 2.4; stroke-dasharray: 4 10; stroke-linecap: round; opacity: .75 }
-.mapa-bg .ln.on { stroke: #7A45B0; stroke-width: 4.5; stroke-dasharray: 10 10; opacity: 1; animation: ruta 1.4s linear infinite }
-@keyframes ruta { to { stroke-dashoffset: -40 } }
-.mapa-bg .nd circle { fill: #9C7BD3 } .mapa-bg .nd .halo { fill: #C9B3EA; opacity: .35 }
-.mapa-bg .nd.on circle { fill: #7A45B0 } .mapa-bg .nd.on .halo { fill: #FFC23D; opacity: .55; animation: pulso 1.6s ease-out infinite; transform-box: fill-box; transform-origin: center }
-@keyframes pulso { from { transform: scale(.6); opacity: .7 } to { transform: scale(1.6); opacity: 0 } }
-@media (max-width: 979px) { .mapa-bg { opacity: .5 } .mapa-bg svg { width: 260vw; left: -95vw; top: 0 } }
-@media (prefers-reduced-motion: reduce) { .mapa-bg .ln.on, .mapa-bg .nd.on .halo { animation: none } }
+.mapa-mini { display: none }
+@media (min-width: 1000px) {
+  .mapa-mini { display: grid; gap: 8px; position: fixed; z-index: 1; top: 50%; transform: translateY(-50%);
+    right: max(20px, calc((100vw - 560px) / 4 - 170px)); width: min(340px, calc((100vw - 560px) / 2 - 48px));
+    padding: 16px 16px 14px; border-radius: 22px; background: rgba(255,255,255,.82); border: 1px solid var(--line);
+    box-shadow: 0 14px 34px rgba(59,26,90,.12); backdrop-filter: blur(6px); text-align: center }
+  .mm-t { font-family: var(--display); font-weight: 800; font-size: 15px; color: var(--brand) }
+  .mm-r { min-height: 20px; font-family: var(--display); font-weight: 800; font-size: 15px; color: #7A45B0 }
+  .mapa-mini svg { width: 100%; height: auto; display: block }
+}
+.mapa-mini .ln { fill: none; stroke: #B9A3E0; stroke-width: 3; stroke-dasharray: 4 10; stroke-linecap: round }
+.mapa-mini .ln.on { stroke: #7A45B0; stroke-width: 6; stroke-dasharray: 12 10; animation: ruta 1.4s linear infinite }
+@keyframes ruta { to { stroke-dashoffset: -44 } }
+.mapa-mini .nd circle { fill: #9C7BD3 } .mapa-mini .nd .halo { fill: #C9B3EA; opacity: .4 }
+.mapa-mini .nd.on circle { fill: #7A45B0 } .mapa-mini .nd.on .halo { fill: #FFC23D; opacity: .6; animation: pulso 1.6s ease-out infinite; transform-box: fill-box; transform-origin: center }
+@keyframes pulso { from { transform: scale(.6); opacity: .7 } to { transform: scale(1.8); opacity: 0 } }
+@media (prefers-reduced-motion: reduce) { .mapa-mini .ln.on, .mapa-mini .nd.on .halo { animation: none } }
