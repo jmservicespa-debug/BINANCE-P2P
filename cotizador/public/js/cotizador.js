@@ -1,6 +1,6 @@
-import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=18';
-import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=18';
-import { esc, flag, flags } from './ui.js?v=18';
+import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=19';
+import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=19';
+import { esc, flag, flags } from './ui.js?v=19';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -157,7 +157,9 @@ function calc() {
   const refName = mode === 'eur' ? 'EUR al euro BCV' : 'USD al dólar BCV';
   // Montos completos, sin decimales: desde ,50 se redondea hacia arriba; por debajo, hacia abajo.
   const target = ref ? Math.round(x * ref) : x;  // bolívares que deben llegar
-  const send = Math.round(mode === 'send' ? x : invert(r, rate, target));
+  // Cuando el cliente parte de lo que debe llegar, lo que paga se redondea HACIA ARRIBA a un número redondo
+  // (CLP a la centena, COP al mil, EUR al euro): la familia recibe exactamente lo pedido y nunca se cobra de menos.
+  const send = mode === 'send' ? Math.round(x) : roundUpPay(invert(r, rate, target), o.cur);
   const get = Math.round(mode === 'send' ? convert(r, rate, send) : target);
   if (belowMin(r, send)) { minimum(r, o, send); return; }
   $('r-big').classList.remove('ask');
@@ -360,6 +362,12 @@ function waButtons(text, action) {
     : adv ? `Escribir a ${esc(p.name.split(' ')[0])} por WhatsApp` : 'Escribir por WhatsApp';
   return `<a href="https://wa.me/${p.phone}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${label}</a>`
     + `<span class="fine">${adv ? esc(p.name) + ' · ' : ''}${p.show}</span>`;
+}
+
+const PAY_STEP = { CLP: 100, COP: 1000, EUR: 1 };
+function roundUpPay(v, cur) {
+  const step = PAY_STEP[cur] || 1;
+  return Math.ceil(Math.round(v * 100) / 100 / step) * step;  // quita el ruido de decimales antes de subir
 }
 
 // Horario de atención: lunes a domingo, 10:00 a 22:30 (hora de Chile).
