@@ -443,21 +443,20 @@ function render() {
   renderOrigins(); renderDests(); calc();
   paisBg();
 }
-// Ilustración de línea del país de destino, muy suave al fondo (se cambia con un fundido).
-const PAIS_BG = ['VE', 'CO', 'PE', 'BR', 'AR', 'US', 'PA'];
-let paisNow = '';
+// Mapa del mundo al fondo: se ilumina la ruta que el cliente está cotizando (ej. Santiago → Caracas).
+let rutaNow = '';
 function paisBg() {
   const r = ROUTES.find((x) => x.id === route);
-  const c = r && PAIS_BG.includes(r.to[0]) ? r.to[0].toLowerCase() : '';
-  if (c === paisNow) return;
-  paisNow = c;
-  const els = [$('pais-bg'), ...document.querySelectorAll('.pais-side')];
-  els.forEach((el) => el.classList.remove('on'));
-  setTimeout(() => {
-    if (paisNow !== c) return;
-    els.forEach((el) => { el.style.backgroundImage = c ? `url(/assets/paises/${c}.svg)` : 'none'; if (c) el.classList.add('on'); });
-  }, 350);
+  const id = r ? `${r.from}-${r.to[0]}` : '';
+  if (id === rutaNow) return;
+  rutaNow = id;
+  document.querySelectorAll('#mapa-bg .on').forEach((e) => e.classList.remove('on'));
+  if (!r) return;
+  document.getElementById(`ln-${id}`)?.classList.add('on');
+  document.getElementById(`nd-${r.from}`)?.classList.add('on');
+  document.getElementById(`nd-${r.to[0]}`)?.classList.add('on');
 }
+
 
 document.querySelectorAll('#modes button').forEach((b) => b.onclick = () => { setMode(b.dataset.mode); calc(); });
 $('amount').oninput = calc;

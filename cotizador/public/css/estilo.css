@@ -295,20 +295,16 @@ table.stats tr.sub td { color: var(--muted); font-size: 13px }
 .dat { padding: 10px 0; border-bottom: 1px solid var(--line) } .dat ul { margin: 6px 0 0; padding-left: 20px; color: var(--muted) }
 .other { text-align: center; color: var(--muted); margin: 16px 0; line-height: 1.6 } .other a { display: inline; color: var(--accent); font-weight: 700 }
 
-/* Ilustración del país de destino, suave al fondo de la tarjeta del cotizador */
-.card.cot { position: relative; overflow: hidden }
-.card.cot > *:not(.pais-bg) { position: relative; z-index: 1 }
-.pais-bg { position: absolute; left: 0; right: 0; top: 0; height: 230px; pointer-events: none; z-index: 0;
-  background: right top / auto 100% no-repeat; opacity: 0; filter: blur(.4px); transition: opacity .35s ease;
-  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%), linear-gradient(to right, transparent 0, #000 35%);
-  -webkit-mask-composite: source-in; mask-image: linear-gradient(to bottom, #000 55%, transparent 100%), linear-gradient(to right, transparent 0, #000 35%); mask-composite: intersect }
-.pais-bg.on { opacity: .2 }
-
-/* En pantallas grandes, la ilustración también a los lados del cotizador (en el fondo blanco). */
-.pais-side { display: none }
-@media (min-width: 980px) {
-  .pais-side { display: block; position: fixed; top: 22vh; width: calc((100vw - 600px) / 2 - 24px); max-width: 520px; height: 46vh; z-index: 0;
-    pointer-events: none; background: center / contain no-repeat; opacity: 0; transition: opacity .35s ease }
-  .pais-side.l { left: 12px; transform: scaleX(-1) } .pais-side.r { right: 12px }
-  .pais-side.on { opacity: .22 }
-}
+/* Mapa del mundo con nodos conectados, al fondo de la página */
+.card.cot { position: relative }
+.mapa-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .8; overflow: hidden }
+/* América a la izquierda y Europa a la derecha del cotizador: 1 grado ≈ 0,75 % del ancho de la pantalla. */
+.mapa-bg svg { position: absolute; width: 142.5vw; height: auto; left: -22vw; top: max(-23vw, -260px) }
+.mapa-bg .ln { fill: none; stroke: #9C7BD3; stroke-width: 2.4; stroke-dasharray: 4 10; stroke-linecap: round; opacity: .75 }
+.mapa-bg .ln.on { stroke: #7A45B0; stroke-width: 4.5; stroke-dasharray: 10 10; opacity: 1; animation: ruta 1.4s linear infinite }
+@keyframes ruta { to { stroke-dashoffset: -40 } }
+.mapa-bg .nd circle { fill: #9C7BD3 } .mapa-bg .nd .halo { fill: #C9B3EA; opacity: .35 }
+.mapa-bg .nd.on circle { fill: #7A45B0 } .mapa-bg .nd.on .halo { fill: #FFC23D; opacity: .55; animation: pulso 1.6s ease-out infinite; transform-box: fill-box; transform-origin: center }
+@keyframes pulso { from { transform: scale(.6); opacity: .7 } to { transform: scale(1.6); opacity: 0 } }
+@media (max-width: 979px) { .mapa-bg { opacity: .5 } .mapa-bg svg { width: 260vw; left: -95vw; top: 0 } }
+@media (prefers-reduced-motion: reduce) { .mapa-bg .ln.on, .mapa-bg .nd.on .halo { animation: none } }
