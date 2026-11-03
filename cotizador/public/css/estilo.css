@@ -276,3 +276,11 @@ table.stats tr.sub td { color: var(--muted); font-size: 13px }
 .pie b { color: inherit }
 .wa-float { position: fixed; right: 16px; bottom: 18px; width: 58px; height: 58px; border-radius: 50%; background: #25D366; display: grid; place-items: center; box-shadow: 0 10px 24px rgba(0,0,0,.25); z-index: 50 }
 .wa-float svg { width: 32px; height: 32px }
+
+/* Tiempo estimado, compartir y aviso de noche */
+.eta { font-size: 13px; font-weight: 700; opacity: .9 }
+#r-free[hidden] + .eta { display: none }
+.share { margin-top: 6px; padding: 11px 14px; border-radius: 999px; border: 2px solid currentColor; background: transparent; color: inherit; font: inherit; font-weight: 800; cursor: pointer }
+.soon.night { background: #2A1446; color: #fff; border-color: #2A1446 }
+.soon.night p { color: #E6DBFF }
+.soon.night b { color: #FFC23D }

@@ -33,8 +33,8 @@
     </div>
     <div class="msg bad" id="error" hidden></div>
     <div class="soon" id="paused" hidden>
-      <b>Actualizando tasas</b>
-      <p>Estamos actualizando las tasas del día. Vuelve en un rato o escríbenos por WhatsApp.</p>
+      <b id="paused-t">Actualizando tasas</b>
+      <p id="paused-p">Estamos actualizando las tasas del día. Vuelve en un rato o escríbenos por WhatsApp.</p>
     </div>
     <span class="step" id="from-q"><b>1</b> ¿Desde dónde envías?</span>
     <div class="seg" id="origins"></div>
@@ -89,7 +89,9 @@
       <span class="big num" id="r-big">—</span>
       <div class="getbox" id="r-get" hidden><span id="g-label"></span><b class="num" id="g-amount"></b><span id="g-sub"></span></div>
       <span class="free" id="r-free" hidden><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Comisión 0 % · Sin cargos extras</span>
+      <span class="eta">⚡ La mayoría de los envíos llega en minutos</span>
       <dl class="break num" id="r-break" hidden></dl>
+      <button type="button" class="share" id="share" hidden>📤 Compartir esta cotización</button>
       <div class="row num"><span id="r-send"></span><span id="r-rate"></span></div>
       <div class="row num"><span id="r-min"></span></div>
       <div class="bcv num" id="r-bcv" hidden>

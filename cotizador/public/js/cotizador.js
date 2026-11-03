@@ -133,7 +133,7 @@ function calc() {
   $('std').hidden = isUsdt;
   if (isUsdt) $('h-cot').textContent = 'USDT · dólar Binance';
   if (isUsdt) { usdtQuote(r); return; }
-  if (!r) { $('r-get').hidden = true; $('r-free').hidden = true; $('r-break').hidden = true; $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
+  if (!r) { $('r-get').hidden = true; $('r-free').hidden = true; $('r-break').hidden = true; $('share').hidden = true; $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
   // Opciones con la moneda, para que quede claro qué se escribe: "Pesos que envío" · "Bolívares que llegan".
   const [give, take] = curNames(r);
   $('modes').querySelector('[data-mode="send"] b').textContent = `${cap(give)} que envío`;
@@ -203,6 +203,8 @@ function calc() {
     ? `Hola, necesito que lleguen ${fmt(get, 0)} Bs a ${r.name} (equivalentes a ${fmt2(usd)} ${refName}), enviando desde ${o.name}. Según el cotizador debo pagar ${fmt(send, 0)} ${o.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`
     : `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${dot(r.name)} Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`;
   $('wa').innerHTML = waButtons(text);
+  lastQuote = ok ? { send, get, o, r, rate } : null;
+  $('share').hidden = !ok;
 }
 
 // Monto por debajo del mínimo de la ruta: no se cotiza, se indica el mínimo.
@@ -210,6 +212,7 @@ function minimum(r, o, send) {
   $('r-get').hidden = true;
   $('r-free').hidden = true;
   $('r-break').hidden = true;
+  $('share').hidden = true;
   $('r-label').textContent = `Envíos a ${r.name}`;
   $('r-big').textContent = `Mínimo ${fmt(r.min, 0)} ${o.cur}`;
   $('r-big').classList.add('ask');
@@ -226,6 +229,7 @@ function unstable(r, o) {
   $('r-get').hidden = true;
   $('r-free').hidden = true;
   $('r-break').hidden = true;
+  $('share').hidden = true;
   amountLabels(r, o);
   const x = amountNum($('amount').value);
   $('r-label').textContent = `Envíos a ${r.name}`;
@@ -335,7 +339,7 @@ function placeholder(r, o) {
 }
 
 function rateOnly(r, o, rate) {
-  ['r-get', 'r-free', 'r-break', 'r-bcv'].forEach((id) => { $(id).hidden = true; });
+  ['r-get', 'r-free', 'r-break', 'r-bcv', 'share'].forEach((id) => { $(id).hidden = true; });
   $('r-big').classList.add('ask');
   $('r-label').textContent = `Tasa del día · ${r.name}`;
   $('r-big').textContent = rate;
@@ -356,11 +360,69 @@ function waButtons(text, action) {
     + `<span class="fine">${adv ? esc(p.name) + ' · ' : ''}${p.show}</span>`;
 }
 
+// Horario de atención: lunes a domingo, 10:00 a 22:30 (hora de Chile).
+function openNow() {
+  const parts = new Intl.DateTimeFormat('es-CL', { timeZone: 'America/Santiago', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
+  const h = Number(parts.find((p) => p.type === 'hour')?.value), m = Number(parts.find((p) => p.type === 'minute')?.value);
+  return h * 60 + m >= 600 && h * 60 + m < 1350;
+}
+
+// ------------------------------------------------------------------ compartir la cotización como imagen
+let lastQuote = null;
+async function shareQuote() {
+  const q = lastQuote;
+  if (!q) return;
+  await document.fonts.ready;
+  const c = document.createElement('canvas'); c.width = 1080; c.height = 1350;
+  const g = c.getContext('2d');
+  const bg = g.createLinearGradient(0, 0, 1080, 1350); bg.addColorStop(0, '#FDFCFF'); bg.addColorStop(1, '#E6D9FB');
+  g.fillStyle = bg; g.fillRect(0, 0, 1080, 1350);
+  // Logo JM (el mismo del sitio): hexágono recortando las barras de la marca.
+  g.save(); g.translate(92, 82); g.scale(124 / 450, 124 / 450); g.translate(-20, -14);
+  g.beginPath(); [[245, 22], [462, 148], [462, 402], [245, 528], [28, 402], [28, 148]].forEach(([x, y]) => g.lineTo(x, y)); g.closePath(); g.clip();
+  g.fillStyle = '#531463'; [[0, 0, 250, 365], [283, 0, 77, 550], [0, 395, 360, 155], [385, 0, 165, 550]].forEach(([x, y, w, h]) => g.fillRect(x, y, w, h));
+  g.restore();
+  g.textAlign = 'left'; g.fillStyle = '#111'; g.font = '400 52px Michroma, Montserrat, sans-serif'; g.fillText('JMCAMBIOS', 250, 160);
+  g.font = '700 22px Montserrat, sans-serif'; g.fillStyle = '#7A45B0'; g.fillText('SPEED AND TRUST', 252, 196);
+  const box = (y, h, fill) => { g.fillStyle = fill; g.beginPath(); g.roundRect(80, y, 920, h, 40); g.fill(); };
+  box(290, 260, '#ffffff');
+  g.fillStyle = '#6E5A8C'; g.font = '700 38px Montserrat, sans-serif'; g.fillText(`Envías desde ${q.o.name}`, 130, 370);
+  g.fillStyle = '#3B1A5A'; g.font = '900 96px Montserrat, sans-serif'; g.fillText(`${fmt(q.send, 0)} ${q.o.cur}`, 130, 490);
+  box(590, 300, '#5B2A86');
+  g.fillStyle = '#E6DBFF'; g.font = '700 38px Montserrat, sans-serif'; g.fillText(`Recibe en ${q.r.name}`, 130, 670);
+  g.fillStyle = '#FFC23D'; g.font = '900 104px Montserrat, sans-serif'; g.fillText(`${fmt(q.get, q.r.dec)} ${q.r.cur}`, 130, 800);
+  g.fillStyle = '#fff'; g.font = '700 30px Montserrat, sans-serif'; g.fillText('Comisión 0 % · Sin cargos extras', 130, 856);
+  const when = data?.updated ? new Date(data.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'America/Santiago' }) : '';
+  g.fillStyle = '#5B3F7A'; g.font = '600 32px "Source Sans 3", sans-serif';
+  g.fillText(`Tasa ${q.rate}${when ? ' · ' + when : ''}`, 90, 960);
+  g.fillText('Tasa referencial: se confirma por WhatsApp antes de enviar.', 90, 1006);
+  g.fillStyle = '#FFC23D'; g.beginPath(); g.roundRect(80, 1110, 920, 120, 60); g.fill();
+  g.fillStyle = '#3B1A5A'; g.textAlign = 'center'; g.font = '900 44px Montserrat, sans-serif'; g.fillText('Cotiza tú también en jmcambios.cl', 540, 1185);
+  const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
+  const file = new File([blob], 'cotizacion-jmcambios.png', { type: 'image/png' });
+  const text = `Mira: envío ${fmt(q.send, 0)} ${q.o.cur} y recibe ${fmt(q.get, q.r.dec)} ${q.r.cur} con JM Cambios (comisión 0 %). Cotiza en https://jmcambios.cl`;
+  try {
+    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], text }); return; }
+  } catch (e) { if (e?.name === 'AbortError') return; }
+  // Sin compartir nativo (computador): se descarga la imagen y se abre WhatsApp con el texto.
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; a.click();
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+}
+$('share').onclick = shareQuote;
+
 // Tasas apagadas (todas desde el panel, o ninguna activa): aviso "Actualizando tasas" y solo WhatsApp.
 const allOff = () => data.paused || !ALL.some((r) => ['on', 'ask'].includes(statusOf(r.id)));
 function render() {
   const off = Boolean(data) && allOff();
   $('paused').hidden = !off;
+  if (off) {  // de noche (fuera de 10:00–22:30, hora de Chile): "volvemos mañana"; de día: "actualizando"
+    const night = !openNow();
+    $('paused').classList.toggle('night', night);
+    $('paused-t').textContent = night ? '🌙 Ya cerramos por hoy' : 'Actualizando tasas';
+    $('paused-p').textContent = night
+      ? 'Volvemos mañana a las 10:00 con las tasas del día. Igual puedes escribirnos por WhatsApp y te respondemos apenas abramos.'
+      : 'Estamos actualizando las tasas del día. Vuelve en un rato o escríbenos por WhatsApp.';
+  }
   ['from-q', 'origins', 'to-q', 'dests', 'other', 'quote', 'soon'].forEach((id) => { if (off) $(id).hidden = true; });
   $('from-q').hidden = off; $('origins').hidden = off;
   if (off) { $('wa').hidden = false; $('dest-note').textContent = ''; $('wa').innerHTML = waButtons('Hola, quiero cotizar un envío. ¿Qué tasas tienen hoy?'); return; }
