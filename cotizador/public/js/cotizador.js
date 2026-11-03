@@ -1,6 +1,6 @@
-import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=20';
-import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=20';
-import { esc, flag, flags } from './ui.js?v=20';
+import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=21';
+import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=21';
+import { esc, flag, flags } from './ui.js?v=21';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -423,7 +423,7 @@ async function shareQuote() {
   const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
   const file = new File([blob], 'cotizacion-jmcambios.png', { type: 'image/png' });
   // Texto corto y sin números: los montos ya van en la imagen.
-  const text = `💜 Así de fácil envío a ${q.r.name} con JM Cambios: comisión 0 % y llega en minutos. Cotiza el tuyo 👉 https://jmcambios.cl`;
+  const text = `✅ Así de fácil envío a ${q.r.name} con JM Cambios: comisión 0 % y llega en minutos. Cotiza el tuyo 👉 https://jmcambios.cl`;
   try {
     if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], text }); return; }
   } catch (e) { if (e?.name === 'AbortError') return; }
