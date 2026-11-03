@@ -12,6 +12,8 @@ if (!ADVISORS[adv]) adv = null;
 try { localStorage.removeItem('jmc_asesor'); } catch { /* lo recordado por la versión anterior ya no se usa */ }
 
 let data = null, origin = 'CL', route = null, mode = 'send';
+// Enlace directo a una ruta (ej. ?r=cl-pe desde la página de Perú): abre el cotizador en ese país.
+{ const want = ROUTES.find((x) => x.id === new URLSearchParams(location.search).get('r')); if (want) { origin = want.from; route = want.id; } }
 const OTHER = 'OTHER';  // origen u otro destino fuera de las rutas principales: tasa por WhatsApp
 const CUR_NAME = { CLP: 'pesos', COP: 'pesos', EUR: 'euros', VES: 'bolívares', PEN: 'soles', USD: 'dólares', BRL: 'reales' };
 const LONG_NAME = { CLP: 'pesos chilenos', COP: 'pesos colombianos' };

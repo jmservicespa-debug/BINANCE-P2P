@@ -284,3 +284,13 @@ table.stats tr.sub td { color: var(--muted); font-size: 13px }
 .soon.night { background: #2A1446; color: #fff; border-color: #2A1446 }
 .soon.night p { color: #E6DBFF }
 .soon.night b { color: #FFC23D }
+
+/* Páginas por país */
+.country h1 { margin: 0; font-family: var(--display); font-weight: 900; font-size: 28px; line-height: 1.15; color: var(--brand) }
+.country .kicker { font-size: 28px }
+.go { display: block; text-align: center; padding: 14px; border-radius: 999px; background: var(--brand); color: #fff; font-weight: 800; text-decoration: none }
+.go.ghost { background: transparent; color: var(--brand); border: 2px solid var(--brand) }
+.info .chips { display: flex; flex-wrap: wrap; gap: 8px }
+.info .chips span, .info .chips a { padding: 8px 14px; border-radius: 999px; background: var(--box); border: 1px solid var(--line); font-weight: 700; color: var(--ink); text-decoration: none }
+.dat { padding: 10px 0; border-bottom: 1px solid var(--line) } .dat ul { margin: 6px 0 0; padding-left: 20px; color: var(--muted) }
+.other { text-align: center; color: var(--muted); margin: 16px 0; line-height: 1.6 } .other a { display: inline; color: var(--accent); font-weight: 700 }
