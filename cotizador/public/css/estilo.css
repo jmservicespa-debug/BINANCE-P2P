@@ -294,3 +294,12 @@ table.stats tr.sub td { color: var(--muted); font-size: 13px }
 .info .chips span, .info .chips a { padding: 8px 14px; border-radius: 999px; background: var(--box); border: 1px solid var(--line); font-weight: 700; color: var(--ink); text-decoration: none }
 .dat { padding: 10px 0; border-bottom: 1px solid var(--line) } .dat ul { margin: 6px 0 0; padding-left: 20px; color: var(--muted) }
 .other { text-align: center; color: var(--muted); margin: 16px 0; line-height: 1.6 } .other a { display: inline; color: var(--accent); font-weight: 700 }
+
+/* Ilustración del país de destino, suave al fondo de la tarjeta del cotizador */
+.card.cot { position: relative; overflow: hidden }
+.card.cot > *:not(.pais-bg) { position: relative; z-index: 1 }
+.pais-bg { position: absolute; left: 0; right: 0; top: 0; height: 230px; pointer-events: none; z-index: 0;
+  background: right top / auto 100% no-repeat; opacity: 0; filter: blur(.4px); transition: opacity .35s ease;
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%), linear-gradient(to right, transparent 0, #000 35%);
+  -webkit-mask-composite: source-in; mask-image: linear-gradient(to bottom, #000 55%, transparent 100%), linear-gradient(to right, transparent 0, #000 35%); mask-composite: intersect }
+.pais-bg.on { opacity: .2 }

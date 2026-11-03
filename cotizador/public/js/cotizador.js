@@ -441,6 +441,19 @@ function render() {
   $('from-q').hidden = off; $('origins').hidden = off;
   if (off) { $('wa').hidden = false; $('dest-note').textContent = ''; $('wa').innerHTML = waButtons('Hola, quiero cotizar un envío. ¿Qué tasas tienen hoy?'); return; }
   renderOrigins(); renderDests(); calc();
+  paisBg();
+}
+// Ilustración de línea del país de destino, muy suave al fondo (se cambia con un fundido).
+const PAIS_BG = ['VE', 'CO', 'PE', 'BR', 'AR', 'US', 'PA'];
+let paisNow = '';
+function paisBg() {
+  const r = ROUTES.find((x) => x.id === route);
+  const c = r && PAIS_BG.includes(r.to[0]) ? r.to[0].toLowerCase() : '';
+  if (c === paisNow) return;
+  paisNow = c;
+  const el = $('pais-bg');
+  el.classList.remove('on');
+  setTimeout(() => { if (paisNow !== c) return; el.style.backgroundImage = c ? `url(/assets/paises/${c}.svg)` : 'none'; if (c) el.classList.add('on'); }, 350);
 }
 
 document.querySelectorAll('#modes button').forEach((b) => b.onclick = () => { setMode(b.dataset.mode); calc(); });
