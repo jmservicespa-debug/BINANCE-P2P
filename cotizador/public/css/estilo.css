@@ -252,3 +252,27 @@ table.stats tr.sub td { color: var(--muted); font-size: 13px }
 .jmr small .jmr-hl { display: inline; font-size: inherit; color: #4B2370; font-weight: 800 }
 .jmr-cl { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 3px 10px 3px 4px; border-radius: 999px; background: #fff; border: 1px solid var(--box-line); font-size: 12px; font-weight: 600; color: #4B2370 }
 .jmr-cl .flag { width: 18px; height: 18px; box-shadow: 0 0 0 1px rgba(0,0,0,.12) }
+
+/* Secciones informativas bajo el cotizador */
+.live { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 14px auto 0; padding: 8px 14px; border-radius: 999px; background: #E3F4EA; color: #0B5D33; font-weight: 700; font-size: 14px; width: fit-content }
+.live i { width: 10px; height: 10px; border-radius: 50%; background: #1E9E50; box-shadow: 0 0 0 4px rgba(30,158,80,.2) }
+.live.off { background: #F1EBFE; color: #4B2370 } .live.off i { background: #9A8BB0; box-shadow: none }
+.info { margin-top: 14px }
+.info h2 { margin: 0 }
+.why { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+.why div { display: grid; gap: 2px; padding: 12px; border-radius: 14px; background: var(--box); text-align: center }
+.why span { font-size: 26px } .why b { font-family: Montserrat, sans-serif; font-weight: 800; color: var(--brand) } .why small { color: var(--muted); font-size: 13px }
+.how { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px }
+.how li { display: flex; gap: 12px; align-items: flex-start }
+.how i { flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--brand); color: #FFC23D; font-style: normal; font-family: Montserrat, sans-serif; font-weight: 900; display: grid; place-items: center }
+.how b { display: block; font-family: Montserrat, sans-serif; font-weight: 800 } .how small { color: var(--muted) }
+.prods { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+.prods a { display: grid; gap: 2px; padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); text-decoration: none; color: var(--ink); text-align: center }
+.prods span { font-size: 26px } .prods b { font-family: Montserrat, sans-serif; font-weight: 800; color: var(--brand) } .prods small { color: var(--muted); font-size: 13px }
+.info details { border-bottom: 1px solid var(--line); padding: 10px 0 }
+.info summary { cursor: pointer; font-weight: 700; color: var(--ink) }
+.info details p { margin: 8px 0 0; color: var(--muted); line-height: 1.45 }
+.btn-op { display: block; text-align: center; padding: 12px; border-radius: 999px; border: 2px solid var(--brand); color: var(--brand); font-weight: 800; text-decoration: none }
+.pie b { color: inherit }
+.wa-float { position: fixed; right: 16px; bottom: 18px; width: 58px; height: 58px; border-radius: 50%; background: #25D366; display: grid; place-items: center; box-shadow: 0 10px 24px rgba(0,0,0,.25); z-index: 50 }
+.wa-float svg { width: 32px; height: 32px }
