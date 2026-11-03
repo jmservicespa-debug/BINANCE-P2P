@@ -371,6 +371,16 @@ function openNow() {
 
 // ------------------------------------------------------------------ compartir la cotización como imagen
 let lastQuote = null;
+// Bandera del país en un círculo (para la imagen de la cotización).
+async function drawFlag(g, code, cx, cy, r, ring = '#fff') {
+  const svg = flag(code).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" ');
+  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+  try {
+    const img = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = url; });
+    g.save(); g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.clip(); g.drawImage(img, cx - r, cy - r, r * 2, r * 2); g.restore();
+    g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.lineWidth = 5; g.strokeStyle = ring; g.stroke();
+  } catch { /* sin bandera si no se pudo dibujar */ } finally { URL.revokeObjectURL(url); }
+}
 async function shareQuote() {
   const q = lastQuote;
   if (!q) return;
@@ -388,10 +398,12 @@ async function shareQuote() {
   g.font = '700 22px Montserrat, sans-serif'; g.fillStyle = '#7A45B0'; g.fillText('SPEED AND TRUST', 252, 196);
   const box = (y, h, fill) => { g.fillStyle = fill; g.beginPath(); g.roundRect(80, y, 920, h, 40); g.fill(); };
   box(290, 260, '#ffffff');
-  g.fillStyle = '#6E5A8C'; g.font = '700 38px Montserrat, sans-serif'; g.fillText(`Envías desde ${q.o.name}`, 130, 370);
+  await drawFlag(g, q.r.from, 158, 357, 32, '#D9CCF2');
+  g.fillStyle = '#6E5A8C'; g.font = '700 38px Montserrat, sans-serif'; g.fillText(`Envías desde ${q.o.name}`, 206, 370);
   g.fillStyle = '#3B1A5A'; g.font = '900 96px Montserrat, sans-serif'; g.fillText(`${fmt(q.send, 0)} ${q.o.cur}`, 130, 490);
   box(590, 300, '#5B2A86');
-  g.fillStyle = '#E6DBFF'; g.font = '700 38px Montserrat, sans-serif'; g.fillText(`Recibe en ${q.r.name}`, 130, 670);
+  await drawFlag(g, q.r.to[0], 158, 657, 32);
+  g.fillStyle = '#E6DBFF'; g.font = '700 38px Montserrat, sans-serif'; g.fillText(`Recibe en ${q.r.name}`, 206, 670);
   g.fillStyle = '#FFC23D'; g.font = '900 104px Montserrat, sans-serif'; g.fillText(`${fmt(q.get, q.r.dec)} ${q.r.cur}`, 130, 800);
   g.fillStyle = '#fff'; g.font = '700 30px Montserrat, sans-serif'; g.fillText('Comisión 0 % · Sin cargos extras', 130, 856);
   const when = data?.updated ? new Date(data.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'America/Santiago' }) : '';
