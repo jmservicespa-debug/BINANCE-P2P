@@ -301,13 +301,12 @@ table.stats tr.sub td { color: var(--muted); font-size: 13px }
 @media (min-width: 1000px) {
   .mapa-mini { display: grid; gap: 8px; position: fixed; z-index: 1; top: 50%; transform: translateY(-50%);
     right: max(20px, calc((100vw - 560px) / 4 - 170px)); width: min(340px, calc((100vw - 560px) / 2 - 48px));
-    padding: 16px 16px 14px; border-radius: 22px; background: rgba(255,255,255,.82); border: 1px solid var(--line);
-    box-shadow: 0 14px 34px rgba(59,26,90,.12); backdrop-filter: blur(6px); text-align: center }
+    padding: 0; background: none; border: 0; text-align: center }
   .mm-t { font-family: var(--display); font-weight: 800; font-size: 15px; color: var(--brand) }
   .mm-r { min-height: 20px; font-family: var(--display); font-weight: 800; font-size: 15px; color: #7A45B0 }
-  .mapa-mini svg { width: 100%; height: auto; display: block }
+  .mapa-mini svg { width: 100%; height: auto; display: block; -webkit-mask-image: radial-gradient(ellipse 72% 72% at 50% 50%, #000 60%, transparent 100%); mask-image: radial-gradient(ellipse 72% 72% at 50% 50%, #000 60%, transparent 100%) }
 }
-.mapa-mini .ln { fill: none; stroke: #B9A3E0; stroke-width: 3; stroke-dasharray: 4 10; stroke-linecap: round }
+.mapa-mini .ln { fill: none; stroke: #A58BD6; stroke-width: 3.4; stroke-dasharray: 4 10; stroke-linecap: round }
 .mapa-mini .ln.on { stroke: #7A45B0; stroke-width: 6; stroke-dasharray: 12 10; animation: ruta 1.4s linear infinite }
 @keyframes ruta { to { stroke-dashoffset: -44 } }
 .mapa-mini .nd circle { fill: #9C7BD3 } .mapa-mini .nd .halo { fill: #C9B3EA; opacity: .4 }
