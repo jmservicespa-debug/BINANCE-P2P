@@ -303,3 +303,12 @@ table.stats tr.sub td { color: var(--muted); font-size: 13px }
   -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%), linear-gradient(to right, transparent 0, #000 35%);
   -webkit-mask-composite: source-in; mask-image: linear-gradient(to bottom, #000 55%, transparent 100%), linear-gradient(to right, transparent 0, #000 35%); mask-composite: intersect }
 .pais-bg.on { opacity: .2 }
+
+/* En pantallas grandes, la ilustración también a los lados del cotizador (en el fondo blanco). */
+.pais-side { display: none }
+@media (min-width: 980px) {
+  .pais-side { display: block; position: fixed; top: 22vh; width: calc((100vw - 600px) / 2 - 24px); max-width: 520px; height: 46vh; z-index: 0;
+    pointer-events: none; background: center / contain no-repeat; opacity: 0; transition: opacity .35s ease }
+  .pais-side.l { left: 12px; transform: scaleX(-1) } .pais-side.r { right: 12px }
+  .pais-side.on { opacity: .22 }
+}

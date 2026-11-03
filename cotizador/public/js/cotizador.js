@@ -1,6 +1,6 @@
-import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=14';
-import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=14';
-import { esc, flag, flags } from './ui.js?v=14';
+import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=15';
+import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=15';
+import { esc, flag, flags } from './ui.js?v=15';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -451,9 +451,12 @@ function paisBg() {
   const c = r && PAIS_BG.includes(r.to[0]) ? r.to[0].toLowerCase() : '';
   if (c === paisNow) return;
   paisNow = c;
-  const el = $('pais-bg');
-  el.classList.remove('on');
-  setTimeout(() => { if (paisNow !== c) return; el.style.backgroundImage = c ? `url(/assets/paises/${c}.svg)` : 'none'; if (c) el.classList.add('on'); }, 350);
+  const els = [$('pais-bg'), ...document.querySelectorAll('.pais-side')];
+  els.forEach((el) => el.classList.remove('on'));
+  setTimeout(() => {
+    if (paisNow !== c) return;
+    els.forEach((el) => { el.style.backgroundImage = c ? `url(/assets/paises/${c}.svg)` : 'none'; if (c) el.classList.add('on'); });
+  }, 350);
 }
 
 document.querySelectorAll('#modes button').forEach((b) => b.onclick = () => { setMode(b.dataset.mode); calc(); });
