@@ -1,6 +1,6 @@
-import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=22';
-import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=22';
-import { esc, flag, flags } from './ui.js?v=22';
+import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=23';
+import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=23';
+import { esc, flag, flags } from './ui.js?v=23';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -207,7 +207,9 @@ function calc() {
     ? `Hola, necesito que lleguen ${fmt(get, 0)} Bs a ${r.name} (equivalentes a ${fmt2(usd)} ${refName}), enviando desde ${o.name}. Según el cotizador debo pagar ${fmt(send, 0)} ${o.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`
     : `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${dot(r.name)} Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`;
   $('wa').innerHTML = waButtons(text);
-  lastQuote = ok ? { send, get, o, r, rate } : null;
+  lastQuote = ok ? { from: [r.from], fromLabel: `Envías desde ${o.name}`, fromAmt: `${fmt(send, 0)} ${o.cur}`,
+    to: r.to, toLabel: `Recibe en ${r.name}`, toAmt: `${fmt(get, r.dec)} ${r.cur}`, rate,
+    text: `✅ Así de fácil envío a ${r.name} con JM Cambios: comisión 0 % y llega en minutos. Cotiza el tuyo 👉 https://jmcambios.cl` } : null;
   $('share').hidden = !ok;
 }
 
@@ -276,7 +278,9 @@ function setMode(m) {
 // Comprar: pagas CLP, recibes USDT (precio de venta). Vender: entregas USDT, recibes CLP (precio de compra).
 let side = 'buy', edited = 'top';
 const usdtFmt = (v) => fmt(v, 2), clpFmt = (v) => fmt(v, 0);
+let uQuote = null;
 function usdtQuote(r) {
+  uQuote = null; $('u-share').hidden = true;
   const cur = ORIGINS[r.from].cur;  // pesos chilenos o colombianos
   const sellOk = Boolean(r.buyMin);  // Colombia: solo se le vende USDT al cliente
   $('u-tabs').hidden = !sellOk;
@@ -314,10 +318,14 @@ function usdtQuote(r) {
     usdt = buy ? Math.floor((clp / price) * 100) / 100 : Math.ceil(Math.round((clp / price) * 1e6) / 1e4) / 100;
   }
   const good = Number.isFinite(usdt) && Number.isFinite(clp) && usdt > 0 && clp > 0;
+  // Compartir USDT: solo montos, sin mostrar el precio por USDT.
+  uQuote = good ? { from: [buy ? r.from : 'USDT'], fromLabel: buy ? 'Pagas' : 'Entregas', fromAmt: buy ? `${clpFmt(clp)} ${cur}` : `${usdtFmt(usdt)} USDT`,
+    to: [buy ? 'USDT' : r.from], toLabel: 'Recibes', toAmt: buy ? `${usdtFmt(usdt)} USDT` : `${clpFmt(clp)} ${cur}`, rate: null,
+    text: `✅ Así de fácil ${buy ? 'compro' : 'vendo'} USDT con JM Cambios: comisión 0 % y en minutos. Cotiza el tuyo 👉 https://jmcambios.cl` } : null;
   dst.value = good ? (srcIsUsdt ? clpFmt(clp) : usdtFmt(usdt)) : '';
   const min = buy ? r.min : r.buyMin;
   if (good && clp < min) {
-    dst.value = '';  // bajo el mínimo no se cotiza
+    dst.value = ''; uQuote = null; $('u-share').hidden = true;  // bajo el mínimo no se cotiza
     $('u-line').innerHTML = `<b>Mínimo ${clpFmt(min)} ${cur}</b><span>${buy ? 'Compra' : 'Venta'} desde ${clpFmt(min)} ${cur}${buy ? '' : ` (unos ${usdtFmt(Math.ceil((min / price) * 100) / 100)} USDT)`}.</span>`;
     $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} USDT.`);
     return;
@@ -325,6 +333,7 @@ function usdtQuote(r) {
   $('wa').innerHTML = waButtons(!good ? `Hola, quiero ${buy ? 'comprar' : 'vender'} USDT.` : buy
     ? `Hola, quiero comprar ${usdtFmt(usdt)} USDT pagando ${clpFmt(clp)} ${cur} (precio ${fmt(price, 2)} ${cur} por USDT, sin comisión). ¿Me confirmas?`
     : `Hola, quiero vender ${usdtFmt(usdt)} USDT y recibir ${clpFmt(clp)} ${cur} (precio ${fmt(price, 2)} ${cur} por USDT, sin comisión). ¿Me confirmas?`);
+  $('u-share').hidden = !uQuote;
 }
 document.querySelectorAll('#u-tabs button').forEach((b) => b.onclick = () => {
   side = b.dataset.side; edited = 'top';
@@ -389,8 +398,7 @@ async function drawFlag(g, code, cx, cy, r, ring = '#fff') {
     g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.lineWidth = 5; g.strokeStyle = ring; g.stroke();
   } catch { /* sin bandera si no se pudo dibujar */ } finally { URL.revokeObjectURL(url); }
 }
-async function shareQuote() {
-  const q = lastQuote;
+async function shareQuote(q) {
   if (!q) return;
   await document.fonts.ready;
   const c = document.createElement('canvas'); c.width = 1080; c.height = 1350;
@@ -406,24 +414,32 @@ async function shareQuote() {
   g.font = '700 22px Montserrat, sans-serif'; g.fillStyle = '#7A45B0'; g.fillText('SPEED AND TRUST', 252, 196);
   const box = (y, h, fill) => { g.fillStyle = fill; g.beginPath(); g.roundRect(80, y, 920, h, 40); g.fill(); };
   box(290, 260, '#ffffff');
-  await drawFlag(g, q.r.from, 158, 357, 32, '#D9CCF2');
-  g.fillStyle = '#6E5A8C'; g.font = '700 38px Montserrat, sans-serif'; g.fillText(`Envías desde ${q.o.name}`, 206, 370);
-  g.fillStyle = '#3B1A5A'; g.font = '900 96px Montserrat, sans-serif'; g.fillText(`${fmt(q.send, 0)} ${q.o.cur}`, 130, 490);
+  // Una bandera por país (ej. Panamá · Ecuador lleva dos), algo superpuestas; el texto se corre a la derecha.
+  const flagRow = async (codes, y, ring) => { for (let i = codes.length - 1; i >= 0; i--) await drawFlag(g, codes[i], 158 + i * 52, y, 32, ring); return 206 + (codes.length - 1) * 52; };
+  let tx = await flagRow(q.from, 357, '#D9CCF2');
+  g.fillStyle = '#6E5A8C'; g.font = '700 38px Montserrat, sans-serif'; g.fillText(q.fromLabel, tx, 370);
+  g.fillStyle = '#3B1A5A'; g.font = '900 96px Montserrat, sans-serif'; g.fillText(q.fromAmt, 130, 490, 840);
   box(590, 300, '#5B2A86');
-  await drawFlag(g, q.r.to[0], 158, 657, 32);
-  g.fillStyle = '#E6DBFF'; g.font = '700 38px Montserrat, sans-serif'; g.fillText(`Recibe en ${q.r.name}`, 206, 670);
-  g.fillStyle = '#FFC23D'; g.font = '900 104px Montserrat, sans-serif'; g.fillText(`${fmt(q.get, q.r.dec)} ${q.r.cur}`, 130, 800);
+  tx = await flagRow(q.to, 657, '#fff');
+  g.fillStyle = '#E6DBFF'; g.font = '700 38px Montserrat, sans-serif'; g.fillText(q.toLabel, tx, 670);
+  g.fillStyle = '#FFC23D'; g.font = '900 104px Montserrat, sans-serif'; g.fillText(q.toAmt, 130, 800, 840);
   g.fillStyle = '#fff'; g.font = '700 30px Montserrat, sans-serif'; g.fillText('Comisión 0 % · Sin cargos extras', 130, 856);
   const when = data?.updated ? new Date(data.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'America/Santiago' }) : '';
   g.fillStyle = '#5B3F7A'; g.font = '600 32px "Source Sans 3", sans-serif';
-  g.fillText(`Tasa ${q.rate}${when ? ' · ' + when : ''}`, 90, 960);
-  g.fillText('Tasa referencial: se confirma por WhatsApp antes de enviar.', 90, 1006);
+  if (q.rate) {
+    g.fillText(`Tasa ${q.rate}${when ? ' · ' + when : ''}`, 90, 960);
+    g.fillText('Tasa referencial: se confirma por WhatsApp antes de enviar.', 90, 1006);
+  } else {
+    g.fillText(`Cotización${when ? ' del ' + when : ''}`, 90, 960);
+    g.fillText('Monto referencial: se confirma por WhatsApp antes de operar.', 90, 1006);
+    g.font = '600 24px "Source Sans 3", sans-serif'; g.fillText('JM Cambios es un comerciante independiente, no es Binance.', 90, 1046);
+  }
   g.fillStyle = '#FFC23D'; g.beginPath(); g.roundRect(80, 1110, 920, 120, 60); g.fill();
   g.fillStyle = '#3B1A5A'; g.textAlign = 'center'; g.font = '900 44px Montserrat, sans-serif'; g.fillText('Cotiza tú también en jmcambios.cl', 540, 1185);
   const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
   const file = new File([blob], 'cotizacion-jmcambios.png', { type: 'image/png' });
   // Texto corto y sin números: los montos ya van en la imagen.
-  const text = `✅ Así de fácil envío a ${q.r.name} con JM Cambios: comisión 0 % y llega en minutos. Cotiza el tuyo 👉 https://jmcambios.cl`;
+  const text = q.text;
   try {
     if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], text }); return; }
   } catch (e) { if (e?.name === 'AbortError') return; }
@@ -431,7 +447,8 @@ async function shareQuote() {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; a.click();
   window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
 }
-$('share').onclick = shareQuote;
+$('share').onclick = () => lastQuote && shareQuote(lastQuote);
+$('u-share').onclick = () => uQuote && shareQuote(uQuote);
 
 // Tasas apagadas (todas desde el panel, o ninguna activa): aviso "Actualizando tasas" y solo WhatsApp.
 const allOff = () => data.paused || !ALL.some((r) => ['on', 'ask'].includes(statusOf(r.id)));
