@@ -1,6 +1,6 @@
-import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=21';
-import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=21';
-import { esc, flag, flags } from './ui.js?v=21';
+import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=22';
+import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=22';
+import { esc, flag, flags } from './ui.js?v=22';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -452,7 +452,7 @@ function render() {
   renderOrigins(); renderDests(); calc();
   paisBg();
 }
-// Mapa del mundo al fondo: se ilumina la ruta que el cliente está cotizando (ej. Santiago → Caracas).
+// Mapa del mundo al fondo: se ilumina la ruta que el cliente está cotizando (ej. Chile → Venezuela).
 let rutaNow = '';
 function paisBg() {
   // Título según el país de origen elegido: "Conectamos Colombia con el mundo", "Conectamos Brasil con el mundo"…
@@ -468,9 +468,9 @@ function paisBg() {
   document.getElementById(`ln-${id}`)?.classList.add('on');
   document.getElementById(`nd-${r.from}`)?.classList.add('on');
   document.getElementById(`nd-${r.to[0]}`)?.classList.add('on');
-  const city = { CL: 'Santiago', CO: 'Bogotá', VE: 'Caracas', PE: 'Lima', BR: 'São Paulo', AR: 'Buenos Aires', US: 'EE. UU.', PA: 'Panamá', EU: 'Europa' };
+  const pais = { CL: 'Chile', CO: 'Colombia', VE: 'Venezuela', PE: 'Perú', BR: 'Brasil', AR: 'Argentina', US: 'EE. UU.', PA: 'Panamá', MX: 'México', EC: 'Ecuador', EU: 'Europa', GB: 'Reino Unido' };
   const t = document.getElementById('mm-ruta');
-  if (t) t.textContent = city[r.from] && city[r.to[0]] ? `${city[r.from]} → ${city[r.to[0]]}` : '';
+  if (t) t.textContent = pais[r.from] && pais[r.to[0]] ? `${pais[r.from]} → ${pais[r.to[0]]}` : '';
 }
 
 
