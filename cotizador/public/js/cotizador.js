@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=46';
-import { setRewardsNav } from './rewards-nav.js?v=46';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=46';
-import { esc, flag, flags } from './ui.js?v=46';
+import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=47';
+import { setRewardsNav } from './rewards-nav.js?v=47';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=47';
+import { esc, flag, flags } from './ui.js?v=47';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -14,7 +14,10 @@ try { localStorage.removeItem('jmc_asesor'); } catch { /* lo recordado por la ve
 
 let data = null, origin = 'CL', route = null, mode = 'send';
 // Dos secciones: "Envíos" (remesas) y "USDT, oro y Bitcoin" (comprar o vender). ?k=cripto abre la segunda.
-let kind = new URLSearchParams(location.search).get('k') === 'cripto' ? 'asset' : 'send';
+// Enlace privado (?k=privado): muestra el oro y Bitcoin aunque estén en modo privado en el panel. Se recuerda en esta pestaña.
+const PRIV = (() => { const q = new URLSearchParams(location.search).get('k') === 'privado';
+  try { if (q) sessionStorage.setItem('jmc_priv', '1'); return q || sessionStorage.getItem('jmc_priv') === '1'; } catch { return q; } })();
+let kind = ['cripto', 'privado'].includes(new URLSearchParams(location.search).get('k')) ? 'asset' : 'send';
 // Enlace directo a una ruta (ej. ?r=cl-pe desde la página de Perú): abre el cotizador en ese país.
 { const want = ROUTES.find((x) => x.id === new URLSearchParams(location.search).get('r')); if (want) { origin = want.from; route = want.id; } }
 const OTHER = 'OTHER';  // origen u otro destino fuera de las rutas principales: tasa por WhatsApp
@@ -664,7 +667,7 @@ async function loadUsdtBr() {
 async function loadGold() {
   const ids = GOLD_ROUTES.map((r) => r.id);
   data.routes = data.routes.filter((x) => !ids.includes(x.id));
-  if (!data?.gold) return;
+  if (!data?.gold || (data.gold.private && !PRIV)) return;  // privado: solo con el enlace
   const toks = data.gold.tokens || ['XAUT', 'PAXG'];  // tokens encendidos en el panel
   const list = GOLD_ROUTES.filter((r) => data.gold[r.from.toLowerCase()] && toks.includes(r.cur));
   if (!list.length) return;
@@ -684,7 +687,7 @@ async function loadGold() {
 async function loadBtc() {
   const ids = BTC_ROUTES.map((r) => r.id);
   data.routes = data.routes.filter((x) => !ids.includes(x.id));
-  if (!data?.btc) return;
+  if (!data?.btc || (data.btc.private && !PRIV)) return;  // privado: solo con el enlace
   const list = BTC_ROUTES.filter((r) => data.btc[r.from.toLowerCase()]);
   if (!list.length) return;
   let g = null;

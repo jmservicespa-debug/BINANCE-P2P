@@ -373,7 +373,7 @@ test('oro tokenizado y USDT Brasil: se activan desde el panel y aparecen en la v
   assert.equal((await putOro({ request: req('/api/oro', { method: 'PUT', cookie, body: { margin_pct: '2,5', buy_margin_pct: '4', cl: true, co: false } }), env: e })).status, 200);
   assert.equal((await putBr({ request: req('/api/usdt-br', { method: 'PUT', cookie, body: { margin_pct: '3', buy_margin_pct: '3', published: true } }), env: e })).status, 200);
   pub = await (await getRates({ env: e })).json();
-  assert.deepEqual(pub.gold, { margin_pct: '2.5', buy_margin_pct: '4', cl: true, co: false, fee: null, tokens: ['XAUT'] });
+  assert.deepEqual(pub.gold, { margin_pct: '2.5', buy_margin_pct: '4', cl: true, co: false, fee: null, tokens: ['XAUT'], private: false });
   // Comisión de red activada: se publica en dólares por token.
   assert.equal((await putOro({ request: req('/api/oro', { method: 'PUT', cookie, body: { margin_pct: '3', buy_margin_pct: '3', cl: true, fee_on: true, fee_paxg: '1,5', fee_xaut: '1' } }), env: e })).status, 200);
   assert.deepEqual((await (await getRates({ env: e })).json()).gold.fee, { PAXG: 1.5, XAUT: 1 });
@@ -400,7 +400,9 @@ test('Bitcoin: se activa desde el panel y el precio sale de CoinGecko en pesos',
   const cookie = ok.headers.get('set-cookie').split(';')[0];
   assert.equal((await (await getRates({ env: e })).json()).btc, undefined);
   assert.equal((await putBtc({ request: req('/api/btc', { method: 'PUT', cookie, body: { margin_pct: '2', buy_margin_pct: '3', cl: false, co: true } }), env: e })).status, 200);
-  assert.deepEqual((await (await getRates({ env: e })).json()).btc, { margin_pct: '2', buy_margin_pct: '3', cl: false, co: true });
+  assert.deepEqual((await (await getRates({ env: e })).json()).btc, { margin_pct: '2', buy_margin_pct: '3', cl: false, co: true, private: false });
+  assert.equal((await putBtc({ request: req('/api/btc', { method: 'PUT', cookie, body: { margin_pct: '2', buy_margin_pct: '3', co: true, private: true } }), env: e })).status, 200);
+  assert.equal((await (await getRates({ env: e })).json()).btc.private, true);
   assert.deepEqual(parseGold('{"bitcoin":{"clp":95000000,"cop":420000000}}'), { BTC: { CLP: 95000000, COP: 420000000 } });
   assert.equal(parseGold('{"bitcoin":{"clp":95}}'), null);
 });

@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=46';
-import { esc, flag, flags } from './ui.js?v=46';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=46';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=47';
+import { esc, flag, flags } from './ui.js?v=47';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=47';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -623,7 +623,7 @@ async function loadGoldCfg() {
   const { status, body } = await api('/api/oro');
   if (status !== 200) return;
   $('go-margin').value = body.margin_pct; $('go-buy').value = body.buy_margin_pct; $('go-cl').checked = !!body.cl; $('go-co').checked = !!body.co;
-  $('go-xaut').checked = body.xaut !== false; $('go-paxg').checked = body.paxg === true;
+  $('go-priv').checked = body.private === true; $('go-xaut').checked = body.xaut !== false; $('go-paxg').checked = body.paxg === true;
   $('go-fee').checked = !!body.fee_on; $('go-fee-x').value = body.fee_xaut ?? '1'; $('go-fee-p').value = body.fee_paxg ?? '1';
   goRef = await marketCoins();
   const src = goRef?.source === 'binance' ? 'Binance PAXG/USDT × USDT Binance P2P' : 'CoinGecko';
@@ -633,14 +633,14 @@ async function loadGoldCfg() {
 async function saveGold() {
   const msg = $('go-msg');
   const { status, body } = await api('/api/oro', { method: 'PUT', body: JSON.stringify({ margin_pct: $('go-margin').value, buy_margin_pct: $('go-buy').value, cl: $('go-cl').checked, co: $('go-co').checked,
-    fee_on: $('go-fee').checked, fee_xaut: $('go-fee-x').value, fee_paxg: $('go-fee-p').value, xaut: $('go-xaut').checked, paxg: $('go-paxg').checked }) });
+    fee_on: $('go-fee').checked, fee_xaut: $('go-fee-x').value, fee_paxg: $('go-fee-p').value, xaut: $('go-xaut').checked, paxg: $('go-paxg').checked, private: $('go-priv').checked }) });
   msg.hidden = false;
   if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
   const on = [body.cl && 'Chile', body.co && 'Colombia'].filter(Boolean);
   msg.className = 'msg'; msg.textContent = on.length ? `Guardado: los clientes ya ven el oro desde ${on.join(' y ')}.` : 'Guardado (oro apagado en el cotizador).';
 }
 $('go-margin').oninput = goCalc; $('go-buy').oninput = goCalc;
-$('go-save').onclick = saveGold; $('go-cl').onchange = saveGold; $('go-co').onchange = saveGold; $('go-fee').onchange = saveGold; $('go-xaut').onchange = saveGold; $('go-paxg').onchange = saveGold;
+$('go-save').onclick = saveGold; $('go-cl').onchange = saveGold; $('go-co').onchange = saveGold; $('go-fee').onchange = saveGold; $('go-xaut').onchange = saveGold; $('go-priv').onchange = saveGold; $('go-paxg').onchange = saveGold;
 
 // ------------------------------------------------------------------ Bitcoin (Chile y Colombia)
 
@@ -654,21 +654,21 @@ function btCalc() {
 async function loadBtcCfg() {
   const { status, body } = await api('/api/btc');
   if (status !== 200) return;
-  $('bt-margin').value = body.margin_pct; $('bt-buy').value = body.buy_margin_pct; $('bt-cl').checked = !!body.cl; $('bt-co').checked = !!body.co;
+  $('bt-margin').value = body.margin_pct; $('bt-buy').value = body.buy_margin_pct; $('bt-cl').checked = !!body.cl; $('bt-co').checked = !!body.co; $('bt-priv').checked = body.private === true;
   btRef = (await marketCoins())?.BTC ?? null;
   $('bt-ref').textContent = btRef ? `US$${fmt(btRef.USD, 0)} · ${fmt(btRef.CLP, 0)} CLP · ${fmt(btRef.COP, 0)} COP` : '—';
   btCalc();
 }
 async function saveBtc() {
   const msg = $('bt-msg');
-  const { status, body } = await api('/api/btc', { method: 'PUT', body: JSON.stringify({ margin_pct: $('bt-margin').value, buy_margin_pct: $('bt-buy').value, cl: $('bt-cl').checked, co: $('bt-co').checked }) });
+  const { status, body } = await api('/api/btc', { method: 'PUT', body: JSON.stringify({ margin_pct: $('bt-margin').value, buy_margin_pct: $('bt-buy').value, cl: $('bt-cl').checked, co: $('bt-co').checked, private: $('bt-priv').checked }) });
   msg.hidden = false;
   if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
   const on = [body.cl && 'Chile', body.co && 'Colombia'].filter(Boolean);
   msg.className = 'msg'; msg.textContent = on.length ? `Guardado: los clientes ya ven Bitcoin desde ${on.join(' y ')}.` : 'Guardado (Bitcoin apagado en el cotizador).';
 }
 $('bt-margin').oninput = btCalc; $('bt-buy').oninput = btCalc;
-$('bt-save').onclick = saveBtc; $('bt-cl').onchange = saveBtc; $('bt-co').onchange = saveBtc;
+$('bt-save').onclick = saveBtc; $('bt-cl').onchange = saveBtc; $('bt-co').onchange = saveBtc; $('bt-priv').onchange = saveBtc;
 
 // ------------------------------------------------------------------ JM Rewards: botón en el cotizador (parte apagado)
 

@@ -17,9 +17,9 @@ export const onRequestGet = async ({ env }) => {
   const gold = await loadGoldCfg(env);
   if (gold.cl || gold.co) view.gold = { margin_pct: gold.margin_pct, buy_margin_pct: gold.buy_margin_pct, cl: gold.cl, co: gold.co,
     fee: gold.fee_on ? { PAXG: Number(gold.fee_paxg), XAUT: Number(gold.fee_xaut) } : null,
-    tokens: [...(gold.xaut !== false ? ['XAUT'] : []), ...(gold.paxg === true ? ['PAXG'] : [])] };
+    tokens: [...(gold.xaut !== false ? ['XAUT'] : []), ...(gold.paxg === true ? ['PAXG'] : [])], private: gold.private === true };
   const btc = await loadBtcCfg(env);
-  if (btc.cl || btc.co) view.btc = { margin_pct: btc.margin_pct, buy_margin_pct: btc.buy_margin_pct, cl: btc.cl, co: btc.co };
+  if (btc.cl || btc.co) view.btc = { margin_pct: btc.margin_pct, buy_margin_pct: btc.buy_margin_pct, cl: btc.cl, co: btc.co, private: btc.private === true };
   if ((await loadRewardsCfg(env)).published) view.rewards = { url: REWARDS_URL };
   return json(view);
 };
