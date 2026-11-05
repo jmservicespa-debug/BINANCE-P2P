@@ -618,3 +618,10 @@ body.tema-fintech .dest-links .fl .flag { width: 40px; height: 40px; box-shadow:
 .tabs.kind button { font-size: 15px; padding: 11px 6px }
 body.tema-fintech .tabs.kind button[aria-pressed="true"] { background: var(--brand); color: #fff; box-shadow: none }
 #bt-prices { display: grid; gap: 6px; font-size: 13.5px } #bt-prices b { font-size: 14.5px } #bt-ref { font-size: 15px }
+
+/* Ayuda para crear la wallet y validez del precio (oro y Bitcoin) */
+.wallet-help { border: 1px dashed var(--box-line); border-radius: 12px; padding: 10px 14px; background: var(--box) }
+.wallet-help summary { cursor: pointer; font-weight: 700; color: var(--brand); font-size: 14.5px }
+.wallet-help p { margin: 8px 0 0; font-size: 13.5px; line-height: 1.45; color: var(--ink) }
+.wallet-help a { color: var(--brand); font-weight: 700 }
+.u-line .valid { font-size: 12.5px; font-weight: 600; color: var(--accent) }

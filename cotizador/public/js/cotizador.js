@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=43';
-import { setRewardsNav } from './rewards-nav.js?v=43';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=43';
-import { esc, flag, flags } from './ui.js?v=43';
+import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=44';
+import { setRewardsNav } from './rewards-nav.js?v=44';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=44';
+import { esc, flag, flags } from './ui.js?v=44';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -348,6 +348,15 @@ function usdtQuote(r) {
     : r.gold
     ? `${buy ? `Enviamos ${sym} solo por la red ${r.net}.` : `Envíanos tus ${sym} solo por la red ${r.net}.`} Verifica que tu wallet use esa red antes de ${buy ? 'comprar' : 'vender'}. El precio del oro sube y baja. JM Cambios es un comerciante independiente, no es ${issuer}.`
     : buy ? r.note : 'Envías los USDT a la wallet o cuenta de Binance que te indiquemos (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente, no es Binance.';
+  // Ayuda para crear la wallet según el producto (solo oro y Bitcoin).
+  $('w-help').hidden = !(r.gold || r.btc);
+  if (r.gold || r.btc) $('w-help-body').innerHTML = (r.btc
+    ? '<p><b>Bitcoin por Lightning:</b> descarga <b>Phoenix</b> (Android o iPhone), créala y toca <b>Recibir</b> para generar tu factura Lightning; esa nos la mandas por WhatsApp.</p>'
+    : r.cur === 'XAUT'
+      ? '<p><b>XAUt por Solana:</b> descarga <b>Phantom</b> (Android o iPhone), créala y copia tu dirección de <b>Solana</b> desde <b>Recibir</b>.</p>'
+      : '<p><b>PAXG por Ethereum:</b> descarga <b>MetaMask</b> o <b>Trust Wallet</b>, créala y copia tu dirección de <b>Ethereum</b> desde <b>Recibir</b>.</p>')
+    + '<p>Guarda tus 12 o 24 palabras secretas en papel y <b>nunca se las compartas a nadie</b>, ni siquiera a nosotros. ¿Prefieres ayuda? '
+    + `<a href="https://wa.me/${(ADVISORS[adv] || ADVISORS[MAIN_LINE]).phone}?text=${encodeURIComponent(`Hola, quiero comprar ${sym} y necesito ayuda para crear mi wallet.`)}" target="_blank" rel="noopener">Escríbenos y te guiamos</a>.</p>`;
   const netTxt = r.btc ? ' Red: Lightning Network (on-chain, asumiendo la comisión de red).' : r.net ? ` Red: ${r.net}.` : '';
   if (!ok) {
     $(edited === 'top' ? 'u-bot' : 'u-top').value = '';  // sin precio no se calcula nada
@@ -355,7 +364,7 @@ function usdtQuote(r) {
     $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} ${sym}. ¿Me das el precio de este momento?`, 'Pedir precio');
     return;
   }
-  $('u-line').innerHTML = `<b class="num">1 ${esc(sym)}${r.gold ? ' (1 onza)' : ''} = ${pf(price)} ${cur}</b><span>Comisión 0 %${fee ? ' · ' + `Comisión de red (≈ US$${fmt(feeUsd, feeUsd % 1 ? 2 : 0)}) ya descontada` : ' · Sin cargos extras'} · Mínimo ${clpFmt(buy ? r.min : r.buyMin)} ${cur}</span>`
+  $('u-line').innerHTML = `<b class="num">1 ${esc(sym)}${r.gold ? ' (1 onza)' : ''} = ${pf(price)} ${cur}</b>${r.gold || r.btc ? '<span class="valid">Precio válido por 10 minutos · se confirma al momento de pagar</span>' : ''}<span>Comisión 0 %${fee ? ' · ' + `Comisión de red (≈ US$${fmt(feeUsd, feeUsd % 1 ? 2 : 0)}) ya descontada` : ' · Sin cargos extras'} · Mínimo ${clpFmt(buy ? r.min : r.buyMin)} ${cur}</span>`
     + (r.btc ? `<span class="net">⚡&nbsp;${buy ? 'Se envía' : 'Envíalo'} por&nbsp;<b>Lightning Network</b>. On-chain: la comisión de red la asumes tú.</span>`
       : r.net ? `<span class="net">⚠️&nbsp;${buy ? 'Se envía' : 'Envíalo'} solo por la red&nbsp;<b>${esc(r.net)}</b></span>` : '');
   const src = $(edited === 'top' ? 'u-top' : 'u-bot'), dst = $(edited === 'top' ? 'u-bot' : 'u-top');
