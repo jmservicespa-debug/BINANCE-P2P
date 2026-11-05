@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=37">
+<link rel="stylesheet" href="/css/estilo.css?v=38">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -165,6 +165,14 @@
     </div>
     <div class="usdt-price" id="go-prices">—</div>
     <div class="msg" id="go-msg" hidden></div>
+    <label class="switch"><input type="checkbox" id="go-fee"> <b>Descontar la comisión de red de lo que recibe el cliente (al comprar)</b></label>
+    <div class="row2">
+      <label class="f" for="go-fee-x">Comisión XAUt · Solana (US$)
+        <span class="amount"><input id="go-fee-x" inputmode="decimal" autocomplete="off"></span></label>
+      <label class="f" for="go-fee-p">Comisión PAXG · Ethereum (US$)
+        <span class="amount"><input id="go-fee-p" inputmode="decimal" autocomplete="off"></span></label>
+    </div>
+    <span class="muted">Marcado: la cotización ya muestra los tokens que llegan después de pagar la red (ej. US$1). Sin marcar: la comisión la asumes tú.</span>
     <label class="switch"><input type="checkbox" id="go-cl"> <b>Oro activo en el cotizador desde Chile</b></label>
     <label class="switch"><input type="checkbox" id="go-co"> <b>Oro activo en el cotizador desde Colombia</b></label>
     <span class="muted">Marcado: los clientes ven "PAXG · oro" y "XAUt · oro" al elegir ese país. Sin marcar: no aparece.</span>
@@ -236,6 +244,6 @@
     <span class="muted">Cada enlace lleva el WhatsApp de esa persona. El enlace general muestra un solo botón sin nombre, a tu número.</span>
   </section>
 </main>
-<script type="module" src="/js/panel.js?v=37"></script>
+<script type="module" src="/js/panel.js?v=38"></script>
 </body>
 </html>

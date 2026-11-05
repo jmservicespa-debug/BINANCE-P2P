@@ -373,14 +373,18 @@ test('oro tokenizado y USDT Brasil: se activan desde el panel y aparecen en la v
   assert.equal((await putOro({ request: req('/api/oro', { method: 'PUT', cookie, body: { margin_pct: '2,5', buy_margin_pct: '4', cl: true, co: false } }), env: e })).status, 200);
   assert.equal((await putBr({ request: req('/api/usdt-br', { method: 'PUT', cookie, body: { margin_pct: '3', buy_margin_pct: '3', published: true } }), env: e })).status, 200);
   pub = await (await getRates({ env: e })).json();
-  assert.deepEqual(pub.gold, { margin_pct: '2.5', buy_margin_pct: '4', cl: true, co: false });
+  assert.deepEqual(pub.gold, { margin_pct: '2.5', buy_margin_pct: '4', cl: true, co: false, fee: null });
+  // Comisión de red activada: se publica en dólares por token.
+  assert.equal((await putOro({ request: req('/api/oro', { method: 'PUT', cookie, body: { margin_pct: '3', buy_margin_pct: '3', cl: true, fee_on: true, fee_paxg: '1,5', fee_xaut: '1' } }), env: e })).status, 200);
+  assert.deepEqual((await (await getRates({ env: e })).json()).gold.fee, { PAXG: 1.5, XAUT: 1 });
+  assert.equal((await putOro({ request: req('/api/oro', { method: 'PUT', cookie, body: { margin_pct: '3', buy_margin_pct: '3', cl: true, fee_on: true, fee_paxg: '99' } }), env: e })).status, 400);
   assert.deepEqual(pub.usdt_br, { margin_pct: '3', buy_margin_pct: '3' });
 });
 
 test('precios: oro de CoinGecko en pesos y USDT en reales (Binance P2P, luego Bybit P2P)', async () => {
   const { parseGold, usdtBrlRef } = await import('../public/js/criptoya.js');
   const g = parseGold('{"pax-gold":{"usd":4077.01,"clp":3960487,"cop":13204532},"tether-gold":{"usd":4072.08,"clp":3955702,"cop":13188578}}');
-  assert.deepEqual(g, { PAXG: { CLP: 3960487, COP: 13204532 }, XAUT: { CLP: 3955702, COP: 13188578 } });
+  assert.deepEqual(g, { PAXG: { USD: 4077.01, CLP: 3960487, COP: 13204532 }, XAUT: { USD: 4072.08, CLP: 3955702, COP: 13188578 } });
   assert.equal(parseGold('{"pax-gold":{"clp":5}}'), null);  // dato absurdo
   assert.equal(usdtBrlRef({ binancep2p: { ask: 5.6, bid: 5.5 }, bybitp2p: { ask: 5.7, bid: 5.4 } }).source, 'binancep2p');
   assert.equal(usdtBrlRef({ bybitp2p: { ask: 5.7, bid: 5.4 } }).value, 5.7);

@@ -384,7 +384,8 @@ export async function saveUsdtBrCfg(request, env, now = Date.now()) {
   return json(cfg);
 }
 
-export const GOLD_CFG = { margin_pct: '3', buy_margin_pct: '3', cl: false, co: false };
+// Comisión de red al enviar el oro al cliente (dólares por envío), opcional: se descuenta de lo que recibe al comprar.
+export const GOLD_CFG = { margin_pct: '3', buy_margin_pct: '3', cl: false, co: false, fee_on: false, fee_paxg: '1', fee_xaut: '1' };
 export const loadGoldCfg = (env) => loadCfg(env, 'gold_cfg', GOLD_CFG);
 export async function goldView(request, env, now = Date.now()) {
   if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
@@ -395,7 +396,10 @@ export async function saveGoldCfg(request, env, now = Date.now()) {
   if (error) return error;
   const m = pctOk(body?.margin_pct), b = pctOk(body?.buy_margin_pct);
   if (m === null || b === null) return json({ error: 'Las ganancias deben estar entre 0 y 50 %.' }, 400);
-  const cfg = { margin_pct: m, buy_margin_pct: b, cl: body?.cl === true, co: body?.co === true };
+  const usd = (v, d) => { const t = String(v ?? d).trim().replace(',', '.'); return t !== '' && Number(t) >= 0 && Number(t) <= 50 ? t : null; };
+  const fp = usd(body?.fee_paxg, '1'), fx = usd(body?.fee_xaut, '1');
+  if (fp === null || fx === null) return json({ error: 'La comisión de red debe estar entre 0 y 50 dólares.' }, 400);
+  const cfg = { margin_pct: m, buy_margin_pct: b, cl: body?.cl === true, co: body?.co === true, fee_on: body?.fee_on === true, fee_paxg: fp, fee_xaut: fx };
   await env.TASAS.put('gold_cfg', JSON.stringify(cfg));
   return json(cfg);
 }

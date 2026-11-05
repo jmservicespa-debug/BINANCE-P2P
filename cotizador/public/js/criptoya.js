@@ -132,16 +132,16 @@ export function usdtBrlRef(text) {
 }
 
 // Oro tokenizado: precio de 1 PAXG y 1 XAUt (1 onza) en pesos chilenos y colombianos, de CoinGecko (API pública).
-export const GOLD_URL = 'https://api.coingecko.com/api/v3/simple/price?ids=pax-gold,tether-gold,bitcoin&vs_currencies=clp,cop';
-const GOLD_RANGE = { clp: [500000, 30000000], cop: [2000000, 100000000] };  // fuera de esto = dato absurdo
-const BTC_RANGE = { clp: [5000000, 1000000000], cop: [20000000, 4000000000] };
+export const GOLD_URL = 'https://api.coingecko.com/api/v3/simple/price?ids=pax-gold,tether-gold,bitcoin&vs_currencies=usd,clp,cop';
+const GOLD_RANGE = { usd: [500, 30000], clp: [500000, 30000000], cop: [2000000, 100000000] };  // fuera de esto = dato absurdo
+const BTC_RANGE = { usd: [5000, 1000000], clp: [5000000, 1000000000], cop: [20000000, 4000000000] };
 export function parseGold(text) {
   let d;
   try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }
   if (!d || typeof d !== 'object') return null;
   const out = {};
   for (const [id, token] of [['pax-gold', 'PAXG'], ['tether-gold', 'XAUT'], ['bitcoin', 'BTC']]) {
-    for (const cur of ['clp', 'cop']) {
+    for (const cur of ['usd', 'clp', 'cop']) {
       const v = Number(d[id]?.[cur]), R = token === 'BTC' ? BTC_RANGE : GOLD_RANGE;
       if (Number.isFinite(v) && v >= R[cur][0] && v <= R[cur][1]) (out[token] ??= {})[cur.toUpperCase()] = v;
     }

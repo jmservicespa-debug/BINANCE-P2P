@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=37';
-import { esc, flag, flags } from './ui.js?v=37';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef } from './criptoya.js?v=37';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=38';
+import { esc, flag, flags } from './ui.js?v=38';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef } from './criptoya.js?v=38';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -623,20 +623,22 @@ async function loadGoldCfg() {
   const { status, body } = await api('/api/oro');
   if (status !== 200) return;
   $('go-margin').value = body.margin_pct; $('go-buy').value = body.buy_margin_pct; $('go-cl').checked = !!body.cl; $('go-co').checked = !!body.co;
+  $('go-fee').checked = !!body.fee_on; $('go-fee-x').value = body.fee_xaut ?? '1'; $('go-fee-p').value = body.fee_paxg ?? '1';
   try { const res = await fetch(GOLD_URL, { cache: 'no-store' }); goRef = res.ok ? parseGold(await res.text()) : null; } catch { goRef = null; }
   $('go-ref').textContent = goRef ? `PAXG ${fmt(goRef.PAXG?.CLP, 0)} CLP · XAUt ${fmt(goRef.XAUT?.CLP, 0)} CLP (CoinGecko)` : '—';
   goCalc();
 }
 async function saveGold() {
   const msg = $('go-msg');
-  const { status, body } = await api('/api/oro', { method: 'PUT', body: JSON.stringify({ margin_pct: $('go-margin').value, buy_margin_pct: $('go-buy').value, cl: $('go-cl').checked, co: $('go-co').checked }) });
+  const { status, body } = await api('/api/oro', { method: 'PUT', body: JSON.stringify({ margin_pct: $('go-margin').value, buy_margin_pct: $('go-buy').value, cl: $('go-cl').checked, co: $('go-co').checked,
+    fee_on: $('go-fee').checked, fee_xaut: $('go-fee-x').value, fee_paxg: $('go-fee-p').value }) });
   msg.hidden = false;
   if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
   const on = [body.cl && 'Chile', body.co && 'Colombia'].filter(Boolean);
   msg.className = 'msg'; msg.textContent = on.length ? `Guardado: los clientes ya ven el oro desde ${on.join(' y ')}.` : 'Guardado (oro apagado en el cotizador).';
 }
 $('go-margin').oninput = goCalc; $('go-buy').oninput = goCalc;
-$('go-save').onclick = saveGold; $('go-cl').onchange = saveGold; $('go-co').onchange = saveGold;
+$('go-save').onclick = saveGold; $('go-cl').onchange = saveGold; $('go-co').onchange = saveGold; $('go-fee').onchange = saveGold;
 
 // ------------------------------------------------------------------ Bitcoin (Chile y Colombia)
 

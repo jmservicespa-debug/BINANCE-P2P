@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=37';
-import { setRewardsNav } from './rewards-nav.js?v=37';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef } from './criptoya.js?v=37';
-import { esc, flag, flags } from './ui.js?v=37';
+import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=38';
+import { setRewardsNav } from './rewards-nav.js?v=38';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef } from './criptoya.js?v=38';
+import { esc, flag, flags } from './ui.js?v=38';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -332,6 +332,8 @@ function usdtQuote(r) {
   $('u-tabs').querySelector('[data-side="sell"]').textContent = `Vender ${sym}`;
   const price = Number(buy ? rateOf(r.id)?.rate : rateOf(r.id)?.buyRate);
   const ok = statusOf(r.id) === 'on' && price > 0;
+  // Oro al comprar: comisión de red ya descontada de lo que recibe (si está activada en el panel).
+  const fee = buy && r.gold ? Number(rateOf(r.id)?.feeTok) || 0 : 0, feeUsd = fee ? Number(rateOf(r.id)?.feeUsd) : 0;
   // Casilla de arriba: lo que entrega el cliente; abajo: lo que recibe.
   const pesoEx = cur === 'COP' ? '200.000' : cur === 'BRL' ? '500' : '100.000', assetEx = r.gold ? '0,01' : r.btc ? '0,001' : '100';
   $('u-top-l').textContent = buy ? 'Pagas' : 'Entregas';
@@ -353,7 +355,7 @@ function usdtQuote(r) {
     $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} ${sym}. ¿Me das el precio de este momento?`, 'Pedir precio');
     return;
   }
-  $('u-line').innerHTML = `<b class="num">1 ${esc(sym)}${r.gold ? ' (1 onza)' : ''} = ${pf(price)} ${cur}</b><span>Comisión 0 % · Sin cargos extras · Mínimo ${clpFmt(buy ? r.min : r.buyMin)} ${cur}</span>`
+  $('u-line').innerHTML = `<b class="num">1 ${esc(sym)}${r.gold ? ' (1 onza)' : ''} = ${pf(price)} ${cur}</b><span>Comisión 0 %${fee ? ' · ' + `Comisión de red (≈ US$${fmt(feeUsd, feeUsd % 1 ? 2 : 0)}) ya descontada` : ' · Sin cargos extras'} · Mínimo ${clpFmt(buy ? r.min : r.buyMin)} ${cur}</span>`
     + (r.btc ? `<span class="net">⚡&nbsp;${buy ? 'Se envía' : 'Envíalo'} por&nbsp;<b>Lightning Network</b>. On-chain: la comisión de red la asumes tú.</span>`
       : r.net ? `<span class="net">⚠️&nbsp;${buy ? 'Se envía' : 'Envíalo'} solo por la red&nbsp;<b>${esc(r.net)}</b></span>` : '');
   const src = $(edited === 'top' ? 'u-top' : 'u-bot'), dst = $(edited === 'top' ? 'u-bot' : 'u-top');
@@ -365,11 +367,11 @@ function usdtQuote(r) {
   if (srcIsAsset) {
     qty = x;
     // Comprar: cobra redondeado al peso. Vender: paga hacia abajo (sin pagar de más).
-    clp = buy ? Math.round(qty * price) : Math.floor(Math.round(qty * price * 100) / 100);
+    clp = buy ? Math.round((qty + fee) * price) : Math.floor(Math.round(qty * price * 100) / 100);
   } else {
     clp = x;
     // Comprar: cantidad a entregar, hacia abajo. Vender: cantidad que debe entregar para recibir ese monto, hacia arriba.
-    qty = buy ? Math.floor((clp / price) * k) / k : Math.ceil(Math.round((clp / price) * k * 1e4) / 1e4) / k;
+    qty = buy ? Math.floor((clp / price - fee) * k) / k : Math.ceil(Math.round((clp / price) * k * 1e4) / 1e4) / k;
   }
   const good = Number.isFinite(qty) && Number.isFinite(clp) && qty > 0 && clp > 0;
   // Compartir: solo montos, sin mostrar el precio por unidad.
@@ -378,6 +380,7 @@ function usdtQuote(r) {
     text: [`✅ Cotización JM Cambios · ${buy ? 'Compra' : 'Venta'} de ${sym}${r.gold ? ' (oro tokenizado)' : ''}`,
       `Pagas: ${buy ? `${clpFmt(clp)} ${cur}` : `${af(qty)} ${sym}`}`,
       `Recibes: ${buy ? `${af(qty)} ${sym}` : `${clpFmt(clp)} ${cur}`}`,
+      ...(fee ? [`Comisión de red (≈ US$${fmt(feeUsd, feeUsd % 1 ? 2 : 0)}) ya descontada`] : []),
       ...(r.btc ? ['Red: Lightning Network (on-chain: comisión de red a cargo del cliente)'] : r.net ? [`Red: ${r.net}`] : []),
       'Comisión 0 %',
       'Cotiza tu operación 👉 https://jmcambios.cl'].join('\n') } : null;
@@ -390,7 +393,7 @@ function usdtQuote(r) {
     return;
   }
   $('wa').innerHTML = waButtons(!good ? `Hola, quiero ${buy ? 'comprar' : 'vender'} ${sym}.` : buy
-    ? `Hola, quiero comprar ${af(qty)} ${sym} pagando ${clpFmt(clp)} ${cur} (precio ${pf(price)} ${cur} por ${sym}, sin comisión).${netTxt} ¿Me confirmas?`
+    ? `Hola, quiero comprar ${af(qty)} ${sym} pagando ${clpFmt(clp)} ${cur} (precio ${pf(price)} ${cur} por ${sym}, sin comisión${fee ? `, comisión de red de ≈ US$${fmt(feeUsd, feeUsd % 1 ? 2 : 0)} ya descontada` : ''}).${netTxt} ¿Me confirmas?`
     : `Hola, quiero vender ${af(qty)} ${sym} y recibir ${clpFmt(clp)} ${cur} (precio ${pf(price)} ${cur} por ${sym}, sin comisión).${netTxt} ¿Me confirmas?`);
   $('u-share').hidden = !uQuote;
 }
@@ -558,6 +561,7 @@ function render() {
   if (off) { $('wa').hidden = false; $('dest-note').textContent = ''; $('wa').innerHTML = waButtons('Hola, quiero cotizar un envío. ¿Qué tasas tienen hoy?'); return; }
   // La pestaña "Cripto y oro" solo aparece si hay algo encendido en el panel.
   $('kind').hidden = !assetOrigins().length;
+  document.querySelectorAll('#kind button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.k === kind)));
   if (kind === 'asset' && !assetOrigins().length) setKind('send');
   renderOrigins(); renderDests(); calc();
   paisBg();
@@ -652,8 +656,10 @@ async function loadGold() {
     const ref = g?.[r.cur]?.[ORIG[r.from].cur];
     const price = ref ? ref * (1 + Number(data.gold.margin_pct) / 100) : NaN;
     const buy = ref ? ref * (1 - Number(data.gold.buy_margin_pct) / 100) : NaN;
+    // Comisión de red (dólares) pasada a tokens con el precio del token en dólares: se descuenta de lo que recibe al comprar.
+    const feeUsd = Number(data.gold.fee?.[r.cur]) || 0, usd = g?.[r.cur]?.USD;
     data.routes.push({ id: r.id, status: Number.isFinite(price) ? 'on' : 'ask', rate: Number.isFinite(price) ? price.toFixed(2) : '',
-      buyRate: Number.isFinite(buy) && buy > 0 ? buy.toFixed(2) : '' });
+      buyRate: Number.isFinite(buy) && buy > 0 ? buy.toFixed(2) : '', feeUsd, feeTok: feeUsd > 0 && usd > 0 ? feeUsd / usd : 0 });
   }
 }
 // Bitcoin (Chile y Colombia): precio de CoinGecko en pesos ± las ganancias del panel.
