@@ -404,3 +404,19 @@ test('Bitcoin: se activa desde el panel y el precio sale de CoinGecko en pesos',
   assert.deepEqual(parseGold('{"bitcoin":{"clp":95000000,"cop":420000000}}'), { BTC: { CLP: 95000000, COP: 420000000 } });
   assert.equal(parseGold('{"bitcoin":{"clp":95}}'), null);
 });
+
+test('precio del oro y Bitcoin: Binance (USDT) × USDT en pesos de CriptoYa; CoinGecko de respaldo', async () => {
+  const { marketCoins, parseBinance } = await import('../public/js/criptoya.js');
+  assert.deepEqual(parseBinance('[{"symbol":"PAXGUSDT","price":"4000.00"},{"symbol":"BTCUSDT","price":"100000.0"}]'), { PAXG: 4000, BTC: 100000 });
+  assert.equal(parseBinance('[{"symbol":"PAXGUSDT","price":"3"}]'), null);
+  const ok = (body) => ({ ok: true, text: async () => body });
+  const fake = (map) => async (u) => { for (const [k, v] of Object.entries(map)) if (u.includes(k)) return v === null ? { ok: false } : ok(v); return { ok: false }; };
+  const m = await marketCoins(fake({ 'binance.vision': '[{"symbol":"PAXGUSDT","price":"4000"},{"symbol":"BTCUSDT","price":"100000"}]',
+    'usdt/clp': '{"vitawallet":{"ask":950,"bid":940}}', 'usdt/cop': '{"binancep2p":{"ask":4000,"bid":3950}}' }));
+  assert.equal(m.source, 'binance');
+  assert.deepEqual(m.XAUT, { USD: 4000, CLP: 3800000, COP: 16000000 });
+  assert.deepEqual(m.BTC, { USD: 100000, CLP: 95000000, COP: 400000000 });
+  // Binance caído: CoinGecko.
+  const r = await marketCoins(fake({ 'coingecko': '{"pax-gold":{"usd":4077,"clp":3960487,"cop":13204532}}' }));
+  assert.equal(r.source, 'coingecko'); assert.equal(r.PAXG.CLP, 3960487);
+});

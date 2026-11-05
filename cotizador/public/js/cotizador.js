@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=38';
-import { setRewardsNav } from './rewards-nav.js?v=38';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef } from './criptoya.js?v=38';
-import { esc, flag, flags } from './ui.js?v=38';
+import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=39';
+import { setRewardsNav } from './rewards-nav.js?v=39';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=39';
+import { esc, flag, flags } from './ui.js?v=39';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -651,7 +651,7 @@ async function loadGold() {
   const list = GOLD_ROUTES.filter((r) => data.gold[r.from.toLowerCase()]);
   if (!list.length) return;
   let g = null;
-  try { const res = await fetch(GOLD_URL, { cache: 'no-store' }); g = res.ok ? parseGold(await res.text()) : null; } catch { g = null; }
+  g = await marketCoins();
   for (const r of list) {
     const ref = g?.[r.cur]?.[ORIG[r.from].cur];
     const price = ref ? ref * (1 + Number(data.gold.margin_pct) / 100) : NaN;
@@ -670,7 +670,7 @@ async function loadBtc() {
   const list = BTC_ROUTES.filter((r) => data.btc[r.from.toLowerCase()]);
   if (!list.length) return;
   let g = null;
-  try { const res = await fetch(GOLD_URL, { cache: 'no-store' }); g = res.ok ? parseGold(await res.text()) : null; } catch { g = null; }
+  g = await marketCoins();
   for (const r of list) {
     const ref = g?.BTC?.[ORIG[r.from].cur];
     const price = ref ? ref * (1 + Number(data.btc.margin_pct) / 100) : NaN;
