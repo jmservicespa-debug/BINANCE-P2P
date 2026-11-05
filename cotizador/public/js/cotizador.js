@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=44';
-import { setRewardsNav } from './rewards-nav.js?v=44';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=44';
-import { esc, flag, flags } from './ui.js?v=44';
+import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=45';
+import { setRewardsNav } from './rewards-nav.js?v=45';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=45';
+import { esc, flag, flags } from './ui.js?v=45';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -40,6 +40,12 @@ const activeRoutes = (o, k = kind) => ALL.filter((r) => r.from === o && isAsset(
 const isSoon = (o) => kind === 'send' && Boolean(SOON[o]) && !(data && activeRoutes(o).length);
 // Países desde donde se puede pagar cripto u oro (solo los que tienen algo encendido en el panel).
 const assetOrigins = () => ['CL', 'CO', 'BR'].filter((o) => activeRoutes(o, 'asset').length);
+// Productos encendidos en el panel (en cualquier país): el nombre de la pestaña y el texto muestran solo esos.
+function assetKinds() {
+  const all = ['CL', 'CO', 'BR'].flatMap((o) => activeRoutes(o, 'asset'));
+  return [['USDT', all.some((r) => r.cur === 'USDT')], ['oro', all.some((r) => r.gold)], ['Bitcoin', all.some((r) => r.btc)]].filter(([, on]) => on).map(([n]) => n);
+}
+const listEs = (xs) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} y ${xs.at(-1)}`);
 function setKind(k) {
   kind = k;
   document.querySelectorAll('#kind button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.k === k)));
@@ -54,7 +60,7 @@ function renderOrigins() {
   const asset = kind === 'asset';
   $('from-q').innerHTML = `<b>1</b> ${asset ? '¿Con qué moneda pagas o recibes?' : '¿Desde dónde envías?'}`;
   $('lead').innerHTML = asset
-    ? 'Compra o vende <b>USDT</b>, <b>oro tokenizado</b> y <b>Bitcoin</b> con pesos chilenos, pesos colombianos o reales. Lo recibes directo en tu wallet.'
+    ? `Compra o vende ${listEs(assetKinds().map((n) => `<b>${n === 'oro' ? 'oro tokenizado' : n}</b>`))} con ${listEs(assetOrigins().map((o) => ({ CL: 'pesos chilenos', CO: 'pesos colombianos', BR: 'reales' }[o])))}. Lo recibes directo en tu wallet.`
     : 'Envía dinero desde Chile, Colombia, Europa, Reino Unido, México y muchos países más. ¿No encuentras tu país? Elige <b>Otro país</b> y te damos la tasa por WhatsApp.';
   if (asset) {
     $('origins').innerHTML = assetOrigins().map((k) => `<button data-o="${k}" aria-pressed="${k === origin}">${flag(k)} ${esc(ORIG[k].name)}</button>`).join('');
@@ -570,6 +576,7 @@ function render() {
   if (off) { $('wa').hidden = false; $('dest-note').textContent = ''; $('wa').innerHTML = waButtons('Hola, quiero cotizar un envío. ¿Qué tasas tienen hoy?'); return; }
   // La pestaña "USDT, oro y Bitcoin" solo aparece si hay algo encendido en el panel.
   $('kind').hidden = !assetOrigins().length;
+  { const k = assetKinds(); const t = listEs(k); $('kind').querySelector('[data-k="asset"]').textContent = t ? t.charAt(0).toUpperCase() + t.slice(1) : 'USDT'; }
   document.querySelectorAll('#kind button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.k === kind)));
   if (kind === 'asset' && !assetOrigins().length) setKind('send');
   renderOrigins(); renderDests(); calc();
