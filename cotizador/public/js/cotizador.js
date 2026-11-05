@@ -1,7 +1,7 @@
-import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=31';
-import { setRewardsNav } from './rewards-nav.js?v=31';
-import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=31';
-import { esc, flag, flags } from './ui.js?v=31';
+import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=32';
+import { setRewardsNav } from './rewards-nav.js?v=32';
+import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=32';
+import { esc, flag, flags } from './ui.js?v=32';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -456,15 +456,13 @@ async function shareQuote(q) {
   g.font = F(700, 28); const chip = '✓  Comisión 0 % · Sin cargos extras'; const cw = g.measureText(chip).width + 48;
   g.fillStyle = '#E8F6EF'; g.beginPath(); g.roundRect(120, 768, cw, 52, 26); g.fill();
   g.fillStyle = '#0B6B45'; g.fillText(chip, 144, 804);
-  const when = data?.updated ? new Date(data.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'America/Santiago' }) : '';
   g.fillStyle = '#6B6578'; g.font = F(500, 30);
   if (q.rate) {
-    g.fillText(`Tasa ${q.rate}${when ? ' · ' + when : ''}`, 84, 928);
+    g.fillText(`Tasa ${q.rate}`, 84, 928);
     g.fillText('Tasa referencial: se confirma por WhatsApp antes de enviar.', 84, 972);
   } else {
-    g.fillText(`Cotización${when ? ' del ' + when : ''}`, 84, 928);
-    g.fillText('Monto referencial: se confirma por WhatsApp antes de operar.', 84, 972);
-    g.font = F(500, 24); g.fillText('JM Cambios es un comerciante independiente, no es Binance.', 84, 1012);
+    g.fillText('Monto referencial: se confirma por WhatsApp antes de operar.', 84, 928);
+    g.font = F(500, 24); g.fillText('JM Cambios es un comerciante independiente, no es Binance.', 84, 968);
   }
   g.fillStyle = '#4A1259'; g.beginPath(); g.roundRect(80, 1096, 920, 116, 28); g.fill();
   g.fillStyle = '#FFFFFF'; g.textAlign = 'center'; g.font = F(700, 42); g.fillText('Cotiza tú también en jmcambios.cl', 540, 1168);
