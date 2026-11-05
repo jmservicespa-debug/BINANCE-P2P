@@ -459,3 +459,26 @@ body.tema-fintech .tb-rw .sm { display: none }
 }
 @media (max-width: 430px) { body.tema-fintech .tb-rw .lg { display: none } body.tema-fintech .tb-rw .sm { display: inline } }
 body.tema-fintech .amount input { color: var(--ink) }
+
+/* Ajuste 1 · La esencia de los flyers: las ondas moradas, suaves, detrás de todo */
+body.tema-fintech .ondas { display: block }
+body.tema-fintech .ondas .o-arriba { opacity: .55; width: min(62vw, 620px) }
+body.tema-fintech .ondas .o-abajo { opacity: .28 }
+body.tema-fintech .hero-txt h1 span { background: linear-gradient(90deg, #4A1259, #7A45B0); -webkit-background-clip: text; background-clip: text; color: transparent }
+
+/* Ajuste 2 · Celular: portada compacta para que el cotizador se vea apenas se abre la página */
+@media (max-width: 760px) {
+  body.tema-fintech .hero-wrap { padding-top: 16px; gap: 14px }
+  body.tema-fintech .hero-txt { gap: 10px }
+  body.tema-fintech .hero-txt h1 { font-size: 27px; line-height: 1.12 }
+  body.tema-fintech .hero-lead { display: none }
+  body.tema-fintech .live { font-size: 12px; padding: 5px 10px }
+  body.tema-fintech .trust { display: flex; flex-wrap: nowrap; gap: 0; margin-top: 2px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.75) }
+  body.tema-fintech .trust div { flex: 1; min-width: 0; text-align: center; padding: 8px 2px; font-size: 11px; line-height: 1.25; border-left: 1px solid var(--line) }
+  body.tema-fintech .trust div:first-child { border-left: 0 }
+  body.tema-fintech .trust b { font-size: 13.5px; letter-spacing: -.01em; white-space: nowrap }
+  body.tema-fintech .trust div:nth-child(3) b { font-size: 12px }
+  body.tema-fintech .ondas .o-arriba { opacity: .4; width: 78vw }
+  body.tema-fintech .card.cot { gap: 14px }
+}
+@media (max-width: 760px) { body.tema-fintech .trust div:nth-child(4) b { font-size: 12px } body.tema-fintech .trust div { padding: 8px 3px } }
