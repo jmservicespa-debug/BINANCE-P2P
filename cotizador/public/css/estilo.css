@@ -599,3 +599,8 @@ body.tema-fintech .band.dark::after { display: none }
   body.tema-fintech .band.dark .why b { font-size: 17px; overflow-wrap: anywhere }
   body.tema-fintech .band.dark .why small { font-size: 12.5px }
 }
+/* Banderas dibujadas (se ven en cualquier equipo, también en Windows) */
+body.tema-fintech .dest-links .fl .flag { width: 40px; height: 40px; box-shadow: 0 0 0 1px rgba(0,0,0,.08) }
+.country .kicker { display: inline-flex; align-items: center; gap: 10px }
+.country .kicker .flag { width: 34px; height: 34px; box-shadow: 0 0 0 1px rgba(0,0,0,.08) }
+.country .kicker .arr { font-size: 22px; color: var(--muted) }
