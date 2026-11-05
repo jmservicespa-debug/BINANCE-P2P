@@ -2,7 +2,7 @@
 // Guarda las tasas en KV (`env.TASAS`), protege el panel con contraseña y lee el dólar BCV.
 
 import { ROUTES, rateNum } from '../public/js/rutas.js';
-import { USDT_URL, parseCriptoYa } from '../public/js/criptoya.js';
+import { CLP_RANGE, COP_RANGE, USDT_COP_URL, USDT_URL, binanceP2pAsk, parseCriptoYa, usdtCopRef } from '../public/js/criptoya.js';
 
 export { parseCriptoYa };
 
@@ -438,7 +438,7 @@ export const CRYPTO_SOURCES = [
 ];
 export async function cryptoUsd(env, now = Date.now()) {
   let cached = null;
-  try { cached = JSON.parse((await env.TASAS.get('crypto_usd')) || 'null'); } catch { cached = null; }
+  try { cached = JSON.parse((await env.TASAS.get('crypto_usd2')) || 'null'); } catch { cached = null; }
   if (cached && now - cached.ts < CRYPTO_TTL_S * 1000) return cached;
   const out = { ts: now, tries: [] };
   for (const [name, url, read] of CRYPTO_SOURCES) {
@@ -452,7 +452,15 @@ export async function cryptoUsd(env, now = Date.now()) {
       if (!out.BTC && okBtc(v.BTC)) { out.BTC = v.BTC; out.btc_src = name; }
     } catch { out.tries.push(`${name}:error`); }
   }
-  if (out.PAXG || out.BTC) await env.TASAS.put('crypto_usd', JSON.stringify(out));
+  // USDT en pesos (Binance P2P vía CriptoYa; si no viene, el respaldo de siempre), para Chile y Colombia.
+  const text = async (u) => { try { const r = await fetch(u, { headers: { accept: 'application/json' } }); out.tries.push(`criptoya:${r.status}`); return r.ok ? await r.text() : null; } catch { out.tries.push('criptoya:error'); return null; } };
+  if (out.PAXG || out.BTC) {
+    const [c, o] = await Promise.all([text(USDT_URL), text(USDT_COP_URL)]);
+    const clp = c && (binanceP2pAsk(c, CLP_RANGE) ?? parseCriptoYa(c)?.value), cop = o && (binanceP2pAsk(o, COP_RANGE) ?? usdtCopRef(o)?.value);
+    if (clp) out.USDT_CLP = clp;
+    if (cop) out.USDT_COP = cop;
+  }
+  if (out.PAXG || out.BTC) await env.TASAS.put('crypto_usd2', JSON.stringify(out));
   else if (cached && now - cached.ts < 30 * 60 * 1000) return { ...cached, stale: true, tries: out.tries };  // respaldo: último precio (máx. 30 min)
   return out;
 }

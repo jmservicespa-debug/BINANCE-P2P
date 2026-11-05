@@ -428,10 +428,13 @@ test('precio en dólares por el servidor: prueba fuentes en orden y guarda 2 min
   globalThis.fetch = async (u) => { calls.push(String(u)); const s = String(u);
     if (s.includes('binance')) return new Response('', { status: 451 });
     if (s.includes('kraken')) return new Response(JSON.stringify({ result: { PAXGUSD: { c: ['4010.5', '1'] }, XXBTZUSD: { c: ['101000.1', '1'] } } }));
+    if (s.includes('usdt/clp')) return new Response(JSON.stringify({ binancep2p: { ask: 950, bid: 940 } }));
+    if (s.includes('usdt/cop')) return new Response(JSON.stringify({ binancep2p: { ask: 4000, bid: 3950 } }));
     return new Response('', { status: 500 }); };
   const r = await cryptoUsd(e, 1000);
   assert.equal(r.PAXG, 4010.5); assert.equal(r.BTC, 101000.1); assert.equal(r.paxg_src, 'kraken');
-  assert.deepEqual(r.tries, ['binance:451', 'binance:451', 'kraken:200']);
+  assert.deepEqual(r.tries, ['binance:451', 'binance:451', 'kraken:200', 'criptoya:200', 'criptoya:200']);
+  assert.equal(r.USDT_CLP, 950); assert.equal(r.USDT_COP, 4000);
   const n = calls.length;
   await cryptoUsd(e, 60000);  // dentro de 2 minutos: no vuelve a consultar
   assert.equal(calls.length, n);

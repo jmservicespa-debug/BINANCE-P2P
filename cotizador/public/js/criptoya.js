@@ -58,8 +58,8 @@ export function vitaPrice(text, side, range) {
   const v = Number(key && d[key]?.[side]);
   return Number.isFinite(v) && v >= range[0] && v <= range[1] ? v : null;
 }
-const COP_RANGE = [1500, 8000];  // COP por USDT fuera de este rango = dato absurdo
-const CLP_RANGE = [300, 3000];
+export const COP_RANGE = [1500, 8000];  // COP por USDT fuera de este rango = dato absurdo
+export const CLP_RANGE = [300, 3000];
 // CLP por cada COP ("cero adelante", ej. 0,2850) con la ganancia ya incluida (más baja = llegan menos CLP).
 // La ganancia se aplica igual que antes (COP por CLP × (1 + %)), solo que expresada al revés. null si falta algún precio.
 export async function clpPerCop(marginPct, fetchFn = fetch) {
@@ -183,7 +183,13 @@ export async function marketCoins(fetchFn = fetch) {
   const get = (u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   let usd = null;
   // 1) Nuestro servidor (lee Binance, Kraken o CoinGecko sin bloqueos). 2) Binance directo desde el navegador.
-  try { const s = JSON.parse((await get('/api/precio-cripto')) || 'null'); if (s?.PAXG || s?.BTC) usd = { ...(s.PAXG ? { PAXG: s.PAXG } : {}), ...(s.BTC ? { BTC: s.BTC } : {}) }; } catch { usd = null; }
+  try {
+    const s = JSON.parse((await get('/api/precio-cripto')) || 'null');
+    if (s?.PAXG || s?.BTC) usd = { ...(s.PAXG ? { PAXG: s.PAXG } : {}), ...(s.BTC ? { BTC: s.BTC } : {}) };
+    // El servidor también trae el USDT en pesos: con eso basta, sin más consultas desde el navegador.
+    const full = usd && coinPrices(usd, s.USDT_CLP, s.USDT_COP);
+    if (full && (s.USDT_CLP || s.USDT_COP)) return { ...full, source: 'binance' };
+  } catch { usd = null; }
   if (!usd) for (const u of BINANCE_URLS) { usd = parseBinance(await get(u)); if (usd) break; }
   if (usd) {
     const [c, o] = await Promise.all([get(USDT_URL), get(USDT_COP_URL)]);
