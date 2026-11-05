@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=41';
-import { setRewardsNav } from './rewards-nav.js?v=41';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=41';
-import { esc, flag, flags } from './ui.js?v=41';
+import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=42';
+import { setRewardsNav } from './rewards-nav.js?v=42';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=42';
+import { esc, flag, flags } from './ui.js?v=42';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -13,7 +13,7 @@ if (!ADVISORS[adv]) adv = null;
 try { localStorage.removeItem('jmc_asesor'); } catch { /* lo recordado por la versión anterior ya no se usa */ }
 
 let data = null, origin = 'CL', route = null, mode = 'send';
-// Dos secciones: "Envíos" (remesas) y "Cripto y oro" (comprar o vender USDT y oro tokenizado). ?k=cripto abre la segunda.
+// Dos secciones: "Envíos" (remesas) y "USDT, oro y Bitcoin" (comprar o vender). ?k=cripto abre la segunda.
 let kind = new URLSearchParams(location.search).get('k') === 'cripto' ? 'asset' : 'send';
 // Enlace directo a una ruta (ej. ?r=cl-pe desde la página de Perú): abre el cotizador en ese país.
 { const want = ROUTES.find((x) => x.id === new URLSearchParams(location.search).get('r')); if (want) { origin = want.from; route = want.id; } }
@@ -559,7 +559,7 @@ function render() {
   ['from-q', 'origins', 'to-q', 'dests', 'other', 'quote', 'soon'].forEach((id) => { if (off) $(id).hidden = true; });
   $('from-q').hidden = off; $('origins').hidden = off;
   if (off) { $('wa').hidden = false; $('dest-note').textContent = ''; $('wa').innerHTML = waButtons('Hola, quiero cotizar un envío. ¿Qué tasas tienen hoy?'); return; }
-  // La pestaña "Cripto y oro" solo aparece si hay algo encendido en el panel.
+  // La pestaña "USDT, oro y Bitcoin" solo aparece si hay algo encendido en el panel.
   $('kind').hidden = !assetOrigins().length;
   document.querySelectorAll('#kind button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.k === kind)));
   if (kind === 'asset' && !assetOrigins().length) setKind('send');
