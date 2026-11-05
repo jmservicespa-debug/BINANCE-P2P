@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=36';
-import { setRewardsNav } from './rewards-nav.js?v=36';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef } from './criptoya.js?v=36';
-import { esc, flag, flags } from './ui.js?v=36';
+import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=37';
+import { setRewardsNav } from './rewards-nav.js?v=37';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef } from './criptoya.js?v=37';
+import { esc, flag, flags } from './ui.js?v=37';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -80,7 +80,7 @@ function renderDests() {
   const goldPick = golds.find((r) => r.id === route) || golds[0];
   const list = all.filter((r) => !r.gold || r === goldPick);
   $('dests').innerHTML = list.map((r) => r.btc
-    ? `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flag('BTC')}<span>Bitcoin<small>BTC · red Bitcoin${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`
+    ? `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flag('BTC')}<span>Bitcoin<small>BTC · red Lightning${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`
     : r.gold
     ? `<button data-r="${r.id}" aria-pressed="${golds.some((g) => g.id === route)}">${flag('XAUT')}<span>Oro tokenizado<small>XAUt o PAXG · 1 = 1 onza</small></span></button>` : `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${r.cur === 'USDT' ? BNB : ''}${esc(r.unit)} (${esc(r.sym || r.cur)})${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`).join('')
     + (kind === 'asset' ? '' : `<button data-r="${OTHER}" aria-pressed="${route === OTHER}">${GLOBE}<span>Otro destino<small>Tasa por WhatsApp</small></span></button>`);
@@ -342,11 +342,11 @@ function usdtQuote(r) {
   $('u-bot').placeholder = `Ej. ${buy ? assetEx : pesoEx}`;
   const issuer = r.cur === 'PAXG' ? 'Paxos' : 'Tether';
   $('dest-note').textContent = r.btc
-    ? `${buy ? 'Enviamos BTC solo por la red Bitcoin.' : 'Envíanos tus BTC solo por la red Bitcoin.'} Verifica que tu wallet use esa red antes de ${buy ? 'comprar' : 'vender'}. El precio de Bitcoin sube y baja. JM Cambios es un comerciante independiente.`
+    ? `${buy ? 'Enviamos BTC por Lightning Network.' : 'Envíanos tus BTC por Lightning Network.'} Si prefieres la red principal (on-chain), la comisión de red la asumes tú. Verifica que tu wallet use la red correcta antes de ${buy ? 'comprar' : 'vender'}. El precio de Bitcoin sube y baja. JM Cambios es un comerciante independiente.`
     : r.gold
     ? `${buy ? `Enviamos ${sym} solo por la red ${r.net}.` : `Envíanos tus ${sym} solo por la red ${r.net}.`} Verifica que tu wallet use esa red antes de ${buy ? 'comprar' : 'vender'}. El precio del oro sube y baja. JM Cambios es un comerciante independiente, no es ${issuer}.`
     : buy ? r.note : 'Envías los USDT a la wallet o cuenta de Binance que te indiquemos (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente, no es Binance.';
-  const netTxt = r.net ? ` Red: ${r.net}.` : '';
+  const netTxt = r.btc ? ' Red: Lightning Network (on-chain, asumiendo la comisión de red).' : r.net ? ` Red: ${r.net}.` : '';
   if (!ok) {
     $(edited === 'top' ? 'u-bot' : 'u-top').value = '';  // sin precio no se calcula nada
     $('u-line').innerHTML = '<b>Mercado inestable</b><span>El precio se confirma por WhatsApp.</span>';
@@ -354,7 +354,8 @@ function usdtQuote(r) {
     return;
   }
   $('u-line').innerHTML = `<b class="num">1 ${esc(sym)}${r.gold ? ' (1 onza)' : ''} = ${pf(price)} ${cur}</b><span>Comisión 0 % · Sin cargos extras · Mínimo ${clpFmt(buy ? r.min : r.buyMin)} ${cur}</span>`
-    + (r.net ? `<span class="net">⚠️&nbsp;${buy ? 'Se envía' : 'Envíalo'} solo por la red&nbsp;<b>${esc(r.net)}</b></span>` : '');
+    + (r.btc ? `<span class="net">⚡&nbsp;${buy ? 'Se envía' : 'Envíalo'} por&nbsp;<b>Lightning Network</b>. On-chain: la comisión de red la asumes tú.</span>`
+      : r.net ? `<span class="net">⚠️&nbsp;${buy ? 'Se envía' : 'Envíalo'} solo por la red&nbsp;<b>${esc(r.net)}</b></span>` : '');
   const src = $(edited === 'top' ? 'u-top' : 'u-bot'), dst = $(edited === 'top' ? 'u-bot' : 'u-top');
   if (!src.value.trim()) { dst.value = ''; $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} ${sym}.`); return; }
   // Lo que escribe el cliente está en USDT/oro o en pesos según la casilla y el lado.
@@ -377,7 +378,7 @@ function usdtQuote(r) {
     text: [`✅ Cotización JM Cambios · ${buy ? 'Compra' : 'Venta'} de ${sym}${r.gold ? ' (oro tokenizado)' : ''}`,
       `Pagas: ${buy ? `${clpFmt(clp)} ${cur}` : `${af(qty)} ${sym}`}`,
       `Recibes: ${buy ? `${af(qty)} ${sym}` : `${clpFmt(clp)} ${cur}`}`,
-      ...(r.net ? [`Red: ${r.net}`] : []),
+      ...(r.btc ? ['Red: Lightning Network (on-chain: comisión de red a cargo del cliente)'] : r.net ? [`Red: ${r.net}`] : []),
       'Comisión 0 %',
       'Cotiza tu operación 👉 https://jmcambios.cl'].join('\n') } : null;
   dst.value = good ? (srcIsAsset ? clpFmt(clp) : af(qty)) : '';
@@ -520,7 +521,7 @@ async function shareQuote(q) {
     g.fillText('Tasa referencial: se confirma por WhatsApp antes de enviar.', 84, 972);
   } else {
     g.fillText('Monto referencial: se confirma por WhatsApp antes de operar.', 84, 928);
-    g.font = F(500, 24); g.fillText(q.gold ? 'Oro tokenizado: 1 token = 1 onza. JM Cambios es un comerciante independiente, no es Paxos ni Tether.' : q.btc ? 'El precio de Bitcoin sube y baja. JM Cambios es un comerciante independiente.' : 'JM Cambios es un comerciante independiente, no es Binance.', 84, 968, 912);
+    g.font = F(500, 24); g.fillText(q.gold ? 'Oro tokenizado: 1 token = 1 onza. JM Cambios es un comerciante independiente, no es Paxos ni Tether.' : q.btc ? 'Red Lightning; on-chain, comisión de red a cargo del cliente. JM Cambios es comerciante independiente.' : 'JM Cambios es un comerciante independiente, no es Binance.', 84, 968, 912);
   }
   g.fillStyle = '#4A1259'; g.beginPath(); g.roundRect(80, 1096, 920, 116, 28); g.fill();
   g.fillStyle = '#FFFFFF'; g.textAlign = 'center'; g.font = F(700, 42); g.fillText('Cotiza tú también en jmcambios.cl', 540, 1168);

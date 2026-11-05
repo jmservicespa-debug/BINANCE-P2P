@@ -78,9 +78,10 @@ const gold = (from, token, min) => ({ id: `${from.toLowerCase()}-${token.toLower
   sym: token === 'PAXG' ? 'PAXG' : 'XAUt', name: token === 'PAXG' ? 'PAXG · oro' : 'XAUt · oro',
   unit: token === 'PAXG' ? 'Pax Gold · 1 = 1 onza' : 'Tether Gold · 1 = 1 onza', op: 'div', dec: 6, min, buyMin: min,
   net: token === 'PAXG' ? 'Ethereum (ERC-20)' : 'Solana' });
-// Bitcoin (Chile y Colombia): precio de CoinGecko en pesos ± la ganancia del panel. Se envía por la red Bitcoin.
+// Bitcoin (Chile y Colombia): precio de CoinGecko en pesos ± la ganancia del panel. Se envía por Lightning Network;
+// si el cliente prefiere la red principal (on-chain), asume la comisión de red.
 const btc = (from, min) => ({ id: `${from.toLowerCase()}-btc`, from, to: ['BTC'], cur: 'BTC', sym: 'BTC', btc: true, name: 'Bitcoin',
-  unit: 'BTC · red Bitcoin', op: 'div', dec: 8, min, buyMin: min, net: 'Bitcoin' });
+  unit: 'BTC · red Lightning', op: 'div', dec: 8, min, buyMin: min, net: 'Lightning Network' });
 export const BTC_ROUTES = [btc('CL', 10000), btc('CO', 30000)];
 export const GOLD_ROUTES = [gold('CL', 'PAXG', 10000), gold('CL', 'XAUT', 10000), gold('CO', 'PAXG', 30000), gold('CO', 'XAUT', 30000)];
 
