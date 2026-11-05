@@ -1,6 +1,6 @@
-import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=23';
-import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=23';
-import { esc, flag, flags } from './ui.js?v=23';
+import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=24';
+import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=24';
+import { esc, flag, flags } from './ui.js?v=24';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
