@@ -1,6 +1,6 @@
-import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=24';
-import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=24';
-import { esc, flag, flags } from './ui.js?v=24';
+import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=25';
+import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=25';
+import { esc, flag, flags } from './ui.js?v=25';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -400,42 +400,59 @@ async function drawFlag(g, code, cx, cy, r, ring = '#fff') {
 }
 async function shareQuote(q) {
   if (!q) return;
+  // Imagen con la apariencia de jmcambios.cl: fondo claro, ondas suaves, letra Inter y tarjeta morada para lo que recibe.
+  await Promise.all(['800 96px Inter', '600 34px Inter', '700 40px Inter', '400 44px Michroma'].map((f) => document.fonts.load(f).catch(() => null)));
   await document.fonts.ready;
   const c = document.createElement('canvas'); c.width = 1080; c.height = 1350;
   const g = c.getContext('2d');
-  const bg = g.createLinearGradient(0, 0, 1080, 1350); bg.addColorStop(0, '#FDFCFF'); bg.addColorStop(1, '#E6D9FB');
+  const F = (w, px) => `${w} ${px}px Inter, "Segoe UI", system-ui, sans-serif`;
+  const bg = g.createLinearGradient(0, 0, 0, 1350); bg.addColorStop(0, '#F7F4FB'); bg.addColorStop(.55, '#FFFFFF'); bg.addColorStop(1, '#FFFFFF');
   g.fillStyle = bg; g.fillRect(0, 0, 1080, 1350);
+  // Ondas moradas de la marca, suaves, arriba a la derecha (si no cargan, la imagen sale igual).
+  try {
+    const o = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = '/assets/ondas-arriba.jpg'; });
+    g.save(); g.globalAlpha = .5; g.globalCompositeOperation = 'multiply'; g.drawImage(o, 380, 0, 700, 460); g.restore();
+    const fx = g.createLinearGradient(380, 0, 640, 0); fx.addColorStop(0, '#F7F4FB'); fx.addColorStop(1, 'rgba(247,244,251,0)'); g.fillStyle = fx; g.fillRect(380, 0, 260, 460);
+    const fy = g.createLinearGradient(0, 300, 0, 460); fy.addColorStop(0, 'rgba(250,248,253,0)'); fy.addColorStop(1, '#FAF8FD'); g.fillStyle = fy; g.fillRect(380, 300, 700, 160);
+  } catch { /* sin ondas */ }
   // Logo JM (el mismo del sitio): hexágono recortando las barras de la marca.
-  g.save(); g.translate(92, 82); g.scale(124 / 450, 124 / 450); g.translate(-20, -14);
+  g.save(); g.translate(80, 78); g.scale(90 / 450, 90 / 450); g.translate(-20, -14);
   g.beginPath(); [[245, 22], [462, 148], [462, 402], [245, 528], [28, 402], [28, 148]].forEach(([x, y]) => g.lineTo(x, y)); g.closePath(); g.clip();
-  g.fillStyle = '#531463'; [[0, 0, 250, 365], [283, 0, 77, 550], [0, 395, 360, 155], [385, 0, 165, 550]].forEach(([x, y, w, h]) => g.fillRect(x, y, w, h));
+  g.fillStyle = '#4A1259'; [[0, 0, 250, 365], [283, 0, 77, 550], [0, 395, 360, 155], [385, 0, 165, 550]].forEach(([x, y, w, h]) => g.fillRect(x, y, w, h));
   g.restore();
-  g.textAlign = 'left'; g.fillStyle = '#111'; g.font = '400 52px Michroma, Montserrat, sans-serif'; g.fillText('JMCAMBIOS', 250, 160);
-  g.font = '700 22px Montserrat, sans-serif'; g.fillStyle = '#7A45B0'; g.fillText('SPEED AND TRUST', 252, 196);
-  const box = (y, h, fill) => { g.fillStyle = fill; g.beginPath(); g.roundRect(80, y, 920, h, 40); g.fill(); };
-  box(290, 260, '#ffffff');
+  g.textAlign = 'left'; g.fillStyle = '#16111D'; g.font = '400 44px Michroma, Inter, sans-serif'; g.fillText('JMCAMBIOS', 190, 146);
+  const card = (y, h, fill, line) => {
+    g.save(); g.shadowColor = 'rgba(22,17,29,.10)'; g.shadowBlur = 40; g.shadowOffsetY = 16;
+    g.fillStyle = fill; g.beginPath(); g.roundRect(80, y, 920, h, 36); g.fill(); g.restore();
+    if (line) { g.strokeStyle = line; g.lineWidth = 2; g.beginPath(); g.roundRect(81, y + 1, 918, h - 2, 35); g.stroke(); }
+  };
   // Una bandera por país (ej. Panamá · Ecuador lleva dos), algo superpuestas; el texto se corre a la derecha.
-  const flagRow = async (codes, y, ring) => { for (let i = codes.length - 1; i >= 0; i--) await drawFlag(g, codes[i], 158 + i * 52, y, 32, ring); return 206 + (codes.length - 1) * 52; };
-  let tx = await flagRow(q.from, 357, '#D9CCF2');
-  g.fillStyle = '#6E5A8C'; g.font = '700 38px Montserrat, sans-serif'; g.fillText(q.fromLabel, tx, 370);
-  g.fillStyle = '#3B1A5A'; g.font = '900 96px Montserrat, sans-serif'; g.fillText(q.fromAmt, 130, 490, 840);
-  box(590, 300, '#5B2A86');
-  tx = await flagRow(q.to, 657, '#fff');
-  g.fillStyle = '#E6DBFF'; g.font = '700 38px Montserrat, sans-serif'; g.fillText(q.toLabel, tx, 670);
-  g.fillStyle = '#FFC23D'; g.font = '900 104px Montserrat, sans-serif'; g.fillText(q.toAmt, 130, 800, 840);
-  g.fillStyle = '#fff'; g.font = '700 30px Montserrat, sans-serif'; g.fillText('Comisión 0 % · Sin cargos extras', 130, 856);
+  const flagRow = async (codes, y, ring) => { for (let i = codes.length - 1; i >= 0; i--) await drawFlag(g, codes[i], 152 + i * 50, y, 30, ring); return 198 + (codes.length - 1) * 50; };
+  card(240, 250, '#FFFFFF', '#E6E1EE');
+  let tx = await flagRow(q.from, 314, '#FFFFFF');
+  g.fillStyle = '#6B6578'; g.font = F(600, 34); g.fillText(q.fromLabel, tx, 326);
+  g.fillStyle = '#16111D'; g.font = F(800, 92); g.fillText(q.fromAmt, 120, 446, 840);
+  const purple = g.createLinearGradient(80, 520, 1000, 840); purple.addColorStop(0, '#3A0F48'); purple.addColorStop(1, '#5A1D6E');
+  card(520, 330, purple);
+  tx = await flagRow(q.to, 594, 'rgba(255,255,255,.9)');
+  g.fillStyle = 'rgba(255,255,255,.78)'; g.font = F(600, 34); g.fillText(q.toLabel, tx, 606);
+  g.fillStyle = '#FFFFFF'; g.font = F(800, 100); g.fillText(q.toAmt, 120, 730, 840);
+  g.font = F(700, 28); const chip = '✓  Comisión 0 % · Sin cargos extras'; const cw = g.measureText(chip).width + 48;
+  g.fillStyle = '#E8F6EF'; g.beginPath(); g.roundRect(120, 768, cw, 52, 26); g.fill();
+  g.fillStyle = '#0B6B45'; g.fillText(chip, 144, 804);
   const when = data?.updated ? new Date(data.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'America/Santiago' }) : '';
-  g.fillStyle = '#5B3F7A'; g.font = '600 32px "Source Sans 3", sans-serif';
+  g.fillStyle = '#6B6578'; g.font = F(500, 30);
   if (q.rate) {
-    g.fillText(`Tasa ${q.rate}${when ? ' · ' + when : ''}`, 90, 960);
-    g.fillText('Tasa referencial: se confirma por WhatsApp antes de enviar.', 90, 1006);
+    g.fillText(`Tasa ${q.rate}${when ? ' · ' + when : ''}`, 84, 928);
+    g.fillText('Tasa referencial: se confirma por WhatsApp antes de enviar.', 84, 972);
   } else {
-    g.fillText(`Cotización${when ? ' del ' + when : ''}`, 90, 960);
-    g.fillText('Monto referencial: se confirma por WhatsApp antes de operar.', 90, 1006);
-    g.font = '600 24px "Source Sans 3", sans-serif'; g.fillText('JM Cambios es un comerciante independiente, no es Binance.', 90, 1046);
+    g.fillText(`Cotización${when ? ' del ' + when : ''}`, 84, 928);
+    g.fillText('Monto referencial: se confirma por WhatsApp antes de operar.', 84, 972);
+    g.font = F(500, 24); g.fillText('JM Cambios es un comerciante independiente, no es Binance.', 84, 1012);
   }
-  g.fillStyle = '#FFC23D'; g.beginPath(); g.roundRect(80, 1110, 920, 120, 60); g.fill();
-  g.fillStyle = '#3B1A5A'; g.textAlign = 'center'; g.font = '900 44px Montserrat, sans-serif'; g.fillText('Cotiza tú también en jmcambios.cl', 540, 1185);
+  g.fillStyle = '#4A1259'; g.beginPath(); g.roundRect(80, 1096, 920, 116, 28); g.fill();
+  g.fillStyle = '#FFFFFF'; g.textAlign = 'center'; g.font = F(700, 42); g.fillText('Cotiza tú también en jmcambios.cl', 540, 1168);
+  g.fillStyle = '#6B6578'; g.font = F(500, 24); g.fillText('JM Services SpA · Atención todos los días, 10:00 a 22:30 h', 540, 1282);
   const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
   const file = new File([blob], 'cotizacion-jmcambios.png', { type: 'image/png' });
   // Texto corto y sin números: los montos ya van en la imagen.
