@@ -385,3 +385,18 @@ test('precios: oro de CoinGecko en pesos y USDT en reales (Binance P2P, luego By
   assert.equal(usdtBrlRef({ binancep2p: { ask: 5.6, bid: 5.5 }, bybitp2p: { ask: 5.7, bid: 5.4 } }).source, 'binancep2p');
   assert.equal(usdtBrlRef({ bybitp2p: { ask: 5.7, bid: 5.4 } }).value, 5.7);
 });
+
+test('Bitcoin: se activa desde el panel y el precio sale de CoinGecko en pesos', async () => {
+  noBcv();
+  const { onRequestPut: putBtc } = await import('../functions/api/btc.js');
+  const { parseGold } = await import('../public/js/criptoya.js');
+  const e = await env();
+  assert.equal((await putBtc({ request: req('/api/btc', { method: 'PUT', body: { margin_pct: '3', buy_margin_pct: '3', cl: true } }), env: e })).status, 401);
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await (await getRates({ env: e })).json()).btc, undefined);
+  assert.equal((await putBtc({ request: req('/api/btc', { method: 'PUT', cookie, body: { margin_pct: '2', buy_margin_pct: '3', cl: false, co: true } }), env: e })).status, 200);
+  assert.deepEqual((await (await getRates({ env: e })).json()).btc, { margin_pct: '2', buy_margin_pct: '3', cl: false, co: true });
+  assert.deepEqual(parseGold('{"bitcoin":{"clp":95000000,"cop":420000000}}'), { BTC: { CLP: 95000000, COP: 420000000 } });
+  assert.equal(parseGold('{"bitcoin":{"clp":95}}'), null);
+});

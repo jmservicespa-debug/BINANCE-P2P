@@ -400,6 +400,22 @@ export async function saveGoldCfg(request, env, now = Date.now()) {
   return json(cfg);
 }
 
+export const BTC_CFG = { margin_pct: '3', buy_margin_pct: '3', cl: false, co: false };
+export const loadBtcCfg = (env) => loadCfg(env, 'btc_cfg', BTC_CFG);
+export async function btcView(request, env, now = Date.now()) {
+  if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
+  return json(await loadBtcCfg(env));
+}
+export async function saveBtcCfg(request, env, now = Date.now()) {
+  const { body, error } = await adminBody(request, env, now);
+  if (error) return error;
+  const m = pctOk(body?.margin_pct), b = pctOk(body?.buy_margin_pct);
+  if (m === null || b === null) return json({ error: 'Las ganancias deben estar entre 0 y 50 %.' }, 400);
+  const cfg = { margin_pct: m, buy_margin_pct: b, cl: body?.cl === true, co: body?.co === true };
+  await env.TASAS.put('btc_cfg', JSON.stringify(cfg));
+  return json(cfg);
+}
+
 // ------------------------------------------------------------------ JM Rewards (botón de registro en el cotizador)
 
 // La dirección es fija (la app de JM Rewards); desde el panel solo se enciende o apaga el botón. Parte apagado.

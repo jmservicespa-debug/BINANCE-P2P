@@ -1,7 +1,7 @@
-import { ADVISORS, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=35';
-import { setRewardsNav } from './rewards-nav.js?v=35';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef } from './criptoya.js?v=35';
-import { esc, flag, flags } from './ui.js?v=35';
+import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=36';
+import { setRewardsNav } from './rewards-nav.js?v=36';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef } from './criptoya.js?v=36';
+import { esc, flag, flags } from './ui.js?v=36';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -29,13 +29,13 @@ const GLOBE = '<svg class="flag" viewBox="0 0 24 24" aria-hidden="true"><circle 
 const rateOf = (id) => data?.routes.find((r) => r.id === id);
 const statusOf = (id) => rateOf(id)?.status ?? (rateOf(id)?.active ? 'on' : 'off');
 // Se muestran las rutas activas y las de mercado inestable (estas sin tasa: se pide por WhatsApp).
-const ALL = [...ROUTES, USDT_ROUTE, USDT_CO_ROUTE, USDT_BR_ROUTE, ...GOLD_ROUTES];
+const ALL = [...ROUTES, USDT_ROUTE, USDT_CO_ROUTE, USDT_BR_ROUTE, ...GOLD_ROUTES, ...BTC_ROUTES];
 // Brasil aparece como "Próximamente" hasta que se activa alguna de sus rutas (USDT desde Brasil) en el panel.
 const ORIG = { ...ORIGINS, BR: { name: 'Brasil', cur: 'BRL' } };
 // Marca de Binance junto a "dólar Binance" (la gente conoce el USDT así). JM Cambios es comerciante independiente.
 const BNB = '<svg class="bnb" viewBox="0 0 126 126" aria-hidden="true"><g fill="#F0B90B"><path d="M63 46 80 63 63 80 46 63z"/>'
   + '<path d="M28 54 37 63 28 72 19 63zM98 54 107 63 98 72 89 63z"/><path d="M63 9 96 42 84 54 63 33 42 54 30 42z"/><path d="M63 117 30 84 42 72 63 93 84 72 96 84z"/></g></svg>';
-const isAsset = (r) => r.cur === 'USDT' || Boolean(r.gold);
+const isAsset = (r) => r.cur === 'USDT' || Boolean(r.gold || r.btc);
 const activeRoutes = (o, k = kind) => ALL.filter((r) => r.from === o && isAsset(r) === (k === 'asset') && ['on', 'ask'].includes(statusOf(r.id)));
 const isSoon = (o) => kind === 'send' && Boolean(SOON[o]) && !(data && activeRoutes(o).length);
 // Países desde donde se puede pagar cripto u oro (solo los que tienen algo encendido en el panel).
@@ -54,7 +54,7 @@ function renderOrigins() {
   const asset = kind === 'asset';
   $('from-q').innerHTML = `<b>1</b> ${asset ? '¿Con qué moneda pagas o recibes?' : '¿Desde dónde envías?'}`;
   $('lead').innerHTML = asset
-    ? 'Compra o vende <b>USDT</b> y <b>oro tokenizado</b> con pesos chilenos, pesos colombianos o reales. Lo recibes directo en tu wallet.'
+    ? 'Compra o vende <b>USDT</b>, <b>oro tokenizado</b> y <b>Bitcoin</b> con pesos chilenos, pesos colombianos o reales. Lo recibes directo en tu wallet.'
     : 'Envía dinero desde Chile, Colombia, Europa, Reino Unido, México y muchos países más. ¿No encuentras tu país? Elige <b>Otro país</b> y te damos la tasa por WhatsApp.';
   if (asset) {
     $('origins').innerHTML = assetOrigins().map((k) => `<button data-o="${k}" aria-pressed="${k === origin}">${flag(k)} ${esc(ORIG[k].name)}</button>`).join('');
@@ -79,7 +79,9 @@ function renderDests() {
   const all = activeRoutes(origin), golds = all.filter((r) => r.gold);
   const goldPick = golds.find((r) => r.id === route) || golds[0];
   const list = all.filter((r) => !r.gold || r === goldPick);
-  $('dests').innerHTML = list.map((r) => r.gold
+  $('dests').innerHTML = list.map((r) => r.btc
+    ? `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flag('BTC')}<span>Bitcoin<small>BTC · red Bitcoin${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`
+    : r.gold
     ? `<button data-r="${r.id}" aria-pressed="${golds.some((g) => g.id === route)}">${flag('XAUT')}<span>Oro tokenizado<small>XAUt o PAXG · 1 = 1 onza</small></span></button>` : `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${r.cur === 'USDT' ? BNB : ''}${esc(r.unit)} (${esc(r.sym || r.cur)})${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`).join('')
     + (kind === 'asset' ? '' : `<button data-r="${OTHER}" aria-pressed="${route === OTHER}">${GLOBE}<span>Otro destino<small>Tasa por WhatsApp</small></span></button>`);
   $('dests').querySelectorAll('button').forEach((b) => b.onclick = () => {
@@ -160,10 +162,10 @@ function calc() {
   if (isOther) { otherQuote(); return; }
   const r = ALL.find((x) => x.id === route);
   const o = ORIG[origin];
-  const isAsset = r?.cur === 'USDT' || Boolean(r?.gold);  // USDT y oro tokenizado: comprar o vender
+  const isAsset = r?.cur === 'USDT' || Boolean(r?.gold || r?.btc);  // USDT, oro tokenizado y Bitcoin: comprar o vender
   $('usdt-ui').hidden = !isAsset;
   $('std').hidden = isAsset;
-  if (isAsset) $('h-cot').textContent = r.gold ? `Oro tokenizado · ${r.sym}` : 'USDT · dólar Binance';
+  if (isAsset) $('h-cot').textContent = r.gold ? `Oro tokenizado · ${r.sym}` : r.btc ? 'Bitcoin (BTC)' : 'USDT · dólar Binance';
   if (isAsset) { usdtQuote(r); return; }
   if (!r) { $('r-get').hidden = true; $('r-free').hidden = true; $('r-break').hidden = true; $('share').hidden = true; $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
   // Opciones con la moneda, para que quede claro qué se escribe: "Pesos que envío" · "Bolívares que llegan".
@@ -331,7 +333,7 @@ function usdtQuote(r) {
   const price = Number(buy ? rateOf(r.id)?.rate : rateOf(r.id)?.buyRate);
   const ok = statusOf(r.id) === 'on' && price > 0;
   // Casilla de arriba: lo que entrega el cliente; abajo: lo que recibe.
-  const pesoEx = cur === 'COP' ? '200.000' : cur === 'BRL' ? '500' : '100.000', assetEx = r.gold ? '0,01' : '100';
+  const pesoEx = cur === 'COP' ? '200.000' : cur === 'BRL' ? '500' : '100.000', assetEx = r.gold ? '0,01' : r.btc ? '0,001' : '100';
   $('u-top-l').textContent = buy ? 'Pagas' : 'Entregas';
   $('u-top-c').textContent = buy ? cur : sym;
   $('u-bot-l').textContent = 'Recibes';
@@ -339,10 +341,12 @@ function usdtQuote(r) {
   $('u-top').placeholder = `Ej. ${buy ? pesoEx : assetEx}`;
   $('u-bot').placeholder = `Ej. ${buy ? assetEx : pesoEx}`;
   const issuer = r.cur === 'PAXG' ? 'Paxos' : 'Tether';
-  $('dest-note').textContent = r.gold
+  $('dest-note').textContent = r.btc
+    ? `${buy ? 'Enviamos BTC solo por la red Bitcoin.' : 'Envíanos tus BTC solo por la red Bitcoin.'} Verifica que tu wallet use esa red antes de ${buy ? 'comprar' : 'vender'}. El precio de Bitcoin sube y baja. JM Cambios es un comerciante independiente.`
+    : r.gold
     ? `${buy ? `Enviamos ${sym} solo por la red ${r.net}.` : `Envíanos tus ${sym} solo por la red ${r.net}.`} Verifica que tu wallet use esa red antes de ${buy ? 'comprar' : 'vender'}. El precio del oro sube y baja. JM Cambios es un comerciante independiente, no es ${issuer}.`
     : buy ? r.note : 'Envías los USDT a la wallet o cuenta de Binance que te indiquemos (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente, no es Binance.';
-  const netTxt = r.gold ? ` Red: ${r.net}.` : '';
+  const netTxt = r.net ? ` Red: ${r.net}.` : '';
   if (!ok) {
     $(edited === 'top' ? 'u-bot' : 'u-top').value = '';  // sin precio no se calcula nada
     $('u-line').innerHTML = '<b>Mercado inestable</b><span>El precio se confirma por WhatsApp.</span>';
@@ -350,7 +354,7 @@ function usdtQuote(r) {
     return;
   }
   $('u-line').innerHTML = `<b class="num">1 ${esc(sym)}${r.gold ? ' (1 onza)' : ''} = ${pf(price)} ${cur}</b><span>Comisión 0 % · Sin cargos extras · Mínimo ${clpFmt(buy ? r.min : r.buyMin)} ${cur}</span>`
-    + (r.gold ? `<span class="net">⚠️&nbsp;${buy ? 'Se envía' : 'Envíalo'} solo por la red&nbsp;<b>${esc(r.net)}</b></span>` : '');
+    + (r.net ? `<span class="net">⚠️&nbsp;${buy ? 'Se envía' : 'Envíalo'} solo por la red&nbsp;<b>${esc(r.net)}</b></span>` : '');
   const src = $(edited === 'top' ? 'u-top' : 'u-bot'), dst = $(edited === 'top' ? 'u-bot' : 'u-top');
   if (!src.value.trim()) { dst.value = ''; $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} ${sym}.`); return; }
   // Lo que escribe el cliente está en USDT/oro o en pesos según la casilla y el lado.
@@ -369,11 +373,11 @@ function usdtQuote(r) {
   const good = Number.isFinite(qty) && Number.isFinite(clp) && qty > 0 && clp > 0;
   // Compartir: solo montos, sin mostrar el precio por unidad.
   uQuote = good ? { from: [buy ? r.from : r.to[0]], fromLabel: buy ? 'Pagas' : 'Entregas', fromAmt: buy ? `${clpFmt(clp)} ${cur}` : `${af(qty)} ${sym}`,
-    to: [buy ? r.to[0] : r.from], toLabel: 'Recibes', toAmt: buy ? `${af(qty)} ${sym}` : `${clpFmt(clp)} ${cur}`, rate: null, gold: Boolean(r.gold),
+    to: [buy ? r.to[0] : r.from], toLabel: 'Recibes', toAmt: buy ? `${af(qty)} ${sym}` : `${clpFmt(clp)} ${cur}`, rate: null, gold: Boolean(r.gold), btc: Boolean(r.btc),
     text: [`✅ Cotización JM Cambios · ${buy ? 'Compra' : 'Venta'} de ${sym}${r.gold ? ' (oro tokenizado)' : ''}`,
       `Pagas: ${buy ? `${clpFmt(clp)} ${cur}` : `${af(qty)} ${sym}`}`,
       `Recibes: ${buy ? `${af(qty)} ${sym}` : `${clpFmt(clp)} ${cur}`}`,
-      ...(r.gold ? [`Red: ${r.net}`] : []),
+      ...(r.net ? [`Red: ${r.net}`] : []),
       'Comisión 0 %',
       'Cotiza tu operación 👉 https://jmcambios.cl'].join('\n') } : null;
   dst.value = good ? (srcIsAsset ? clpFmt(clp) : af(qty)) : '';
@@ -516,7 +520,7 @@ async function shareQuote(q) {
     g.fillText('Tasa referencial: se confirma por WhatsApp antes de enviar.', 84, 972);
   } else {
     g.fillText('Monto referencial: se confirma por WhatsApp antes de operar.', 84, 928);
-    g.font = F(500, 24); g.fillText(q.gold ? 'Oro tokenizado: 1 token = 1 onza. JM Cambios es un comerciante independiente, no es Paxos ni Tether.' : 'JM Cambios es un comerciante independiente, no es Binance.', 84, 968, 912);
+    g.font = F(500, 24); g.fillText(q.gold ? 'Oro tokenizado: 1 token = 1 onza. JM Cambios es un comerciante independiente, no es Paxos ni Tether.' : q.btc ? 'El precio de Bitcoin sube y baja. JM Cambios es un comerciante independiente.' : 'JM Cambios es un comerciante independiente, no es Binance.', 84, 968, 912);
   }
   g.fillStyle = '#4A1259'; g.beginPath(); g.roundRect(80, 1096, 920, 116, 28); g.fill();
   g.fillStyle = '#FFFFFF'; g.textAlign = 'center'; g.font = F(700, 42); g.fillText('Cotiza tú también en jmcambios.cl', 540, 1168);
@@ -651,6 +655,23 @@ async function loadGold() {
       buyRate: Number.isFinite(buy) && buy > 0 ? buy.toFixed(2) : '' });
   }
 }
+// Bitcoin (Chile y Colombia): precio de CoinGecko en pesos ± las ganancias del panel.
+async function loadBtc() {
+  const ids = BTC_ROUTES.map((r) => r.id);
+  data.routes = data.routes.filter((x) => !ids.includes(x.id));
+  if (!data?.btc) return;
+  const list = BTC_ROUTES.filter((r) => data.btc[r.from.toLowerCase()]);
+  if (!list.length) return;
+  let g = null;
+  try { const res = await fetch(GOLD_URL, { cache: 'no-store' }); g = res.ok ? parseGold(await res.text()) : null; } catch { g = null; }
+  for (const r of list) {
+    const ref = g?.BTC?.[ORIG[r.from].cur];
+    const price = ref ? ref * (1 + Number(data.btc.margin_pct) / 100) : NaN;
+    const buy = ref ? ref * (1 - Number(data.btc.buy_margin_pct) / 100) : NaN;
+    data.routes.push({ id: r.id, status: Number.isFinite(price) ? 'on' : 'ask', rate: Number.isFinite(price) ? price.toFixed(0) : '',
+      buyRate: Number.isFinite(buy) && buy > 0 ? buy.toFixed(0) : '' });
+  }
+}
 async function loadBrl() {
   const r = data?.routes.find((x) => x.id === 'cl-br' && x.auto);
   if (!r) return;
@@ -668,7 +689,7 @@ async function load() {
   } catch {
     if (!data) { $('error').hidden = false; $('error').textContent = 'No pudimos cargar las tasas. Revisa tu conexión o escríbenos por WhatsApp.'; data = { routes: [], bcv: null, bcv_eur: null }; }
   }
-  await Promise.all([loadUsdt(), loadUsdtCo(), loadUsdtBr(), loadGold(), loadBrl(), loadCoCl()]);
+  await Promise.all([loadUsdt(), loadUsdtCo(), loadUsdtBr(), loadGold(), loadBtc(), loadBrl(), loadCoCl()]);
   // Botón de JM Rewards: solo aparece si se activó en el panel.
   $('jmr').hidden = !data.rewards?.url;
   if (data.rewards?.url) $('jmr').href = data.rewards.url;

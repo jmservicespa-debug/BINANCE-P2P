@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=35';
-import { esc, flag, flags } from './ui.js?v=35';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef } from './criptoya.js?v=35';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=36';
+import { esc, flag, flags } from './ui.js?v=36';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef } from './criptoya.js?v=36';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -18,7 +18,7 @@ async function api(path, opts = {}) {
 
 function showEditor(on) {
   $('login').hidden = on;
-  ['power', 'mkt', 'editor', 'usdt', 'usdtco', 'usdtbr', 'oro', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  ['power', 'mkt', 'editor', 'usdt', 'usdtco', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
 }
 
 async function start() {
@@ -35,6 +35,7 @@ async function start() {
   loadUsdtCo();
   loadUsdtBr();
   loadGoldCfg();
+  loadBtcCfg();
   loadRewards();
   loadStats();
   renderSelf();
@@ -636,6 +637,34 @@ async function saveGold() {
 }
 $('go-margin').oninput = goCalc; $('go-buy').oninput = goCalc;
 $('go-save').onclick = saveGold; $('go-cl').onchange = saveGold; $('go-co').onchange = saveGold;
+
+// ------------------------------------------------------------------ Bitcoin (Chile y Colombia)
+
+let btRef = null;
+function btCalc() {
+  const m = pctIn('bt-margin'), b = pctIn('bt-buy');
+  if (!btRef || !(m >= 0 && m <= 50 && b >= 0 && b <= 50)) { $('bt-prices').textContent = btRef ? 'Revisa las ganancias (0 a 50 %).' : 'No se pudo leer CoinGecko ahora: el cotizador mostrará "Mercado inestable".'; return; }
+  $('bt-prices').innerHTML = ['CLP', 'COP'].map((c) => btRef[c]
+    ? `<div><b>BTC</b> en ${c}: vendes a <b class="num">${fmt(btRef[c] * (1 + m / 100), 0)}</b> · compras a <b class="num">${fmt(btRef[c] * (1 - b / 100), 0)}</b></div>` : '').join('');
+}
+async function loadBtcCfg() {
+  const { status, body } = await api('/api/btc');
+  if (status !== 200) return;
+  $('bt-margin').value = body.margin_pct; $('bt-buy').value = body.buy_margin_pct; $('bt-cl').checked = !!body.cl; $('bt-co').checked = !!body.co;
+  try { const res = await fetch(GOLD_URL, { cache: 'no-store' }); btRef = res.ok ? parseGold(await res.text())?.BTC ?? null : null; } catch { btRef = null; }
+  $('bt-ref').textContent = btRef ? `${fmt(btRef.CLP, 0)} CLP · ${fmt(btRef.COP, 0)} COP (CoinGecko)` : '—';
+  btCalc();
+}
+async function saveBtc() {
+  const msg = $('bt-msg');
+  const { status, body } = await api('/api/btc', { method: 'PUT', body: JSON.stringify({ margin_pct: $('bt-margin').value, buy_margin_pct: $('bt-buy').value, cl: $('bt-cl').checked, co: $('bt-co').checked }) });
+  msg.hidden = false;
+  if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
+  const on = [body.cl && 'Chile', body.co && 'Colombia'].filter(Boolean);
+  msg.className = 'msg'; msg.textContent = on.length ? `Guardado: los clientes ya ven Bitcoin desde ${on.join(' y ')}.` : 'Guardado (Bitcoin apagado en el cotizador).';
+}
+$('bt-margin').oninput = btCalc; $('bt-buy').oninput = btCalc;
+$('bt-save').onclick = saveBtc; $('bt-cl').onchange = saveBtc; $('bt-co').onchange = saveBtc;
 
 // ------------------------------------------------------------------ JM Rewards: botón en el cotizador (parte apagado)
 

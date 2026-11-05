@@ -617,3 +617,4 @@ body.tema-fintech .dest-links .fl .flag { width: 40px; height: 40px; box-shadow:
 .tabs.kind { margin-bottom: -2px }
 .tabs.kind button { font-size: 15px; padding: 11px 6px }
 body.tema-fintech .tabs.kind button[aria-pressed="true"] { background: var(--brand); color: #fff; box-shadow: none }
+#bt-prices { display: grid; gap: 6px; font-size: 13.5px } #bt-prices b { font-size: 14.5px } #bt-ref { font-size: 15px }
