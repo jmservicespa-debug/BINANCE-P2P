@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=47">
+<link rel="stylesheet" href="/css/estilo.css?v=48">
 </head>
 <body class="tema-flyer tema-fintech">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -168,17 +168,17 @@
     <div class="prods">
       <a href="https://wa.me/56933529706?text=Hola%2C%20quiero%20comprar%20USDT" target="_blank" rel="noopener"><span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15 9.5c-.5-1-1.6-1.5-3-1.5-1.7 0-3 .8-3 2s1.3 1.7 3 2 3 .8 3 2-1.3 2-3 2c-1.4 0-2.5-.5-3-1.5M12 6v12"/></svg></span><b>USDT y USDC</b><small>dólar digital</small></a>
       <a href="https://wa.me/56933529706?text=Hola%2C%20quiero%20comprar%20d%C3%B3lares%20%28Zelle%2C%20Binance%2C%20Zinli%2C%20Wenia%E2%80%A6%29" target="_blank" rel="noopener"><span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 21h18"/></svg></span><b>Dólares</b><small>Zelle, Binance, Zinli, Wenia…</small></a>
-      <a href="https://wa.me/56933529706?text=Hola%2C%20quiero%20comprar%20Bitcoin" target="_blank" rel="noopener"><span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 7.5v9M9.5 8h4a2 2 0 0 1 0 4h-4m0 0h4.5a2 2 0 0 1 0 4H9.5M11 6v2M13 6v2M11 16v2M13 16v2"/></svg></span><b>Bitcoin</b><small>directo a tu wallet</small></a>
-      <a href="https://wa.me/56933529706?text=Hola%2C%20quiero%20informaci%C3%B3n%20del%20oro%20tokenizado" target="_blank" rel="noopener"><span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9h10l3 9H4z"/><path d="M9 9l1-3h4l1 3"/></svg></span><b>Oro tokenizado</b><small>(digital) · próximamente</small></a>
+      <a data-only="btc" hidden href="https://wa.me/56933529706?text=Hola%2C%20quiero%20comprar%20Bitcoin" target="_blank" rel="noopener"><span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 7.5v9M9.5 8h4a2 2 0 0 1 0 4h-4m0 0h4.5a2 2 0 0 1 0 4H9.5M11 6v2M13 6v2M11 16v2M13 16v2"/></svg></span><b>Bitcoin</b><small>directo a tu wallet</small></a>
+      <a data-only="gold" hidden href="https://wa.me/56933529706?text=Hola%2C%20quiero%20informaci%C3%B3n%20del%20oro%20tokenizado" target="_blank" rel="noopener"><span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9h10l3 9H4z"/><path d="M9 9l1-3h4l1 3"/></svg></span><b>Oro tokenizado</b><small>XAUt, desde $30.000</small></a>
     </div>
   </section>
 
   <section class="card info band faq" aria-labelledby="h-faq">
     <span class="kick">AYUDA</span>
     <h2 id="h-faq">Preguntas frecuentes</h2>
-    <details><summary>¿Qué es el oro tokenizado?</summary><p>Es oro físico representado en un token digital: cada XAUt (Tether Gold) equivale a 1 onza troy de oro guardada en bóveda por Tether. Puedes comprar fracciones desde $30.000 CLP o $100.000 COP, guardarlo en tu wallet y venderlo cuando quieras. Su precio sube y baja con el del oro.</p></details>
-    <details><summary>¿Qué wallet necesito para oro o Bitcoin?</summary><p>Para el oro (XAUt), una wallet de la red Solana, por ejemplo Phantom. Para Bitcoin, una wallet Lightning, por ejemplo Phoenix. Si nunca has usado una, escríbenos y te ayudamos a crearla paso a paso. Nunca te pediremos tus palabras secretas ni claves.</p></details>
-    <details><summary>¿Puedo vender después mi oro o mi Bitcoin?</summary><p>Sí. En la pestaña "USDT, oro y Bitcoin" eliges Vender, ves cuánto recibes en pesos y nos escribes por WhatsApp. Nos envías los tokens por la red indicada y te pagamos por transferencia.</p></details>
+    <details data-only="gold" hidden><summary>¿Qué es el oro tokenizado?</summary><p>Es oro físico representado en un token digital: cada XAUt (Tether Gold) equivale a 1 onza troy de oro guardada en bóveda por Tether. Puedes comprar fracciones desde $30.000 CLP o $100.000 COP, guardarlo en tu wallet y venderlo cuando quieras. Su precio sube y baja con el del oro.</p></details>
+    <details data-only="gold btc" hidden><summary>¿Qué wallet necesito para oro o Bitcoin?</summary><p>Para el oro (XAUt), una wallet de la red Solana, por ejemplo Phantom. Para Bitcoin, una wallet Lightning, por ejemplo Phoenix. Si nunca has usado una, escríbenos y te ayudamos a crearla paso a paso. Nunca te pediremos tus palabras secretas ni claves.</p></details>
+    <details data-only="gold btc" hidden><summary>¿Puedo vender después mi oro o mi Bitcoin?</summary><p>Sí. En la pestaña "USDT, oro y Bitcoin" eliges Vender, ves cuánto recibes en pesos y nos escribes por WhatsApp. Nos envías los tokens por la red indicada y te pagamos por transferencia.</p></details>
     <details><summary>¿Cuánto demora mi envío?</summary><p>La mayoría llega en minutos. A veces tarda más por horarios bancarios, feriados, bancos congestionados o datos incorrectos. Si hay demora, te avisamos.</p></details>
     <details><summary>¿Qué datos necesito para enviar?</summary><p>Para cuenta bancaria: nombre, banco y número de cuenta. Para billeteras o pagos instantáneos, el dato de cada país (por ejemplo pago móvil, Yape, Nequi, Pix o Zelle): mira los detalles en la página de cada país. Revísalos bien: un dato mal escrito puede devolver el envío.</p></details>
     <details><summary>¿Cómo recibe mi familia?</summary><p>Según el país: transferencia bancaria o pago móvil en Venezuela; Nequi, Bancolombia, Daviplata, Davivienda o llaves Bre-B en Colombia; Pix en Brasil; Zelle en EE. UU., entre otros. Te confirmamos las opciones por WhatsApp antes de enviar.</p></details>
@@ -207,7 +207,7 @@
 </main>
 <footer class="pie"><b>JM Services SpA</b><span>RUT 77.906.482-4 · Las Condes, Santiago, Chile</span><a href="mailto:jmservicespa@gmail.com">jmservicespa@gmail.com</a><span>Atención de lunes a domingo, 10:00 a 22:30 h</span></footer>
 <a class="wa-float" href="https://wa.me/56933529706?text=Hola%2C%20quiero%20cotizar%20un%20env%C3%ADo" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.6 14.1c-.2.7-1.4 1.4-2 1.4-.5 0-1.2.3-4-.8-3.3-1.4-5.4-4.8-5.6-5-.2-.2-1.3-1.8-1.3-3.4s.8-2.4 1.1-2.8c.3-.3.6-.4.8-.4h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2.1.4 0 .5l-.4.6-.4.4c-.1.2-.2.3 0 .6.2.3.8 1.3 1.7 2 1.1.9 2 1.2 2.3 1.4.3.1.5.1.6-.1l.8-1c.2-.3.4-.2.6-.1l1.8.9c.3.1.4.2.5.3.1.2.1.8-.2 1.5z"/></svg></a>
-<script type="module" src="/js/info.js?v=47"></script>
-<script type="module" src="/js/cotizador.js?v=47"></script>
+<script type="module" src="/js/info.js?v=48"></script>
+<script type="module" src="/js/cotizador.js?v=48"></script>
 </body>
 </html>

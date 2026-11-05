@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=47';
-import { setRewardsNav } from './rewards-nav.js?v=47';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=47';
-import { esc, flag, flags } from './ui.js?v=47';
+import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=48';
+import { setRewardsNav } from './rewards-nav.js?v=48';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=48';
+import { esc, flag, flags } from './ui.js?v=48';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -578,6 +578,10 @@ function render() {
   ['from-q', 'origins', 'to-q', 'dests', 'other', 'quote', 'soon'].forEach((id) => { if (off) $(id).hidden = true; });
   $('from-q').hidden = off; $('origins').hidden = off;
   if (off) { $('wa').hidden = false; $('dest-note').textContent = ''; $('wa').innerHTML = waButtons('Hola, quiero cotizar un envío. ¿Qué tasas tienen hoy?'); return; }
+  // Tarjetas y preguntas de oro/Bitcoin: solo si quien mira puede cotizarlos (público, o con el enlace privado).
+  { const all = ['CL', 'CO'].flatMap((o) => activeRoutes(o, 'asset'));
+    const vis = { gold: all.some((r) => r.gold), btc: all.some((r) => r.btc) };
+    document.querySelectorAll('[data-only]').forEach((e) => { e.hidden = !e.dataset.only.split(' ').some((k) => vis[k]); }); }
   // La pestaña "USDT, oro y Bitcoin" solo aparece si hay algo encendido en el panel.
   $('kind').hidden = !assetOrigins().length;
   { const k = assetKinds(); const t = listEs(k); $('kind').querySelector('[data-k="asset"]').textContent = t ? t.charAt(0).toUpperCase() + t.slice(1) : 'USDT'; }
