@@ -1,7 +1,7 @@
-import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=28';
-import { setRewardsNav } from './rewards-nav.js?v=28';
-import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=28';
-import { esc, flag, flags } from './ui.js?v=28';
+import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=29';
+import { setRewardsNav } from './rewards-nav.js?v=29';
+import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=29';
+import { esc, flag, flags } from './ui.js?v=29';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -210,7 +210,7 @@ function calc() {
   $('wa').innerHTML = waButtons(text);
   lastQuote = ok ? { from: [r.from], fromLabel: `Envías desde ${o.name}`, fromAmt: `${fmt(send, 0)} ${o.cur}`,
     to: r.to, toLabel: `Recibe en ${r.name}`, toAmt: `${fmt(get, r.dec)} ${r.cur}`, rate,
-    text: `✅ Así de fácil envío a ${r.name} con JM Cambios: comisión 0 % y llega en minutos. Cotiza el tuyo 👉 https://jmcambios.cl` } : null;
+    text: shareText(r, o, send, get, mode === 'eur' && eurOk ? ['EUR', eur, 'euro BCV'] : bcvOk ? ['USD', bcv, 'dólar BCV'] : null) } : null;
   $('share').hidden = !ok;
 }
 
@@ -322,7 +322,11 @@ function usdtQuote(r) {
   // Compartir USDT: solo montos, sin mostrar el precio por USDT.
   uQuote = good ? { from: [buy ? r.from : 'USDT'], fromLabel: buy ? 'Pagas' : 'Entregas', fromAmt: buy ? `${clpFmt(clp)} ${cur}` : `${usdtFmt(usdt)} USDT`,
     to: [buy ? 'USDT' : r.from], toLabel: 'Recibes', toAmt: buy ? `${usdtFmt(usdt)} USDT` : `${clpFmt(clp)} ${cur}`, rate: null,
-    text: `✅ Así de fácil ${buy ? 'compro' : 'vendo'} USDT con JM Cambios: comisión 0 % y en minutos. Cotiza el tuyo 👉 https://jmcambios.cl` } : null;
+    text: [`✅ Cotización JM Cambios · ${buy ? 'Compra' : 'Venta'} de USDT`,
+      `Pagas: ${buy ? `${clpFmt(clp)} ${cur}` : `${usdtFmt(usdt)} USDT`}`,
+      `Recibes: ${buy ? `${usdtFmt(usdt)} USDT` : `${clpFmt(clp)} ${cur}`}`,
+      'Comisión 0 % · Monto referencial, se confirma por WhatsApp.',
+      'Cotiza tu operación 👉 https://jmcambios.cl'].join('\n') } : null;
   dst.value = good ? (srcIsUsdt ? clpFmt(clp) : usdtFmt(usdt)) : '';
   const min = buy ? r.min : r.buyMin;
   if (good && clp < min) {
@@ -385,6 +389,17 @@ function openNow() {
   const parts = new Intl.DateTimeFormat('es-CL', { timeZone: 'America/Santiago', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
   const h = Number(parts.find((p) => p.type === 'hour')?.value), m = Number(parts.find((p) => p.type === 'minute')?.value);
   return h * 60 + m >= 600 && h * 60 + m < 1350;
+}
+
+// Texto que acompaña la imagen al compartir: los montos claros, en la moneda de cada uno.
+function shareText(r, o, send, get, bcvRef) {
+  const recv = r.cur === 'VES' ? `${fmt(get, 0)} Bs` : `${fmt(get, r.dec)} ${r.cur}`;
+  return [`✅ Cotización JM Cambios · Envío a ${r.name}`,
+    `Pagas: ${fmt(send, 0)} ${o.cur}`,
+    `Recibe: ${recv}`,
+    ...(bcvRef ? [`Equivale a: ${fmt(get / bcvRef[1], 2)} ${bcvRef[0]} (${bcvRef[2]})`] : []),
+    'Comisión 0 % · Tasa referencial, se confirma por WhatsApp.',
+    'Cotiza tu envío 👉 https://jmcambios.cl'].join('\n');
 }
 
 // ------------------------------------------------------------------ compartir la cotización como imagen
