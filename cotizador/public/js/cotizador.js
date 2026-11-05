@@ -1,7 +1,7 @@
-import { ADVISORS, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=34';
-import { setRewardsNav } from './rewards-nav.js?v=34';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef } from './criptoya.js?v=34';
-import { esc, flag, flags } from './ui.js?v=34';
+import { ADVISORS, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=35';
+import { setRewardsNav } from './rewards-nav.js?v=35';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef } from './criptoya.js?v=35';
+import { esc, flag, flags } from './ui.js?v=35';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -13,6 +13,8 @@ if (!ADVISORS[adv]) adv = null;
 try { localStorage.removeItem('jmc_asesor'); } catch { /* lo recordado por la versión anterior ya no se usa */ }
 
 let data = null, origin = 'CL', route = null, mode = 'send';
+// Dos secciones: "Envíos" (remesas) y "Cripto y oro" (comprar o vender USDT y oro tokenizado). ?k=cripto abre la segunda.
+let kind = new URLSearchParams(location.search).get('k') === 'cripto' ? 'asset' : 'send';
 // Enlace directo a una ruta (ej. ?r=cl-pe desde la página de Perú): abre el cotizador en ese país.
 { const want = ROUTES.find((x) => x.id === new URLSearchParams(location.search).get('r')); if (want) { origin = want.from; route = want.id; } }
 const OTHER = 'OTHER';  // origen u otro destino fuera de las rutas principales: tasa por WhatsApp
@@ -22,7 +24,7 @@ const LONG_NAME = { CLP: 'pesos chilenos', COP: 'pesos colombianos' };
 const bcvFmt = (v) => fmt(v, 2);
 const fmt2 = (v) => fmt(v, Number.isInteger(v) ? 0 : 2);  // 100 → "100"; 100,5 → "100,50"
 // Orígenes que se muestran con su bandera y el aviso "Próximamente", con los destinos que vendrán.
-const SOON = { BR: { name: 'Brasil', to: [['PE', 'Perú'], ['CO', 'Colombia'], ['VE', 'Venezuela'], ['USDT', 'USDT (dólar Binance)']] } };
+const SOON = { BR: { name: 'Brasil', to: [['PE', 'Perú'], ['CO', 'Colombia'], ['VE', 'Venezuela']] } };
 const GLOBE = '<svg class="flag" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--box)" stroke="var(--box-line)"/><path d="M1 12h22M12 1c3 3.2 4.5 7 4.5 11S15 19.8 12 23c-3-3.2-4.5-7-4.5-11S9 4.2 12 1z" fill="none" stroke="var(--accent)" stroke-width="1.4"/></svg>';
 const rateOf = (id) => data?.routes.find((r) => r.id === id);
 const statusOf = (id) => rateOf(id)?.status ?? (rateOf(id)?.active ? 'on' : 'off');
@@ -33,16 +35,35 @@ const ORIG = { ...ORIGINS, BR: { name: 'Brasil', cur: 'BRL' } };
 // Marca de Binance junto a "dólar Binance" (la gente conoce el USDT así). JM Cambios es comerciante independiente.
 const BNB = '<svg class="bnb" viewBox="0 0 126 126" aria-hidden="true"><g fill="#F0B90B"><path d="M63 46 80 63 63 80 46 63z"/>'
   + '<path d="M28 54 37 63 28 72 19 63zM98 54 107 63 98 72 89 63z"/><path d="M63 9 96 42 84 54 63 33 42 54 30 42z"/><path d="M63 117 30 84 42 72 63 93 84 72 96 84z"/></g></svg>';
-const activeRoutes = (o) => ALL.filter((r) => r.from === o && ['on', 'ask'].includes(statusOf(r.id)));
-const isSoon = (o) => Boolean(SOON[o]) && !(data && activeRoutes(o).length);
+const isAsset = (r) => r.cur === 'USDT' || Boolean(r.gold);
+const activeRoutes = (o, k = kind) => ALL.filter((r) => r.from === o && isAsset(r) === (k === 'asset') && ['on', 'ask'].includes(statusOf(r.id)));
+const isSoon = (o) => kind === 'send' && Boolean(SOON[o]) && !(data && activeRoutes(o).length);
+// Países desde donde se puede pagar cripto u oro (solo los que tienen algo encendido en el panel).
+const assetOrigins = () => ['CL', 'CO', 'BR'].filter((o) => activeRoutes(o, 'asset').length);
+function setKind(k) {
+  kind = k;
+  document.querySelectorAll('#kind button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.k === k)));
+  if (k === 'asset' && !assetOrigins().includes(origin)) origin = assetOrigins()[0] || 'CL';
+  if (k === 'send' && !ORIGINS[origin]) origin = 'CL';
+  route = activeRoutes(origin)[0]?.id ?? (k === 'send' ? OTHER : null);
+  ['amount', 'u-top', 'u-bot'].forEach((id) => { $(id).value = ''; });
+}
+document.querySelectorAll('#kind button').forEach((b) => b.onclick = () => { if (b.dataset.k !== kind) { setKind(b.dataset.k); render(); } });
 
 function renderOrigins() {
-  $('origins').innerHTML = Object.entries(ORIGINS).map(([k, o]) =>
+  const asset = kind === 'asset';
+  $('from-q').innerHTML = `<b>1</b> ${asset ? '¿Con qué moneda pagas o recibes?' : '¿Desde dónde envías?'}`;
+  $('lead').innerHTML = asset
+    ? 'Compra o vende <b>USDT</b> y <b>oro tokenizado</b> con pesos chilenos, pesos colombianos o reales. Lo recibes directo en tu wallet.'
+    : 'Envía dinero desde Chile, Colombia, Europa, Reino Unido, México y muchos países más. ¿No encuentras tu país? Elige <b>Otro país</b> y te damos la tasa por WhatsApp.';
+  if (asset) {
+    $('origins').innerHTML = assetOrigins().map((k) => `<button data-o="${k}" aria-pressed="${k === origin}">${flag(k)} ${esc(ORIG[k].name)}</button>`).join('');
+  } else $('origins').innerHTML = Object.entries(ORIGINS).map(([k, o]) =>
     `<button data-o="${k}" aria-pressed="${k === origin}">${flag(k)} ${esc(o.name)}</button>`).join('')
     + Object.entries(SOON).map(([k, s]) => `<button data-o="${k}" aria-pressed="${k === origin}">${flag(k)} ${esc(s.name)}</button>`).join('')
     + `<button data-o="${OTHER}" aria-pressed="${origin === OTHER}">${GLOBE} Otro país</button>`;
   $('origins').querySelectorAll('button').forEach((b) => b.onclick = () => {
-    origin = b.dataset.o; route = origin === OTHER || isSoon(origin) ? null : activeRoutes(origin)[0]?.id ?? OTHER;
+    origin = b.dataset.o; route = origin === OTHER || isSoon(origin) ? null : activeRoutes(origin)[0]?.id ?? (kind === 'asset' ? null : OTHER);
     ['o-to', 'o-amount', ...(origin === OTHER ? ['o-from'] : [])].forEach((id) => { $(id).value = ''; });
     $('amount').value = '';
     render();
@@ -52,6 +73,7 @@ function renderOrigins() {
 function renderDests() {
   $('dests').hidden = origin === OTHER || isSoon(origin);
   $('to-q').hidden = $('dests').hidden;
+  $('to-q').innerHTML = `<b>2</b> ${kind === 'asset' ? '¿Qué quieres comprar o vender?' : '¿A qué país envías?'}`;
   if ($('dests').hidden) return;
   // Oro: un solo botón "Oro tokenizado"; el token (XAUt o PAXG) se elige después.
   const all = activeRoutes(origin), golds = all.filter((r) => r.gold);
@@ -59,7 +81,7 @@ function renderDests() {
   const list = all.filter((r) => !r.gold || r === goldPick);
   $('dests').innerHTML = list.map((r) => r.gold
     ? `<button data-r="${r.id}" aria-pressed="${golds.some((g) => g.id === route)}">${flag('XAUT')}<span>Oro tokenizado<small>XAUt o PAXG · 1 = 1 onza</small></span></button>` : `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${r.cur === 'USDT' ? BNB : ''}${esc(r.unit)} (${esc(r.sym || r.cur)})${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`).join('')
-    + `<button data-r="${OTHER}" aria-pressed="${route === OTHER}">${GLOBE}<span>Otro destino<small>Tasa por WhatsApp</small></span></button>`;
+    + (kind === 'asset' ? '' : `<button data-r="${OTHER}" aria-pressed="${route === OTHER}">${GLOBE}<span>Otro destino<small>Tasa por WhatsApp</small></span></button>`);
   $('dests').querySelectorAll('button').forEach((b) => b.onclick = () => {
     if (mode !== 'send' && b.dataset.r !== route) $('amount').value = '';  // la casilla está en la moneda del destino
     route = b.dataset.r; render();
@@ -529,6 +551,9 @@ function render() {
   ['from-q', 'origins', 'to-q', 'dests', 'other', 'quote', 'soon'].forEach((id) => { if (off) $(id).hidden = true; });
   $('from-q').hidden = off; $('origins').hidden = off;
   if (off) { $('wa').hidden = false; $('dest-note').textContent = ''; $('wa').innerHTML = waButtons('Hola, quiero cotizar un envío. ¿Qué tasas tienen hoy?'); return; }
+  // La pestaña "Cripto y oro" solo aparece si hay algo encendido en el panel.
+  $('kind').hidden = !assetOrigins().length;
+  if (kind === 'asset' && !assetOrigins().length) setKind('send');
   renderOrigins(); renderDests(); calc();
   paisBg();
 }
@@ -651,6 +676,7 @@ async function load() {
   $('updated').textContent = data.paused ? 'Tasas en actualización' : data.updated
     ? 'Tasas del ' + new Date(data.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
     : 'Tasas aún no publicadas';
+  if (kind === 'asset' && assetOrigins().length && !assetOrigins().includes(origin)) origin = assetOrigins()[0];
   if (origin !== OTHER && !isSoon(origin) && route !== OTHER && (!route || !activeRoutes(origin).some((r) => r.id === route))) route = activeRoutes(origin)[0]?.id ?? null;
   render();
 }

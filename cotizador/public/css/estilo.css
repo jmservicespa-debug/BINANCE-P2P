@@ -613,3 +613,7 @@ body.tema-fintech .dest-links .fl .flag { width: 40px; height: 40px; box-shadow:
 .g-tok .tok button { display: grid; gap: 1px; text-align: left; padding: 10px 12px }
 .g-tok .tok button b { font-size: 15px } .g-tok .tok button small { font-size: 12px; font-weight: 500; color: var(--muted) }
 .g-tok .step { margin: 0 }
+/* Secciones del cotizador: Envíos · Cripto y oro */
+.tabs.kind { margin-bottom: -2px }
+.tabs.kind button { font-size: 15px; padding: 11px 6px }
+body.tema-fintech .tabs.kind button[aria-pressed="true"] { background: var(--brand); color: #fff; box-shadow: none }
