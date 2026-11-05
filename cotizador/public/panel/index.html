@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=45">
+<link rel="stylesheet" href="/css/estilo.css?v=46">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -154,7 +154,7 @@
   <section class="card" id="oro" hidden aria-labelledby="h-oro">
     <div>
       <h2 id="h-oro">Oro tokenizado (PAXG y XAUt)</h2>
-      <span class="muted">Comprar y vender desde Chile (mínimo 10.000 CLP) y Colombia (mínimo 30.000 COP). Precio = PAXG/USDT de Binance (1 onza, sirve para XAUt y PAXG) × USDT en pesos (Binance P2P vía CriptoYa, Chile y Colombia) ± tu ganancia. PAXG se envía solo por Ethereum (ERC-20) y XAUt solo por Solana.</span>
+      <span class="muted">Comprar y vender desde Chile (mínimo 30.000 CLP) y Colombia (mínimo 100.000 COP). Precio = PAXG/USDT (1 onza, sirve para XAUt y PAXG) × USDT en pesos (Binance P2P vía CriptoYa, Chile y Colombia) ± tu ganancia. PAXG se envía solo por Ethereum (ERC-20) y XAUt solo por Solana.</span>
     </div>
     <div class="usdt-ref"><span class="muted">Referencia (1 onza)</span><b class="num" id="go-ref">—</b></div>
     <div class="row2">
@@ -173,6 +173,9 @@
         <span class="amount"><input id="go-fee-p" inputmode="decimal" autocomplete="off"></span></label>
     </div>
     <span class="muted">Marcado: la cotización ya muestra los tokens que llegan después de pagar la red (ej. US$1). Sin marcar: la comisión la asumes tú.</span>
+    <label class="switch"><input type="checkbox" id="go-xaut"> <b>Ofrecer XAUt (Tether Gold · red Solana)</b></label>
+    <label class="switch"><input type="checkbox" id="go-paxg"> <b>Ofrecer PAXG (Pax Gold · red Ethereum)</b></label>
+    <span class="muted">Con un solo token encendido, el cliente no elige: ve directo ese token y su red.</span>
     <label class="switch"><input type="checkbox" id="go-cl"> <b>Oro activo en el cotizador desde Chile</b></label>
     <label class="switch"><input type="checkbox" id="go-co"> <b>Oro activo en el cotizador desde Colombia</b></label>
     <span class="muted">Marcado: los clientes ven "PAXG · oro" y "XAUt · oro" al elegir ese país. Sin marcar: no aparece.</span>
@@ -244,6 +247,6 @@
     <span class="muted">Cada enlace lleva el WhatsApp de esa persona. El enlace general muestra un solo botón sin nombre, a tu número.</span>
   </section>
 </main>
-<script type="module" src="/js/panel.js?v=45"></script>
+<script type="module" src="/js/panel.js?v=46"></script>
 </body>
 </html>

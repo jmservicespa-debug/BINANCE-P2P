@@ -83,7 +83,8 @@ const gold = (from, token, min) => ({ id: `${from.toLowerCase()}-${token.toLower
 const btc = (from, min) => ({ id: `${from.toLowerCase()}-btc`, from, to: ['BTC'], cur: 'BTC', sym: 'BTC', btc: true, name: 'Bitcoin',
   unit: 'BTC · red Lightning', op: 'div', dec: 8, min, buyMin: min, net: 'Lightning Network' });
 export const BTC_ROUTES = [btc('CL', 10000), btc('CO', 30000)];
-export const GOLD_ROUTES = [gold('CL', 'PAXG', 10000), gold('CL', 'XAUT', 10000), gold('CO', 'PAXG', 30000), gold('CO', 'XAUT', 30000)];
+// Mínimos más altos que Bitcoin para que la comisión de red pese poco: 30.000 CLP y 100.000 COP.
+export const GOLD_ROUTES = [gold('CL', 'XAUT', 30000), gold('CL', 'PAXG', 30000), gold('CO', 'XAUT', 100000), gold('CO', 'PAXG', 100000)];
 
 // USDT admite decimales: "100,5" o "100.5" = cien y medio; "1.000" o "1.000,25" = mil.
 export function usdtNum(v) {

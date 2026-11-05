@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=45';
-import { setRewardsNav } from './rewards-nav.js?v=45';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=45';
-import { esc, flag, flags } from './ui.js?v=45';
+import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=46';
+import { setRewardsNav } from './rewards-nav.js?v=46';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=46';
+import { esc, flag, flags } from './ui.js?v=46';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -88,7 +88,7 @@ function renderDests() {
   $('dests').innerHTML = list.map((r) => r.btc
     ? `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flag('BTC')}<span>Bitcoin<small>BTC · red Lightning${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`
     : r.gold
-    ? `<button data-r="${r.id}" aria-pressed="${golds.some((g) => g.id === route)}">${flag('XAUT')}<span>Oro tokenizado<small>XAUt o PAXG · 1 = 1 onza</small></span></button>` : `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${r.cur === 'USDT' ? BNB : ''}${esc(r.unit)} (${esc(r.sym || r.cur)})${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`).join('')
+    ? `<button data-r="${r.id}" aria-pressed="${golds.some((g) => g.id === route)}">${flag('XAUT')}<span>Oro tokenizado<small>${golds.length > 1 ? 'XAUt o PAXG' : `${r.sym} · red ${r.net.replace(' (ERC-20)', '')}`} · 1 = 1 onza</small></span></button>` : `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${r.cur === 'USDT' ? BNB : ''}${esc(r.unit)} (${esc(r.sym || r.cur)})${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`).join('')
     + (kind === 'asset' ? '' : `<button data-r="${OTHER}" aria-pressed="${route === OTHER}">${GLOBE}<span>Otro destino<small>Tasa por WhatsApp</small></span></button>`);
   $('dests').querySelectorAll('button').forEach((b) => b.onclick = () => {
     if (mode !== 'send' && b.dataset.r !== route) $('amount').value = '';  // la casilla está en la moneda del destino
@@ -326,7 +326,8 @@ function usdtQuote(r) {
   const sellOk = Boolean(r.buyMin);  // Colombia (USDT): solo se le vende al cliente
   $('u-tabs').hidden = !sellOk;
   // Oro: el cliente elige qué token recibir (solo los que están activos en su país).
-  $('g-tok').hidden = !r.gold;
+  // Solo se elige token si hay más de uno encendido; con uno solo (ej. XAUt) va directo.
+  $('g-tok').hidden = !r.gold || activeRoutes(r.from).filter((x) => x.gold).length < 2;
   if (r.gold) $('g-tok').querySelectorAll('button').forEach((b) => {
     const id = `${r.from.toLowerCase()}-${b.dataset.tok.toLowerCase()}`;
     b.hidden = !activeRoutes(r.from).some((x) => x.id === id);
@@ -664,7 +665,8 @@ async function loadGold() {
   const ids = GOLD_ROUTES.map((r) => r.id);
   data.routes = data.routes.filter((x) => !ids.includes(x.id));
   if (!data?.gold) return;
-  const list = GOLD_ROUTES.filter((r) => data.gold[r.from.toLowerCase()]);
+  const toks = data.gold.tokens || ['XAUT', 'PAXG'];  // tokens encendidos en el panel
+  const list = GOLD_ROUTES.filter((r) => data.gold[r.from.toLowerCase()] && toks.includes(r.cur));
   if (!list.length) return;
   let g = null;
   g = await marketCoins();
