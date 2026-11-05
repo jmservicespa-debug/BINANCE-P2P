@@ -1,6 +1,7 @@
-import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=25';
-import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=25';
-import { esc, flag, flags } from './ui.js?v=25';
+import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=26';
+import { setRewardsNav } from './rewards-nav.js?v=26';
+import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=26';
+import { esc, flag, flags } from './ui.js?v=26';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -570,6 +571,7 @@ async function load() {
   // Botón de JM Rewards: solo aparece si se activó en el panel.
   $('jmr').hidden = !data.rewards?.url;
   if (data.rewards?.url) $('jmr').href = data.rewards.url;
+  setRewardsNav(data.rewards?.url);  // botón de la barra superior: "Entrar" cuando Rewards está publicado
   $('updated').textContent = data.paused ? 'Tasas en actualización' : data.updated
     ? 'Tasas del ' + new Date(data.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
     : 'Tasas aún no publicadas';

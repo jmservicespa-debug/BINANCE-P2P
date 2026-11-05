@@ -511,3 +511,7 @@ body.tema-fintech.panel #logout { background: #fff; border-radius: 10px; font-we
 body.tema-fintech .btn { border-radius: 12px; font-weight: 600 } body.tema-fintech .btn.ghost { background: #fff }
 body.tema-fintech .route input[type="text"] { border: 1px solid var(--line); background: #fff; color: var(--ink); font-weight: 700 }
 body.tema-fintech.panel .amount input { font-size: 20px }
+/* Botón JM Rewards publicado: "Entrar" */
+body.tema-fintech a.tb-rw { text-decoration: none }
+body.tema-fintech a.tb-rw:hover { border-color: var(--brand) }
+body.tema-fintech a.tb-rw em { background: var(--brand); color: #fff }

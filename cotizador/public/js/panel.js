@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=25';
-import { esc, flag, flags } from './ui.js?v=25';
-import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, usdtCopRef } from './criptoya.js?v=25';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=26';
+import { esc, flag, flags } from './ui.js?v=26';
+import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, usdtCopRef } from './criptoya.js?v=26';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
