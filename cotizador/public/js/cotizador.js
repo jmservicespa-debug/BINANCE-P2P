@@ -1,7 +1,7 @@
-import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=32';
-import { setRewardsNav } from './rewards-nav.js?v=32';
-import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=32';
-import { esc, flag, flags } from './ui.js?v=32';
+import { ADVISORS, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=33';
+import { setRewardsNav } from './rewards-nav.js?v=33';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef } from './criptoya.js?v=33';
+import { esc, flag, flags } from './ui.js?v=33';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -27,11 +27,14 @@ const GLOBE = '<svg class="flag" viewBox="0 0 24 24" aria-hidden="true"><circle 
 const rateOf = (id) => data?.routes.find((r) => r.id === id);
 const statusOf = (id) => rateOf(id)?.status ?? (rateOf(id)?.active ? 'on' : 'off');
 // Se muestran las rutas activas y las de mercado inestable (estas sin tasa: se pide por WhatsApp).
-const ALL = [...ROUTES, USDT_ROUTE, USDT_CO_ROUTE];
+const ALL = [...ROUTES, USDT_ROUTE, USDT_CO_ROUTE, USDT_BR_ROUTE, ...GOLD_ROUTES];
+// Brasil aparece como "Próximamente" hasta que se activa alguna de sus rutas (USDT desde Brasil) en el panel.
+const ORIG = { ...ORIGINS, BR: { name: 'Brasil', cur: 'BRL' } };
 // Marca de Binance junto a "dólar Binance" (la gente conoce el USDT así). JM Cambios es comerciante independiente.
 const BNB = '<svg class="bnb" viewBox="0 0 126 126" aria-hidden="true"><g fill="#F0B90B"><path d="M63 46 80 63 63 80 46 63z"/>'
   + '<path d="M28 54 37 63 28 72 19 63zM98 54 107 63 98 72 89 63z"/><path d="M63 9 96 42 84 54 63 33 42 54 30 42z"/><path d="M63 117 30 84 42 72 63 93 84 72 96 84z"/></g></svg>';
 const activeRoutes = (o) => ALL.filter((r) => r.from === o && ['on', 'ask'].includes(statusOf(r.id)));
+const isSoon = (o) => Boolean(SOON[o]) && !(data && activeRoutes(o).length);
 
 function renderOrigins() {
   $('origins').innerHTML = Object.entries(ORIGINS).map(([k, o]) =>
@@ -39,7 +42,7 @@ function renderOrigins() {
     + Object.entries(SOON).map(([k, s]) => `<button data-o="${k}" aria-pressed="${k === origin}">${flag(k)} ${esc(s.name)}</button>`).join('')
     + `<button data-o="${OTHER}" aria-pressed="${origin === OTHER}">${GLOBE} Otro país</button>`;
   $('origins').querySelectorAll('button').forEach((b) => b.onclick = () => {
-    origin = b.dataset.o; route = origin === OTHER || SOON[origin] ? null : activeRoutes(origin)[0]?.id ?? OTHER;
+    origin = b.dataset.o; route = origin === OTHER || isSoon(origin) ? null : activeRoutes(origin)[0]?.id ?? OTHER;
     ['o-to', 'o-amount', ...(origin === OTHER ? ['o-from'] : [])].forEach((id) => { $(id).value = ''; });
     $('amount').value = '';
     render();
@@ -47,11 +50,11 @@ function renderOrigins() {
 }
 
 function renderDests() {
-  $('dests').hidden = origin === OTHER || Boolean(SOON[origin]);
+  $('dests').hidden = origin === OTHER || isSoon(origin);
   $('to-q').hidden = $('dests').hidden;
   if ($('dests').hidden) return;
   const list = activeRoutes(origin);
-  $('dests').innerHTML = list.map((r) => `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${r.cur === 'USDT' ? BNB : ''}${esc(r.unit)} (${r.cur})${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`).join('')
+  $('dests').innerHTML = list.map((r) => `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${r.cur === 'USDT' ? BNB : ''}${esc(r.unit)} (${esc(r.sym || r.cur)})${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`).join('')
     + `<button data-r="${OTHER}" aria-pressed="${route === OTHER}">${GLOBE}<span>Otro destino<small>Tasa por WhatsApp</small></span></button>`;
   $('dests').querySelectorAll('button').forEach((b) => b.onclick = () => {
     if (mode !== 'send' && b.dataset.r !== route) $('amount').value = '';  // la casilla está en la moneda del destino
@@ -62,7 +65,7 @@ function renderDests() {
 // Otro país (origen) u otro destino: sin tasa publicada; el cliente la pide por WhatsApp.
 function otherQuote() {
   const fixed = origin !== OTHER;
-  if (fixed) $('o-from').value = ORIGINS[origin].name;
+  if (fixed) $('o-from').value = ORIG[origin].name;
   $('o-from').disabled = fixed;
   const from = $('o-from').value.trim(), to = $('o-to').value.trim(), amount = $('o-amount').value.trim();
   const text = `Hola, quiero enviar dinero${from ? ` desde ${from}` : ''}${to ? ` a ${to}` : ''}${amount ? `. Monto aproximado: ${amount}` : ''}. ¿Qué tasa tienen?`;
@@ -80,7 +83,7 @@ const TICK = {
 };
 function ticker() {
   const r = ALL.find((x) => x.id === route);
-  const countries = [...new Set([...(SOON[origin] ? [] : r?.to || []), origin])].filter((c) => TICK[c]);
+  const countries = [...new Set([...(isSoon(origin) ? [] : r?.to || []), origin])].filter((c) => TICK[c]);
   const items = countries.flatMap((c) => TICK[c]().filter(([, v]) => v > 0)
     .map(([name, v, unit, f]) => `<span class="tick">${flag(c)}${esc(name)} <b>${f(v)} ${unit}</b></span>`));
   $('ticker').hidden = !items.length;
@@ -106,7 +109,7 @@ function track(e, r) {
   try { if (e !== 'whatsapp') { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); } } catch { /* sin almacenamiento: se cuenta igual */ }
   fetch('/api/evento', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ e, r }), keepalive: true }).catch(() => {});
 }
-const currentRoute = () => (SOON[origin] ? null : origin === OTHER || route === OTHER ? 'otro' : route);
+const currentRoute = () => (isSoon(origin) ? null : origin === OTHER || route === OTHER ? 'otro' : route);
 let cotizaTimer = null;
 function maybeCotiza() {  // cuenta cuando el cliente deja escrito un monto (no cada tecla)
   clearTimeout(cotizaTimer);
@@ -119,7 +122,7 @@ function calc() {
   ticker();
   maybeCotiza();
   $('h-cot').textContent = 'Cotiza tu envío';
-  const soon = Boolean(SOON[origin]);
+  const soon = isSoon(origin);
   $('soon').hidden = !soon;
   $('wa').hidden = soon;
   if (soon) {
@@ -130,12 +133,12 @@ function calc() {
   $('quote').hidden = isOther;
   if (isOther) { otherQuote(); return; }
   const r = ALL.find((x) => x.id === route);
-  const o = ORIGINS[origin];
-  const isUsdt = r?.cur === 'USDT';
-  $('usdt-ui').hidden = !isUsdt;
-  $('std').hidden = isUsdt;
-  if (isUsdt) $('h-cot').textContent = 'USDT · dólar Binance';
-  if (isUsdt) { usdtQuote(r); return; }
+  const o = ORIG[origin];
+  const isAsset = r?.cur === 'USDT' || Boolean(r?.gold);  // USDT y oro tokenizado: comprar o vender
+  $('usdt-ui').hidden = !isAsset;
+  $('std').hidden = isAsset;
+  if (isAsset) $('h-cot').textContent = r.gold ? `Oro tokenizado · ${r.sym}` : 'USDT · dólar Binance';
+  if (isAsset) { usdtQuote(r); return; }
   if (!r) { $('r-get').hidden = true; $('r-free').hidden = true; $('r-break').hidden = true; $('share').hidden = true; $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
   // Opciones con la moneda, para que quede claro qué se escribe: "Pesos que envío" · "Bolívares que llegan".
   const [give, take] = curNames(r);
@@ -255,8 +258,8 @@ function unstable(r, o) {
 
 // Nombre de las monedas en palabras. Chile → Colombia: las dos serían "pesos", así que se dice cuál es cuál.
 function curNames(r) {
-  let [give, take] = [CUR_NAME[ORIGINS[r.from]?.cur] || 'monto', CUR_NAME[r.cur] || r.cur];
-  if (give === take && LONG_NAME[ORIGINS[r.from]?.cur]) [give, take] = [LONG_NAME[ORIGINS[r.from].cur], LONG_NAME[r.cur]];
+  let [give, take] = [CUR_NAME[ORIG[r.from]?.cur] || 'monto', CUR_NAME[r.cur] || r.cur];
+  if (give === take && LONG_NAME[ORIG[r.from]?.cur]) [give, take] = [LONG_NAME[ORIG[r.from].cur], LONG_NAME[r.cur]];
   return [give, take];
 }
 const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
@@ -282,62 +285,75 @@ const usdtFmt = (v) => fmt(v, 2), clpFmt = (v) => fmt(v, 0);
 let uQuote = null;
 function usdtQuote(r) {
   uQuote = null; $('u-share').hidden = true;
-  const cur = ORIGINS[r.from].cur;  // pesos chilenos o colombianos
-  const sellOk = Boolean(r.buyMin);  // Colombia: solo se le vende USDT al cliente
+  const cur = ORIG[r.from].cur;  // pesos chilenos, colombianos o reales
+  const sym = r.sym || 'USDT', dec = r.dec ?? 2, k = 10 ** dec;
+  const af = (v) => fmt(v, dec);  // cantidad de USDT u oro
+  const pf = (v) => fmt(v, v >= 1000 ? 0 : 2);  // precio por unidad
+  const sellOk = Boolean(r.buyMin);  // Colombia (USDT): solo se le vende al cliente
   $('u-tabs').hidden = !sellOk;
   if (!sellOk) side = 'buy';
   const buy = side === 'buy';
+  $('u-tabs').querySelector('[data-side="buy"]').textContent = `Comprar ${sym}`;
+  $('u-tabs').querySelector('[data-side="sell"]').textContent = `Vender ${sym}`;
   const price = Number(buy ? rateOf(r.id)?.rate : rateOf(r.id)?.buyRate);
   const ok = statusOf(r.id) === 'on' && price > 0;
   // Casilla de arriba: lo que entrega el cliente; abajo: lo que recibe.
+  const pesoEx = cur === 'COP' ? '200.000' : cur === 'BRL' ? '500' : '100.000', assetEx = r.gold ? '0,01' : '100';
   $('u-top-l').textContent = buy ? 'Pagas' : 'Entregas';
-  $('u-top-c').textContent = buy ? cur : 'USDT';
+  $('u-top-c').textContent = buy ? cur : sym;
   $('u-bot-l').textContent = 'Recibes';
-  $('u-bot-c').textContent = buy ? 'USDT' : cur;
-  $('u-top').placeholder = buy ? `Ej. ${cur === 'COP' ? '200.000' : '100.000'}` : 'Ej. 100';
-  $('u-bot').placeholder = buy ? 'Ej. 100' : `Ej. ${cur === 'COP' ? '200.000' : '100.000'}`;
-  $('dest-note').textContent = buy ? r.note : 'Envías los USDT a la wallet o cuenta de Binance que te indiquemos (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente, no es Binance.';
+  $('u-bot-c').textContent = buy ? sym : cur;
+  $('u-top').placeholder = `Ej. ${buy ? pesoEx : assetEx}`;
+  $('u-bot').placeholder = `Ej. ${buy ? assetEx : pesoEx}`;
+  const issuer = r.cur === 'PAXG' ? 'Paxos' : 'Tether';
+  $('dest-note').textContent = r.gold
+    ? `${buy ? `Enviamos ${sym} solo por la red ${r.net}.` : `Envíanos tus ${sym} solo por la red ${r.net}.`} Verifica que tu wallet use esa red antes de ${buy ? 'comprar' : 'vender'}. El precio del oro sube y baja. JM Cambios es un comerciante independiente, no es ${issuer}.`
+    : buy ? r.note : 'Envías los USDT a la wallet o cuenta de Binance que te indiquemos (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente, no es Binance.';
+  const netTxt = r.gold ? ` Red: ${r.net}.` : '';
   if (!ok) {
+    $(edited === 'top' ? 'u-bot' : 'u-top').value = '';  // sin precio no se calcula nada
     $('u-line').innerHTML = '<b>Mercado inestable</b><span>El precio se confirma por WhatsApp.</span>';
-    $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} USDT. ¿Me das el precio de este momento?`, 'Pedir precio');
+    $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} ${sym}. ¿Me das el precio de este momento?`, 'Pedir precio');
     return;
   }
-  $('u-line').innerHTML = `<b class="num">1 USDT = ${fmt(price, 2)} ${cur}</b><span>Comisión 0 % · Sin cargos extras · Mínimo ${clpFmt(buy ? r.min : r.buyMin)} ${cur}</span>`;
+  $('u-line').innerHTML = `<b class="num">1 ${esc(sym)}${r.gold ? ' (1 onza)' : ''} = ${pf(price)} ${cur}</b><span>Comisión 0 % · Sin cargos extras · Mínimo ${clpFmt(buy ? r.min : r.buyMin)} ${cur}</span>`
+    + (r.gold ? `<span class="net">⚠️&nbsp;${buy ? 'Se envía' : 'Envíalo'} solo por la red&nbsp;<b>${esc(r.net)}</b></span>` : '');
   const src = $(edited === 'top' ? 'u-top' : 'u-bot'), dst = $(edited === 'top' ? 'u-bot' : 'u-top');
-  if (!src.value.trim()) { dst.value = ''; $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} USDT.`); return; }
-  // Lo que escribe el cliente está en USDT o en pesos según la casilla y el lado.
-  const srcIsUsdt = (edited === 'top') !== buy;
-  const x = (srcIsUsdt ? usdtNum : amountNum)(src.value);
-  let usdt, clp;
-  if (srcIsUsdt) {
-    usdt = x;
+  if (!src.value.trim()) { dst.value = ''; $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} ${sym}.`); return; }
+  // Lo que escribe el cliente está en USDT/oro o en pesos según la casilla y el lado.
+  const srcIsAsset = (edited === 'top') !== buy;
+  const x = (srcIsAsset ? usdtNum : amountNum)(src.value);
+  let qty, clp;
+  if (srcIsAsset) {
+    qty = x;
     // Comprar: cobra redondeado al peso. Vender: paga hacia abajo (sin pagar de más).
-    clp = buy ? Math.round(usdt * price) : Math.floor(Math.round(usdt * price * 100) / 100);
+    clp = buy ? Math.round(qty * price) : Math.floor(Math.round(qty * price * 100) / 100);
   } else {
     clp = x;
-    // Comprar: USDT a entregar, hacia abajo. Vender: USDT que debe entregar para recibir ese monto, hacia arriba.
-    usdt = buy ? Math.floor((clp / price) * 100) / 100 : Math.ceil(Math.round((clp / price) * 1e6) / 1e4) / 100;
+    // Comprar: cantidad a entregar, hacia abajo. Vender: cantidad que debe entregar para recibir ese monto, hacia arriba.
+    qty = buy ? Math.floor((clp / price) * k) / k : Math.ceil(Math.round((clp / price) * k * 1e4) / 1e4) / k;
   }
-  const good = Number.isFinite(usdt) && Number.isFinite(clp) && usdt > 0 && clp > 0;
-  // Compartir USDT: solo montos, sin mostrar el precio por USDT.
-  uQuote = good ? { from: [buy ? r.from : 'USDT'], fromLabel: buy ? 'Pagas' : 'Entregas', fromAmt: buy ? `${clpFmt(clp)} ${cur}` : `${usdtFmt(usdt)} USDT`,
-    to: [buy ? 'USDT' : r.from], toLabel: 'Recibes', toAmt: buy ? `${usdtFmt(usdt)} USDT` : `${clpFmt(clp)} ${cur}`, rate: null,
-    text: [`✅ Cotización JM Cambios · ${buy ? 'Compra' : 'Venta'} de USDT`,
-      `Pagas: ${buy ? `${clpFmt(clp)} ${cur}` : `${usdtFmt(usdt)} USDT`}`,
-      `Recibes: ${buy ? `${usdtFmt(usdt)} USDT` : `${clpFmt(clp)} ${cur}`}`,
+  const good = Number.isFinite(qty) && Number.isFinite(clp) && qty > 0 && clp > 0;
+  // Compartir: solo montos, sin mostrar el precio por unidad.
+  uQuote = good ? { from: [buy ? r.from : r.to[0]], fromLabel: buy ? 'Pagas' : 'Entregas', fromAmt: buy ? `${clpFmt(clp)} ${cur}` : `${af(qty)} ${sym}`,
+    to: [buy ? r.to[0] : r.from], toLabel: 'Recibes', toAmt: buy ? `${af(qty)} ${sym}` : `${clpFmt(clp)} ${cur}`, rate: null, gold: Boolean(r.gold),
+    text: [`✅ Cotización JM Cambios · ${buy ? 'Compra' : 'Venta'} de ${sym}${r.gold ? ' (oro tokenizado)' : ''}`,
+      `Pagas: ${buy ? `${clpFmt(clp)} ${cur}` : `${af(qty)} ${sym}`}`,
+      `Recibes: ${buy ? `${af(qty)} ${sym}` : `${clpFmt(clp)} ${cur}`}`,
+      ...(r.gold ? [`Red: ${r.net}`] : []),
       'Comisión 0 %',
       'Cotiza tu operación 👉 https://jmcambios.cl'].join('\n') } : null;
-  dst.value = good ? (srcIsUsdt ? clpFmt(clp) : usdtFmt(usdt)) : '';
+  dst.value = good ? (srcIsAsset ? clpFmt(clp) : af(qty)) : '';
   const min = buy ? r.min : r.buyMin;
   if (good && clp < min) {
     dst.value = ''; uQuote = null; $('u-share').hidden = true;  // bajo el mínimo no se cotiza
-    $('u-line').innerHTML = `<b>Mínimo ${clpFmt(min)} ${cur}</b><span>${buy ? 'Compra' : 'Venta'} desde ${clpFmt(min)} ${cur}${buy ? '' : ` (unos ${usdtFmt(Math.ceil((min / price) * 100) / 100)} USDT)`}.</span>`;
-    $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} USDT.`);
+    $('u-line').innerHTML = `<b>Mínimo ${clpFmt(min)} ${cur}</b><span>${buy ? 'Compra' : 'Venta'} desde ${clpFmt(min)} ${cur}${buy ? '' : ` (unos ${af(Math.ceil((min / price) * k) / k)} ${esc(sym)})`}.</span>`;
+    $('wa').innerHTML = waButtons(`Hola, quiero ${buy ? 'comprar' : 'vender'} ${sym}.`);
     return;
   }
-  $('wa').innerHTML = waButtons(!good ? `Hola, quiero ${buy ? 'comprar' : 'vender'} USDT.` : buy
-    ? `Hola, quiero comprar ${usdtFmt(usdt)} USDT pagando ${clpFmt(clp)} ${cur} (precio ${fmt(price, 2)} ${cur} por USDT, sin comisión). ¿Me confirmas?`
-    : `Hola, quiero vender ${usdtFmt(usdt)} USDT y recibir ${clpFmt(clp)} ${cur} (precio ${fmt(price, 2)} ${cur} por USDT, sin comisión). ¿Me confirmas?`);
+  $('wa').innerHTML = waButtons(!good ? `Hola, quiero ${buy ? 'comprar' : 'vender'} ${sym}.` : buy
+    ? `Hola, quiero comprar ${af(qty)} ${sym} pagando ${clpFmt(clp)} ${cur} (precio ${pf(price)} ${cur} por ${sym}, sin comisión).${netTxt} ¿Me confirmas?`
+    : `Hola, quiero vender ${af(qty)} ${sym} y recibir ${clpFmt(clp)} ${cur} (precio ${pf(price)} ${cur} por ${sym}, sin comisión).${netTxt} ¿Me confirmas?`);
   $('u-share').hidden = !uQuote;
 }
 document.querySelectorAll('#u-tabs button').forEach((b) => b.onclick = () => {
@@ -462,7 +478,7 @@ async function shareQuote(q) {
     g.fillText('Tasa referencial: se confirma por WhatsApp antes de enviar.', 84, 972);
   } else {
     g.fillText('Monto referencial: se confirma por WhatsApp antes de operar.', 84, 928);
-    g.font = F(500, 24); g.fillText('JM Cambios es un comerciante independiente, no es Binance.', 84, 968);
+    g.font = F(500, 24); g.fillText(q.gold ? 'Oro tokenizado: 1 token = 1 onza. JM Cambios es un comerciante independiente, no es Paxos ni Tether.' : 'JM Cambios es un comerciante independiente, no es Binance.', 84, 968, 912);
   }
   g.fillStyle = '#4A1259'; g.beginPath(); g.roundRect(80, 1096, 920, 116, 28); g.fill();
   g.fillStyle = '#FFFFFF'; g.textAlign = 'center'; g.font = F(700, 42); g.fillText('Cotiza tú también en jmcambios.cl', 540, 1168);
@@ -504,7 +520,7 @@ function render() {
 let rutaNow = '';
 function paisBg() {
   // Título según el país de origen elegido: "Conectamos Colombia con el mundo", "Conectamos Brasil con el mundo"…
-  const from = origin === OTHER ? 'tu país' : ORIGINS[origin]?.name || SOON[origin]?.name || 'Chile';
+  const from = origin === OTHER ? 'tu país' : ORIG[origin]?.name || SOON[origin]?.name || 'Chile';
   const tt = document.getElementById('mm-t');
   if (tt) tt.textContent = `Conectamos ${from} con el mundo`;
   const r = ROUTES.find((x) => x.id === route);
@@ -563,6 +579,37 @@ async function loadUsdtCo() {
   const price = ref ? ref.value * (1 + Number(data.usdt_co.margin_pct) / 100) : NaN;
   data.routes.push({ id: USDT_CO_ROUTE.id, status: Number.isFinite(price) ? 'on' : 'ask', rate: Number.isFinite(price) ? price.toFixed(2) : '', buyRate: '' });
 }
+// USDT desde Brasil: precio de Binance P2P (o Bybit P2P) en reales vía CriptoYa ± las ganancias del panel.
+async function loadUsdtBr() {
+  data.routes = data.routes.filter((x) => x.id !== USDT_BR_ROUTE.id);
+  if (!data?.usdt_br) return;
+  let ref = null;
+  try { const res = await fetch(USDT_BRL_URL, { cache: 'no-store' }); ref = res.ok ? usdtBrlRef(await res.text()) : null; } catch { ref = null; }
+  const price = ref ? ref.value * (1 + Number(data.usdt_br.margin_pct) / 100) : NaN;
+  const buy = ref?.bid ? ref.bid * (1 - Number(data.usdt_br.buy_margin_pct) / 100) : NaN;
+  // Mínimo: el equivalente a 10 USDT al precio del momento.
+  USDT_BR_ROUTE.min = Number.isFinite(price) ? Math.ceil(USDT_BR_ROUTE.minUsdt * price) : 0;
+  USDT_BR_ROUTE.buyMin = Number.isFinite(buy) && buy > 0 ? Math.ceil(USDT_BR_ROUTE.minUsdt * buy) : 0;
+  data.routes.push({ id: USDT_BR_ROUTE.id, status: Number.isFinite(price) ? 'on' : 'ask', rate: Number.isFinite(price) ? price.toFixed(4) : '',
+    buyRate: Number.isFinite(buy) && buy > 0 ? buy.toFixed(4) : '' });
+}
+// Oro tokenizado (Chile y Colombia): precio de CoinGecko en pesos ± las ganancias del panel.
+async function loadGold() {
+  const ids = GOLD_ROUTES.map((r) => r.id);
+  data.routes = data.routes.filter((x) => !ids.includes(x.id));
+  if (!data?.gold) return;
+  const list = GOLD_ROUTES.filter((r) => data.gold[r.from.toLowerCase()]);
+  if (!list.length) return;
+  let g = null;
+  try { const res = await fetch(GOLD_URL, { cache: 'no-store' }); g = res.ok ? parseGold(await res.text()) : null; } catch { g = null; }
+  for (const r of list) {
+    const ref = g?.[r.cur]?.[ORIG[r.from].cur];
+    const price = ref ? ref * (1 + Number(data.gold.margin_pct) / 100) : NaN;
+    const buy = ref ? ref * (1 - Number(data.gold.buy_margin_pct) / 100) : NaN;
+    data.routes.push({ id: r.id, status: Number.isFinite(price) ? 'on' : 'ask', rate: Number.isFinite(price) ? price.toFixed(2) : '',
+      buyRate: Number.isFinite(buy) && buy > 0 ? buy.toFixed(2) : '' });
+  }
+}
 async function loadBrl() {
   const r = data?.routes.find((x) => x.id === 'cl-br' && x.auto);
   if (!r) return;
@@ -580,7 +627,7 @@ async function load() {
   } catch {
     if (!data) { $('error').hidden = false; $('error').textContent = 'No pudimos cargar las tasas. Revisa tu conexión o escríbenos por WhatsApp.'; data = { routes: [], bcv: null, bcv_eur: null }; }
   }
-  await Promise.all([loadUsdt(), loadUsdtCo(), loadBrl(), loadCoCl()]);
+  await Promise.all([loadUsdt(), loadUsdtCo(), loadUsdtBr(), loadGold(), loadBrl(), loadCoCl()]);
   // Botón de JM Rewards: solo aparece si se activó en el panel.
   $('jmr').hidden = !data.rewards?.url;
   if (data.rewards?.url) $('jmr').href = data.rewards.url;
@@ -588,7 +635,7 @@ async function load() {
   $('updated').textContent = data.paused ? 'Tasas en actualización' : data.updated
     ? 'Tasas del ' + new Date(data.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
     : 'Tasas aún no publicadas';
-  if (origin !== OTHER && !SOON[origin] && route !== OTHER && (!route || !activeRoutes(origin).some((r) => r.id === route))) route = activeRoutes(origin)[0]?.id ?? null;
+  if (origin !== OTHER && !isSoon(origin) && route !== OTHER && (!route || !activeRoutes(origin).some((r) => r.id === route))) route = activeRoutes(origin)[0]?.id ?? null;
   render();
 }
 track('visita');

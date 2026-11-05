@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=32';
-import { esc, flag, flags } from './ui.js?v=32';
-import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, usdtCopRef } from './criptoya.js?v=32';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=33';
+import { esc, flag, flags } from './ui.js?v=33';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef } from './criptoya.js?v=33';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -18,7 +18,7 @@ async function api(path, opts = {}) {
 
 function showEditor(on) {
   $('login').hidden = on;
-  ['power', 'mkt', 'editor', 'usdt', 'usdtco', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  ['power', 'mkt', 'editor', 'usdt', 'usdtco', 'usdtbr', 'oro', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
 }
 
 async function start() {
@@ -33,6 +33,8 @@ async function start() {
   drawFlyers();
   loadUsdt(true);
   loadUsdtCo();
+  loadUsdtBr();
+  loadGoldCfg();
   loadRewards();
   loadStats();
   renderSelf();
@@ -579,6 +581,62 @@ async function saveUsdtCo() {
   if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
   msg.className = 'msg'; msg.textContent = body.published ? 'Guardado: los clientes ya ven USDT desde Colombia.' : 'Guardado (USDT Colombia apagado en el cotizador).';
 }
+// ------------------------------------------------------------------ USDT Brasil (comprar y vender)
+
+let ubRef = null;
+const pctIn = (id) => Number(String($(id).value).replace(',', '.'));
+function ubCalc() {
+  const m = pctIn('ub-margin'), b = pctIn('ub-buy');
+  $('ub-sell').textContent = ubRef && m >= 0 && m <= 50 ? fmt(ubRef.value * (1 + m / 100), 4) : '—';
+  $('ub-bid').textContent = ubRef?.bid && b >= 0 && b <= 50 ? fmt(ubRef.bid * (1 - b / 100), 4) : '—';
+}
+async function loadUsdtBr() {
+  const { status, body } = await api('/api/usdt-br');
+  if (status !== 200) return;
+  $('ub-margin').value = body.margin_pct; $('ub-buy').value = body.buy_margin_pct; $('ub-pub').checked = !!body.published;
+  try { const res = await fetch(USDT_BRL_URL, { cache: 'no-store' }); ubRef = res.ok ? usdtBrlRef(await res.text()) : null; } catch { ubRef = null; }
+  $('ub-ref').textContent = ubRef ? `${fmt(ubRef.value, 4)} BRL` : '—';
+  $('ub-src').textContent = ubRef ? `(${{ binancep2p: 'Binance P2P', bybitp2p: 'Bybit P2P', mediana: 'mediana de exchanges' }[ubRef.source]} vía CriptoYa)` : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".';
+  ubCalc();
+}
+async function saveUsdtBr() {
+  const msg = $('ub-msg');
+  const { status, body } = await api('/api/usdt-br', { method: 'PUT', body: JSON.stringify({ margin_pct: $('ub-margin').value, buy_margin_pct: $('ub-buy').value, published: $('ub-pub').checked }) });
+  msg.hidden = false;
+  if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
+  msg.className = 'msg'; msg.textContent = body.published ? 'Guardado: los clientes ya ven USDT desde Brasil.' : 'Guardado (USDT Brasil apagado en el cotizador).';
+}
+$('ub-margin').oninput = ubCalc; $('ub-buy').oninput = ubCalc;
+$('ub-save').onclick = saveUsdtBr; $('ub-pub').onchange = saveUsdtBr;
+
+// ------------------------------------------------------------------ Oro tokenizado (Chile y Colombia)
+
+let goRef = null;
+function goCalc() {
+  const m = pctIn('go-margin'), b = pctIn('go-buy');
+  if (!goRef || !(m >= 0 && m <= 50 && b >= 0 && b <= 50)) { $('go-prices').textContent = goRef ? 'Revisa las ganancias (0 a 50 %).' : 'No se pudo leer CoinGecko ahora: el cotizador mostrará "Mercado inestable".'; return; }
+  $('go-prices').innerHTML = [['PAXG', 'PAXG'], ['XAUT', 'XAUt']].map(([t, n]) => ['CLP', 'COP'].map((c) => goRef[t]?.[c]
+    ? `<div><b>${n}</b> en ${c}: vendes a <b class="num">${fmt(goRef[t][c] * (1 + m / 100), 0)}</b> · compras a <b class="num">${fmt(goRef[t][c] * (1 - b / 100), 0)}</b></div>` : '').join('')).join('');
+}
+async function loadGoldCfg() {
+  const { status, body } = await api('/api/oro');
+  if (status !== 200) return;
+  $('go-margin').value = body.margin_pct; $('go-buy').value = body.buy_margin_pct; $('go-cl').checked = !!body.cl; $('go-co').checked = !!body.co;
+  try { const res = await fetch(GOLD_URL, { cache: 'no-store' }); goRef = res.ok ? parseGold(await res.text()) : null; } catch { goRef = null; }
+  $('go-ref').textContent = goRef ? `PAXG ${fmt(goRef.PAXG?.CLP, 0)} CLP · XAUt ${fmt(goRef.XAUT?.CLP, 0)} CLP (CoinGecko)` : '—';
+  goCalc();
+}
+async function saveGold() {
+  const msg = $('go-msg');
+  const { status, body } = await api('/api/oro', { method: 'PUT', body: JSON.stringify({ margin_pct: $('go-margin').value, buy_margin_pct: $('go-buy').value, cl: $('go-cl').checked, co: $('go-co').checked }) });
+  msg.hidden = false;
+  if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
+  const on = [body.cl && 'Chile', body.co && 'Colombia'].filter(Boolean);
+  msg.className = 'msg'; msg.textContent = on.length ? `Guardado: los clientes ya ven el oro desde ${on.join(' y ')}.` : 'Guardado (oro apagado en el cotizador).';
+}
+$('go-margin').oninput = goCalc; $('go-buy').oninput = goCalc;
+$('go-save').onclick = saveGold; $('go-cl').onchange = saveGold; $('go-co').onchange = saveGold;
+
 // ------------------------------------------------------------------ JM Rewards: botón en el cotizador (parte apagado)
 
 async function loadRewards() {

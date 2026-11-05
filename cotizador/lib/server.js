@@ -356,6 +356,50 @@ export async function saveUsdtCoCfg(request, env, now = Date.now()) {
   return json(cfg);
 }
 
+// ------------------------------------------------------------------ USDT Brasil y oro tokenizado (Chile y Colombia)
+// El precio lo calcula el navegador del cliente (CriptoYa / CoinGecko) con estas ganancias; aquí solo se guardan.
+const pctOk = (v) => { const t = String(v ?? '').trim().replace(',', '.'); return t !== '' && Number(t) >= 0 && Number(t) <= 50 ? t : null; };
+async function loadCfg(env, key, defaults) {
+  try { return { ...defaults, ...JSON.parse((await env.TASAS.get(key)) || '{}') }; } catch { return { ...defaults }; }
+}
+async function adminBody(request, env, now) {
+  if (!sameOrigin(request)) return { error: json({ error: 'origen no permitido' }, 403) };
+  if (!(await isAdmin(request, env, now))) return { error: json({ error: 'Inicia sesión de nuevo.' }, 401) };
+  try { return { body: await request.json() }; } catch { return { error: json({ error: 'datos inválidos' }, 400) }; }
+}
+
+export const BR_CFG = { margin_pct: '3', buy_margin_pct: '3', published: false };
+export const loadUsdtBrCfg = (env) => loadCfg(env, 'usdt_br_cfg', BR_CFG);
+export async function usdtBrView(request, env, now = Date.now()) {
+  if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
+  return json(await loadUsdtBrCfg(env));
+}
+export async function saveUsdtBrCfg(request, env, now = Date.now()) {
+  const { body, error } = await adminBody(request, env, now);
+  if (error) return error;
+  const m = pctOk(body?.margin_pct), b = pctOk(body?.buy_margin_pct);
+  if (m === null || b === null) return json({ error: 'Las ganancias deben estar entre 0 y 50 %.' }, 400);
+  const cfg = { margin_pct: m, buy_margin_pct: b, published: body?.published === true };
+  await env.TASAS.put('usdt_br_cfg', JSON.stringify(cfg));
+  return json(cfg);
+}
+
+export const GOLD_CFG = { margin_pct: '3', buy_margin_pct: '3', cl: false, co: false };
+export const loadGoldCfg = (env) => loadCfg(env, 'gold_cfg', GOLD_CFG);
+export async function goldView(request, env, now = Date.now()) {
+  if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
+  return json(await loadGoldCfg(env));
+}
+export async function saveGoldCfg(request, env, now = Date.now()) {
+  const { body, error } = await adminBody(request, env, now);
+  if (error) return error;
+  const m = pctOk(body?.margin_pct), b = pctOk(body?.buy_margin_pct);
+  if (m === null || b === null) return json({ error: 'Las ganancias deben estar entre 0 y 50 %.' }, 400);
+  const cfg = { margin_pct: m, buy_margin_pct: b, cl: body?.cl === true, co: body?.co === true };
+  await env.TASAS.put('gold_cfg', JSON.stringify(cfg));
+  return json(cfg);
+}
+
 // ------------------------------------------------------------------ JM Rewards (botón de registro en el cotizador)
 
 // La dirección es fija (la app de JM Rewards); desde el panel solo se enciende o apaga el botón. Parte apagado.

@@ -604,3 +604,7 @@ body.tema-fintech .dest-links .fl .flag { width: 40px; height: 40px; box-shadow:
 .country .kicker { display: inline-flex; align-items: center; gap: 10px }
 .country .kicker .flag { width: 34px; height: 34px; box-shadow: 0 0 0 1px rgba(0,0,0,.08) }
 .country .kicker .arr { font-size: 22px; color: var(--muted) }
+/* Oro tokenizado: red obligatoria bien visible */
+.u-line .net { display: block; margin-top: 6px; padding: 8px 12px; border-radius: 10px; line-height: 1.35; background: #FFF4D6; color: #7A5310; font-size: 12.5px }
+.u-line .net b { font-size: 12.5px; color: #7A5310 }
+#go-prices { display: grid; gap: 6px; font-size: 13.5px } #go-prices b { font-size: 14.5px } #go-ref { font-size: 15px }

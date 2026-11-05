@@ -109,3 +109,41 @@ export function usdtCopRef(text) {
   const all = Object.values(d).map((x) => Number(x?.ask)).filter(ok).sort((a, z) => a - z);
   return all.length ? { value: all[Math.floor(all.length / 2)], source: 'mediana' } : null;
 }
+
+// USDT en reales para comprar y vender en Brasil: Binance P2P; si no viene, Bybit P2P; si tampoco, la mediana.
+export function usdtBrlRef(text) {
+  let d;
+  try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }
+  if (!d || typeof d !== 'object') return null;
+  const ok = (v) => Number.isFinite(v) && v >= BRL_RANGE[0] && v <= BRL_RANGE[1];
+  const bybit = Object.keys(d).filter((k) => /bybit/i.test(k)).sort((a, b) => /p2p/i.test(b) - /p2p/i.test(a))[0];
+  const pick = (side) => {
+    const b = Number(d.binancep2p?.[side]);
+    if (ok(b)) return { value: b, source: 'binancep2p' };
+    const y = Number(bybit && d[bybit]?.[side]);
+    if (ok(y)) return { value: y, source: 'bybitp2p' };
+    const all = Object.values(d).map((x) => Number(x?.[side])).filter(ok).sort((a, z) => a - z);
+    return all.length ? { value: all[Math.floor(all.length / 2)], source: 'mediana' } : null;
+  };
+  const ask = pick('ask');
+  if (!ask) return null;
+  const bid = pick('bid');
+  return bid ? { ...ask, bid: bid.value, bid_source: bid.source } : ask;
+}
+
+// Oro tokenizado: precio de 1 PAXG y 1 XAUt (1 onza) en pesos chilenos y colombianos, de CoinGecko (API pública).
+export const GOLD_URL = 'https://api.coingecko.com/api/v3/simple/price?ids=pax-gold,tether-gold&vs_currencies=clp,cop';
+const GOLD_RANGE = { clp: [500000, 30000000], cop: [2000000, 100000000] };  // fuera de esto = dato absurdo
+export function parseGold(text) {
+  let d;
+  try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }
+  if (!d || typeof d !== 'object') return null;
+  const out = {};
+  for (const [id, token] of [['pax-gold', 'PAXG'], ['tether-gold', 'XAUT']]) {
+    for (const cur of ['clp', 'cop']) {
+      const v = Number(d[id]?.[cur]);
+      if (Number.isFinite(v) && v >= GOLD_RANGE[cur][0] && v <= GOLD_RANGE[cur][1]) (out[token] ??= {})[cur.toUpperCase()] = v;
+    }
+  }
+  return Object.keys(out).length ? out : null;
+}

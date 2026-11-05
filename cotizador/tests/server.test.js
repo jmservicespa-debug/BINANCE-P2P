@@ -355,3 +355,33 @@ test('la dirección antigua y www llevan a jmcambios.cl con la misma página', a
   assert.equal(await (await go('https://jmcambios.cl/')).text(), 'sitio');               // la principal no se redirige
   assert.equal(await (await go('https://abc123.jmcambios.pages.dev/')).text(), 'sitio');  // vistas previas tampoco
 });
+
+test('oro tokenizado y USDT Brasil: se activan desde el panel y aparecen en la vista pública', async () => {
+  noBcv();
+  const { onRequestPut: putOro } = await import('../functions/api/oro.js');
+  const { onRequestPut: putBr } = await import('../functions/api/usdt-br.js');
+  const e = await env();
+  // Sin sesión no se puede activar.
+  assert.equal((await putOro({ request: req('/api/oro', { method: 'PUT', body: { margin_pct: '3', buy_margin_pct: '3', cl: true } }), env: e })).status, 401);
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  // Apagado por defecto: no aparece.
+  let pub = await (await getRates({ env: e })).json();
+  assert.equal(pub.gold, undefined); assert.equal(pub.usdt_br, undefined);
+  // Ganancia fuera de rango → rechazado.
+  assert.equal((await putOro({ request: req('/api/oro', { method: 'PUT', cookie, body: { margin_pct: '80', buy_margin_pct: '3', cl: true } }), env: e })).status, 400);
+  assert.equal((await putOro({ request: req('/api/oro', { method: 'PUT', cookie, body: { margin_pct: '2,5', buy_margin_pct: '4', cl: true, co: false } }), env: e })).status, 200);
+  assert.equal((await putBr({ request: req('/api/usdt-br', { method: 'PUT', cookie, body: { margin_pct: '3', buy_margin_pct: '3', published: true } }), env: e })).status, 200);
+  pub = await (await getRates({ env: e })).json();
+  assert.deepEqual(pub.gold, { margin_pct: '2.5', buy_margin_pct: '4', cl: true, co: false });
+  assert.deepEqual(pub.usdt_br, { margin_pct: '3', buy_margin_pct: '3' });
+});
+
+test('precios: oro de CoinGecko en pesos y USDT en reales (Binance P2P, luego Bybit P2P)', async () => {
+  const { parseGold, usdtBrlRef } = await import('../public/js/criptoya.js');
+  const g = parseGold('{"pax-gold":{"usd":4077.01,"clp":3960487,"cop":13204532},"tether-gold":{"usd":4072.08,"clp":3955702,"cop":13188578}}');
+  assert.deepEqual(g, { PAXG: { CLP: 3960487, COP: 13204532 }, XAUT: { CLP: 3955702, COP: 13188578 } });
+  assert.equal(parseGold('{"pax-gold":{"clp":5}}'), null);  // dato absurdo
+  assert.equal(usdtBrlRef({ binancep2p: { ask: 5.6, bid: 5.5 }, bybitp2p: { ask: 5.7, bid: 5.4 } }).source, 'binancep2p');
+  assert.equal(usdtBrlRef({ bybitp2p: { ask: 5.7, bid: 5.4 } }).value, 5.7);
+});

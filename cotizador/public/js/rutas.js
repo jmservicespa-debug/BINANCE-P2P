@@ -63,11 +63,22 @@ export function fmt(v, dec) {
 }
 
 // USDT desde Chile: el precio no se escribe en el panel; sale de Vita (CriptoYa) + la ganancia configurada.
-export const USDT_ROUTE = { id: 'cl-usdt', from: 'CL', to: ['USDT'], name: 'USDT', cur: 'USDT', unit: 'Dólar Binance', op: 'div', dec: 2,
+export const USDT_ROUTE = { id: 'cl-usdt', from: 'CL', to: ['USDT'], name: 'USDT', cur: 'USDT', sym: 'USDT', unit: 'Dólar Binance', op: 'div', dec: 2,
   min: 10000, buyMin: 15000,  // mínimos en CLP: cliente compra (nosotros vendemos) 10.000 · cliente vende (nosotros compramos) 15.000
   note: 'Recibes los USDT en tu wallet o cuenta de Binance (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente, no es Binance.' };
 // USDT desde Colombia: solo venta al cliente. Precio = USDT en Binance P2P Colombia (CriptoYa) + ganancia; mínimo editable en el panel.
 export const USDT_CO_ROUTE = { ...USDT_ROUTE, id: 'co-usdt', from: 'CO', min: 50000, buyMin: null };
+// USDT desde Brasil: comprar y vender. Precio = USDT en reales (Binance P2P o Bybit P2P vía CriptoYa) ± la ganancia del panel.
+// Mínimo: el equivalente a 10 USDT al precio del momento (se calcula al cargar).
+export const USDT_BR_ROUTE = { ...USDT_ROUTE, id: 'br-usdt', from: 'BR', min: 0, buyMin: 0, minUsdt: 10 };
+
+// Oro tokenizado (Chile y Colombia): 1 token = 1 onza troy de oro. Precio = CoinGecko en pesos ± la ganancia del panel.
+// Cada token se envía por una sola red: PAXG por Ethereum (ERC-20) y XAUt por Solana.
+const gold = (from, token, min) => ({ id: `${from.toLowerCase()}-${token.toLowerCase()}`, from, to: [token], cur: token, gold: true,
+  sym: token === 'PAXG' ? 'PAXG' : 'XAUt', name: token === 'PAXG' ? 'PAXG · oro' : 'XAUt · oro',
+  unit: token === 'PAXG' ? 'Pax Gold · 1 = 1 onza' : 'Tether Gold · 1 = 1 onza', op: 'div', dec: 6, min, buyMin: min,
+  net: token === 'PAXG' ? 'Ethereum (ERC-20)' : 'Solana' });
+export const GOLD_ROUTES = [gold('CL', 'PAXG', 10000), gold('CL', 'XAUT', 10000), gold('CO', 'PAXG', 30000), gold('CO', 'XAUT', 30000)];
 
 // USDT admite decimales: "100,5" o "100.5" = cien y medio; "1.000" o "1.000,25" = mil.
 export function usdtNum(v) {

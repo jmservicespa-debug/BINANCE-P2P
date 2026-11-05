@@ -1,4 +1,4 @@
-import { isPaused, json, loadRewardsCfg, loadUsdtCfg, loadUsdtCoCfg, publicView, REWARDS_URL, saveRates } from '../../lib/server.js';
+import { isPaused, json, loadGoldCfg, loadRewardsCfg, loadUsdtBrCfg, loadUsdtCfg, loadUsdtCoCfg, publicView, REWARDS_URL, saveRates } from '../../lib/server.js';
 
 // Público: tasas activas y dólar y euro BCV para el cotizador.
 // USDT desde Chile: aparece solo si está activado en el panel (para todos por igual).
@@ -12,6 +12,10 @@ export const onRequestGet = async ({ env }) => {
   if (cfg.published) view.usdt = { margin_pct: cfg.margin_pct, buy_margin_pct: cfg.buy_margin_pct };
   const co = await loadUsdtCoCfg(env);
   if (co.published) view.usdt_co = { margin_pct: co.margin_pct, min: Number(co.min) };
+  const br = await loadUsdtBrCfg(env);
+  if (br.published) view.usdt_br = { margin_pct: br.margin_pct, buy_margin_pct: br.buy_margin_pct };
+  const gold = await loadGoldCfg(env);
+  if (gold.cl || gold.co) view.gold = { margin_pct: gold.margin_pct, buy_margin_pct: gold.buy_margin_pct, cl: gold.cl, co: gold.co };
   if ((await loadRewardsCfg(env)).published) view.rewards = { url: REWARDS_URL };
   return json(view);
 };

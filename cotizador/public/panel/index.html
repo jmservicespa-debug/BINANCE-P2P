@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=32">
+<link rel="stylesheet" href="/css/estilo.css?v=33">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -132,6 +132,45 @@
     <button class="btn ghost" id="uc-save">Guardar</button>
   </section>
 
+  <section class="card" id="usdtbr" hidden aria-labelledby="h-usdtbr">
+    <div>
+      <h2 id="h-usdtbr">USDT Brasil (comprar y vender)</h2>
+      <span class="muted">El cliente paga o recibe reales. Precio = USDT en Binance P2P Brasil (si no viene, Bybit P2P) vía CriptoYa ± tu ganancia. Mínimo: el equivalente a 10 USDT.</span>
+    </div>
+    <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="ub-ref">—</b><span class="muted" id="ub-src"></span></div>
+    <div class="row2">
+      <label class="f" for="ub-margin">Ganancia al vender (%)
+        <span class="amount"><input id="ub-margin" inputmode="decimal" autocomplete="off"></span></label>
+      <label class="f" for="ub-buy">Ganancia al comprar (%)
+        <span class="amount"><input id="ub-buy" inputmode="decimal" autocomplete="off"></span></label>
+    </div>
+    <div class="usdt-price">Vendes a <b class="num" id="ub-sell">—</b> BRL · compras a <b class="num" id="ub-bid">—</b> BRL por USDT</div>
+    <div class="msg" id="ub-msg" hidden></div>
+    <label class="switch"><input type="checkbox" id="ub-pub"> <b>USDT activo en el cotizador (desde Brasil)</b></label>
+    <span class="muted">Marcado: Brasil deja de decir "Próximamente" y los clientes ven USDT. Sin marcar: no aparece.</span>
+    <button class="btn ghost" id="ub-save">Guardar</button>
+  </section>
+
+  <section class="card" id="oro" hidden aria-labelledby="h-oro">
+    <div>
+      <h2 id="h-oro">Oro tokenizado (PAXG y XAUt)</h2>
+      <span class="muted">Comprar y vender desde Chile (mínimo 10.000 CLP) y Colombia (mínimo 30.000 COP). Precio = CoinGecko en pesos ± tu ganancia. PAXG se envía solo por Ethereum (ERC-20) y XAUt solo por Solana.</span>
+    </div>
+    <div class="usdt-ref"><span class="muted">Referencia (1 onza)</span><b class="num" id="go-ref">—</b></div>
+    <div class="row2">
+      <label class="f" for="go-margin">Ganancia al vender (%)
+        <span class="amount"><input id="go-margin" inputmode="decimal" autocomplete="off"></span></label>
+      <label class="f" for="go-buy">Ganancia al comprar (%)
+        <span class="amount"><input id="go-buy" inputmode="decimal" autocomplete="off"></span></label>
+    </div>
+    <div class="usdt-price" id="go-prices">—</div>
+    <div class="msg" id="go-msg" hidden></div>
+    <label class="switch"><input type="checkbox" id="go-cl"> <b>Oro activo en el cotizador desde Chile</b></label>
+    <label class="switch"><input type="checkbox" id="go-co"> <b>Oro activo en el cotizador desde Colombia</b></label>
+    <span class="muted">Marcado: los clientes ven "PAXG · oro" y "XAUt · oro" al elegir ese país. Sin marcar: no aparece.</span>
+    <button class="btn ghost" id="go-save">Guardar</button>
+  </section>
+
   <section class="card" id="rewards" hidden aria-labelledby="h-rewards">
     <div>
       <h2 id="h-rewards">JM Rewards en el cotizador</h2>
@@ -177,6 +216,6 @@
     <span class="muted">Cada enlace lleva el WhatsApp de esa persona. El enlace general muestra un solo botón sin nombre, a tu número.</span>
   </section>
 </main>
-<script type="module" src="/js/panel.js?v=32"></script>
+<script type="module" src="/js/panel.js?v=33"></script>
 </body>
 </html>
