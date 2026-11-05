@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=40';
-import { esc, flag, flags } from './ui.js?v=40';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=40';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=41';
+import { esc, flag, flags } from './ui.js?v=41';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=41';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -615,7 +615,7 @@ $('ub-save').onclick = saveUsdtBr; $('ub-pub').onchange = saveUsdtBr;
 let goRef = null;
 function goCalc() {
   const m = pctIn('go-margin'), b = pctIn('go-buy');
-  if (!goRef || !(m >= 0 && m <= 50 && b >= 0 && b <= 50)) { $('go-prices').textContent = goRef ? 'Revisa las ganancias (0 a 50 %).' : 'No se pudo leer el precio ahora (Binance/CriptoYa): el cotizador mostrará "Mercado inestable".'; return; }
+  if (!goRef || !(m >= 0 && m <= 50 && b >= 0 && b <= 50)) { $('go-prices').textContent = goRef ? 'Revisa las ganancias (0 a 50 %).' : 'No se pudo leer el precio ahora: el cotizador mostrará "Mercado inestable". Revisa jmcambios.cl/api/precio-cripto.'; return; }
   $('go-prices').innerHTML = [['PAXG', 'PAXG'], ['XAUT', 'XAUt']].map(([t, n]) => ['CLP', 'COP'].map((c) => goRef[t]?.[c]
     ? `<div><b>${n}</b> en ${c}: vendes a <b class="num">${fmt(goRef[t][c] * (1 + m / 100), 0)}</b> · compras a <b class="num">${fmt(goRef[t][c] * (1 - b / 100), 0)}</b></div>` : '').join('')).join('');
 }
@@ -646,7 +646,7 @@ $('go-save').onclick = saveGold; $('go-cl').onchange = saveGold; $('go-co').onch
 let btRef = null;
 function btCalc() {
   const m = pctIn('bt-margin'), b = pctIn('bt-buy');
-  if (!btRef || !(m >= 0 && m <= 50 && b >= 0 && b <= 50)) { $('bt-prices').textContent = btRef ? 'Revisa las ganancias (0 a 50 %).' : 'No se pudo leer el precio ahora (Binance/CriptoYa): el cotizador mostrará "Mercado inestable".'; return; }
+  if (!btRef || !(m >= 0 && m <= 50 && b >= 0 && b <= 50)) { $('bt-prices').textContent = btRef ? 'Revisa las ganancias (0 a 50 %).' : 'No se pudo leer el precio ahora: el cotizador mostrará "Mercado inestable". Revisa jmcambios.cl/api/precio-cripto.'; return; }
   $('bt-prices').innerHTML = ['CLP', 'COP'].map((c) => btRef[c]
     ? `<div><b>BTC</b> en ${c}: vendes a <b class="num">${fmt(btRef[c] * (1 + m / 100), 0)}</b> · compras a <b class="num">${fmt(btRef[c] * (1 - b / 100), 0)}</b></div>` : '').join('');
 }

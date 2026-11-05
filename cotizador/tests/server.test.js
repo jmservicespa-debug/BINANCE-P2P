@@ -420,3 +420,19 @@ test('precio del oro y Bitcoin: Binance (USDT) × USDT en pesos de CriptoYa; Coi
   const r = await marketCoins(fake({ 'coingecko': '{"pax-gold":{"usd":4077,"clp":3960487,"cop":13204532}}' }));
   assert.equal(r.source, 'coingecko'); assert.equal(r.PAXG.CLP, 3960487);
 });
+
+test('precio en dólares por el servidor: prueba fuentes en orden y guarda 2 minutos', async () => {
+  const { cryptoUsd } = await import('../lib/server.js');
+  const e = await env();
+  const calls = [];
+  globalThis.fetch = async (u) => { calls.push(String(u)); const s = String(u);
+    if (s.includes('binance')) return new Response('', { status: 451 });
+    if (s.includes('kraken')) return new Response(JSON.stringify({ result: { PAXGUSD: { c: ['4010.5', '1'] }, XXBTZUSD: { c: ['101000.1', '1'] } } }));
+    return new Response('', { status: 500 }); };
+  const r = await cryptoUsd(e, 1000);
+  assert.equal(r.PAXG, 4010.5); assert.equal(r.BTC, 101000.1); assert.equal(r.paxg_src, 'kraken');
+  assert.deepEqual(r.tries, ['binance:451', 'binance:451', 'kraken:200']);
+  const n = calls.length;
+  await cryptoUsd(e, 60000);  // dentro de 2 minutos: no vuelve a consultar
+  assert.equal(calls.length, n);
+});

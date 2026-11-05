@@ -420,6 +420,43 @@ export async function saveBtcCfg(request, env, now = Date.now()) {
   return json(cfg);
 }
 
+// ------------------------------------------------------------------ Precio del oro (PAXG) y Bitcoin en dólares, leído por el servidor
+// El navegador no siempre puede leer Binance o CoinGecko (bloqueos entre sitios); el servidor sí. Se prueban varias fuentes
+// públicas en orden y se guarda 2 minutos. El cotizador lo multiplica por el USDT en pesos (CriptoYa).
+const CRYPTO_TTL_S = 120;
+const okGold = (v) => Number.isFinite(v) && v >= 500 && v <= 30000;
+const okBtc = (v) => Number.isFinite(v) && v >= 5000 && v <= 1000000;
+export const CRYPTO_SOURCES = [
+  ['binance', 'https://data-api.binance.vision/api/v3/ticker/price?symbols=%5B%22PAXGUSDT%22,%22BTCUSDT%22%5D', (d) => {
+    const px = (s) => Number(Array.isArray(d) ? d.find((x) => x?.symbol === s)?.price : NaN); return { PAXG: px('PAXGUSDT'), BTC: px('BTCUSDT') }; }],
+  ['binance', 'https://api.binance.com/api/v3/ticker/price?symbols=%5B%22PAXGUSDT%22,%22BTCUSDT%22%5D', (d) => {
+    const px = (s) => Number(Array.isArray(d) ? d.find((x) => x?.symbol === s)?.price : NaN); return { PAXG: px('PAXGUSDT'), BTC: px('BTCUSDT') }; }],
+  ['kraken', 'https://api.kraken.com/0/public/Ticker?pair=PAXGUSD,XBTUSD', (d) => {
+    const r = d?.result || {}; const k = (re) => Number(r[Object.keys(r).find((x) => re.test(x))]?.c?.[0]);
+    return { PAXG: k(/^PAXG/), BTC: k(/^X?XBTZ?USD/) }; }],
+  ['coingecko', 'https://api.coingecko.com/api/v3/simple/price?ids=pax-gold,bitcoin&vs_currencies=usd', (d) => ({ PAXG: Number(d?.['pax-gold']?.usd), BTC: Number(d?.bitcoin?.usd) })],
+];
+export async function cryptoUsd(env, now = Date.now()) {
+  let cached = null;
+  try { cached = JSON.parse((await env.TASAS.get('crypto_usd')) || 'null'); } catch { cached = null; }
+  if (cached && now - cached.ts < CRYPTO_TTL_S * 1000) return cached;
+  const out = { ts: now, tries: [] };
+  for (const [name, url, read] of CRYPTO_SOURCES) {
+    if (out.PAXG && out.BTC) break;
+    try {
+      const res = await fetch(url, { headers: { accept: 'application/json', 'user-agent': 'JMCambios-cotizador/1.0' }, cf: { cacheTtl: 60 } });
+      out.tries.push(`${name}:${res.status}`);
+      if (!res.ok) continue;
+      const v = read(await res.json());
+      if (!out.PAXG && okGold(v.PAXG)) { out.PAXG = v.PAXG; out.paxg_src = name; }
+      if (!out.BTC && okBtc(v.BTC)) { out.BTC = v.BTC; out.btc_src = name; }
+    } catch { out.tries.push(`${name}:error`); }
+  }
+  if (out.PAXG || out.BTC) await env.TASAS.put('crypto_usd', JSON.stringify(out));
+  else if (cached && now - cached.ts < 30 * 60 * 1000) return { ...cached, stale: true, tries: out.tries };  // respaldo: último precio (máx. 30 min)
+  return out;
+}
+
 // ------------------------------------------------------------------ JM Rewards (botón de registro en el cotizador)
 
 // La dirección es fija (la app de JM Rewards); desde el panel solo se enciende o apaga el botón. Parte apagado.

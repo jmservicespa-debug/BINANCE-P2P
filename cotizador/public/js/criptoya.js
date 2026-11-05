@@ -182,7 +182,9 @@ export function binanceP2pAsk(text, range) {
 export async function marketCoins(fetchFn = fetch) {
   const get = (u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   let usd = null;
-  for (const u of BINANCE_URLS) { usd = parseBinance(await get(u)); if (usd) break; }
+  // 1) Nuestro servidor (lee Binance, Kraken o CoinGecko sin bloqueos). 2) Binance directo desde el navegador.
+  try { const s = JSON.parse((await get('/api/precio-cripto')) || 'null'); if (s?.PAXG || s?.BTC) usd = { ...(s.PAXG ? { PAXG: s.PAXG } : {}), ...(s.BTC ? { BTC: s.BTC } : {}) }; } catch { usd = null; }
+  if (!usd) for (const u of BINANCE_URLS) { usd = parseBinance(await get(u)); if (usd) break; }
   if (usd) {
     const [c, o] = await Promise.all([get(USDT_URL), get(USDT_COP_URL)]);
     // Misma fuente en Chile y Colombia: USDT en Binance P2P (si no viene, el respaldo de siempre).
