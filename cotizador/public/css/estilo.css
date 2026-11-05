@@ -608,3 +608,8 @@ body.tema-fintech .dest-links .fl .flag { width: 40px; height: 40px; box-shadow:
 .u-line .net { display: block; margin-top: 6px; padding: 8px 12px; border-radius: 10px; line-height: 1.35; background: #FFF4D6; color: #7A5310; font-size: 12.5px }
 .u-line .net b { font-size: 12.5px; color: #7A5310 }
 #go-prices { display: grid; gap: 6px; font-size: 13.5px } #go-prices b { font-size: 14.5px } #go-ref { font-size: 15px }
+/* Oro: elegir XAUt o PAXG */
+.g-tok { display: grid; gap: 8px }
+.g-tok .tok button { display: grid; gap: 1px; text-align: left; padding: 10px 12px }
+.g-tok .tok button b { font-size: 15px } .g-tok .tok button small { font-size: 12px; font-weight: 500; color: var(--muted) }
+.g-tok .step { margin: 0 }

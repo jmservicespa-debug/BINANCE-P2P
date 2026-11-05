@@ -1,7 +1,7 @@
-import { ADVISORS, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=33';
-import { setRewardsNav } from './rewards-nav.js?v=33';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef } from './criptoya.js?v=33';
-import { esc, flag, flags } from './ui.js?v=33';
+import { ADVISORS, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=34';
+import { setRewardsNav } from './rewards-nav.js?v=34';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef } from './criptoya.js?v=34';
+import { esc, flag, flags } from './ui.js?v=34';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -53,8 +53,12 @@ function renderDests() {
   $('dests').hidden = origin === OTHER || isSoon(origin);
   $('to-q').hidden = $('dests').hidden;
   if ($('dests').hidden) return;
-  const list = activeRoutes(origin);
-  $('dests').innerHTML = list.map((r) => `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${r.cur === 'USDT' ? BNB : ''}${esc(r.unit)} (${esc(r.sym || r.cur)})${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`).join('')
+  // Oro: un solo botón "Oro tokenizado"; el token (XAUt o PAXG) se elige después.
+  const all = activeRoutes(origin), golds = all.filter((r) => r.gold);
+  const goldPick = golds.find((r) => r.id === route) || golds[0];
+  const list = all.filter((r) => !r.gold || r === goldPick);
+  $('dests').innerHTML = list.map((r) => r.gold
+    ? `<button data-r="${r.id}" aria-pressed="${golds.some((g) => g.id === route)}">${flag('XAUT')}<span>Oro tokenizado<small>XAUt o PAXG · 1 = 1 onza</small></span></button>` : `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${r.cur === 'USDT' ? BNB : ''}${esc(r.unit)} (${esc(r.sym || r.cur)})${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`).join('')
     + `<button data-r="${OTHER}" aria-pressed="${route === OTHER}">${GLOBE}<span>Otro destino<small>Tasa por WhatsApp</small></span></button>`;
   $('dests').querySelectorAll('button').forEach((b) => b.onclick = () => {
     if (mode !== 'send' && b.dataset.r !== route) $('amount').value = '';  // la casilla está en la moneda del destino
@@ -291,6 +295,13 @@ function usdtQuote(r) {
   const pf = (v) => fmt(v, v >= 1000 ? 0 : 2);  // precio por unidad
   const sellOk = Boolean(r.buyMin);  // Colombia (USDT): solo se le vende al cliente
   $('u-tabs').hidden = !sellOk;
+  // Oro: el cliente elige qué token recibir (solo los que están activos en su país).
+  $('g-tok').hidden = !r.gold;
+  if (r.gold) $('g-tok').querySelectorAll('button').forEach((b) => {
+    const id = `${r.from.toLowerCase()}-${b.dataset.tok.toLowerCase()}`;
+    b.hidden = !activeRoutes(r.from).some((x) => x.id === id);
+    b.setAttribute('aria-pressed', String(id === r.id));
+  });
   if (!sellOk) side = 'buy';
   const buy = side === 'buy';
   $('u-tabs').querySelector('[data-side="buy"]').textContent = `Comprar ${sym}`;
@@ -356,6 +367,11 @@ function usdtQuote(r) {
     : `Hola, quiero vender ${af(qty)} ${sym} y recibir ${clpFmt(clp)} ${cur} (precio ${pf(price)} ${cur} por ${sym}, sin comisión).${netTxt} ¿Me confirmas?`);
   $('u-share').hidden = !uQuote;
 }
+document.querySelectorAll('#g-tok button').forEach((b) => b.onclick = () => {
+  route = `${origin.toLowerCase()}-${b.dataset.tok.toLowerCase()}`; edited = 'top';
+  $('u-top').value = ''; $('u-bot').value = '';
+  render();
+});
 document.querySelectorAll('#u-tabs button').forEach((b) => b.onclick = () => {
   side = b.dataset.side; edited = 'top';
   document.querySelectorAll('#u-tabs button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
