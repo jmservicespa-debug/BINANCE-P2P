@@ -482,3 +482,32 @@ body.tema-fintech .hero-txt h1 span { background: linear-gradient(90deg, #4A1259
   body.tema-fintech .card.cot { gap: 14px }
 }
 @media (max-width: 760px) { body.tema-fintech .trust div:nth-child(4) b { font-size: 12px } body.tema-fintech .trust div { padding: 8px 3px } }
+
+/* Páginas por país con la misma apariencia de la principal */
+body.tema-fintech.pais main { max-width: 820px; padding-top: 40px }
+body.tema-fintech .country { padding: 36px; gap: 14px; box-shadow: 0 24px 60px rgba(22,17,29,.06) }
+body.tema-fintech .country .kicker { font-size: 26px; letter-spacing: 2px }
+body.tema-fintech .country h1 { font-family: var(--display); font-weight: 800; font-size: 40px; line-height: 1.08; letter-spacing: -.035em; color: var(--ink) }
+body.tema-fintech .country .muted { font-size: 16px; line-height: 1.55 }
+body.tema-fintech .go { border-radius: 12px; background: var(--brand); color: #fff; font-weight: 600; padding: 15px; font-size: 15.5px }
+body.tema-fintech .go.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line) }
+body.tema-fintech .info .chips span { background: #fff; border: 1px solid var(--line); font-weight: 600; border-radius: 10px }
+body.tema-fintech .dat { padding: 14px 0 } body.tema-fintech .dat b { font-weight: 700 } body.tema-fintech .dat ul { line-height: 1.6 }
+body.tema-fintech .other { font-size: 14.5px }
+@media (max-width: 760px) {
+  body.tema-fintech.pais main { padding-top: 18px }
+  body.tema-fintech .country { padding: 22px }
+  body.tema-fintech .country h1 { font-size: 28px }
+  body.tema-fintech .country .muted { font-size: 15px }
+}
+body.tema-fintech.pais p.other { display: block; margin: 8px 0 0 } body.tema-fintech.pais p.other a { color: var(--brand); font-weight: 600; text-decoration: none }
+
+/* Panel con la misma apariencia (solo visual) */
+body.tema-fintech.panel main { max-width: 640px; padding-top: 8px }
+body.tema-fintech.panel header { justify-content: space-between; padding: 14px 0 6px; border-bottom: 1px solid var(--line); margin-bottom: 6px }
+body.tema-fintech.panel .word small { display: block; font-family: var(--body); font-size: 10px; letter-spacing: .14em; color: var(--muted) }
+body.tema-fintech.panel .card h2 { color: var(--ink); font-size: 18px; font-weight: 700 }
+body.tema-fintech.panel #logout { background: #fff; border-radius: 10px; font-weight: 600 }
+body.tema-fintech .btn { border-radius: 12px; font-weight: 600 } body.tema-fintech .btn.ghost { background: #fff }
+body.tema-fintech .route input[type="text"] { border: 1px solid var(--line); background: #fff; color: var(--ink); font-weight: 700 }
+body.tema-fintech.panel .amount input { font-size: 20px }
