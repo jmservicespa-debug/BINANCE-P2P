@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=39';
-import { esc, flag, flags } from './ui.js?v=39';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=39';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=40';
+import { esc, flag, flags } from './ui.js?v=40';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=40';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -625,7 +625,7 @@ async function loadGoldCfg() {
   $('go-margin').value = body.margin_pct; $('go-buy').value = body.buy_margin_pct; $('go-cl').checked = !!body.cl; $('go-co').checked = !!body.co;
   $('go-fee').checked = !!body.fee_on; $('go-fee-x').value = body.fee_xaut ?? '1'; $('go-fee-p').value = body.fee_paxg ?? '1';
   goRef = await marketCoins();
-  const src = goRef?.source === 'binance' ? 'Binance PAXG/USDT × USDT CriptoYa' : 'CoinGecko';
+  const src = goRef?.source === 'binance' ? 'Binance PAXG/USDT × USDT Binance P2P' : 'CoinGecko';
   $('go-ref').textContent = goRef ? `1 onza ≈ US$${fmt(goRef.PAXG?.USD, 2)} · ${fmt(goRef.PAXG?.CLP, 0)} CLP · ${fmt(goRef.PAXG?.COP, 0)} COP (${src})` : '—';
   goCalc();
 }

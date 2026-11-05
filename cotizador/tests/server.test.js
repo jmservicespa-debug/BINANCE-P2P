@@ -412,7 +412,7 @@ test('precio del oro y Bitcoin: Binance (USDT) × USDT en pesos de CriptoYa; Coi
   const ok = (body) => ({ ok: true, text: async () => body });
   const fake = (map) => async (u) => { for (const [k, v] of Object.entries(map)) if (u.includes(k)) return v === null ? { ok: false } : ok(v); return { ok: false }; };
   const m = await marketCoins(fake({ 'binance.vision': '[{"symbol":"PAXGUSDT","price":"4000"},{"symbol":"BTCUSDT","price":"100000"}]',
-    'usdt/clp': '{"vitawallet":{"ask":950,"bid":940}}', 'usdt/cop': '{"binancep2p":{"ask":4000,"bid":3950}}' }));
+    'usdt/clp': '{"vitawallet":{"ask":960,"bid":940},"binancep2p":{"ask":950,"bid":945}}', 'usdt/cop': '{"binancep2p":{"ask":4000,"bid":3950}}' }));
   assert.equal(m.source, 'binance');
   assert.deepEqual(m.XAUT, { USD: 4000, CLP: 3800000, COP: 16000000 });
   assert.deepEqual(m.BTC, { USD: 100000, CLP: 95000000, COP: 400000000 });

@@ -150,7 +150,7 @@ export function parseGold(text) {
 }
 
 // Precios del oro tokenizado y de Bitcoin en pesos: Binance (PAXG/USDT y BTC/USDT) × USDT en pesos (CriptoYa:
-// Vita en Chile, Binance P2P en Colombia). XAUt y PAXG representan 1 onza de oro: se usa el precio de PAXG para los dos.
+// Binance P2P en Chile y en Colombia). XAUt y PAXG representan 1 onza de oro: se usa el precio de PAXG para los dos.
 // Si Binance no responde, se usa CoinGecko como respaldo. Devuelve { PAXG, XAUT, BTC: { USD, CLP, COP }, source }.
 export const BINANCE_URLS = ['https://data-api.binance.vision/api/v3/ticker/price?symbols=%5B%22PAXGUSDT%22,%22BTCUSDT%22%5D',
   'https://api.binance.com/api/v3/ticker/price?symbols=%5B%22PAXGUSDT%22,%22BTCUSDT%22%5D'];
@@ -173,13 +173,20 @@ export function coinPrices(usd, clp, cop) {
   if (usd.BTC) out.BTC = per(usd.BTC);
   return Object.keys(out).length ? out : null;
 }
+export function binanceP2pAsk(text, range) {
+  let d;
+  try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }
+  const v = Number(d?.binancep2p?.ask);
+  return Number.isFinite(v) && v >= range[0] && v <= range[1] ? v : null;
+}
 export async function marketCoins(fetchFn = fetch) {
   const get = (u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   let usd = null;
   for (const u of BINANCE_URLS) { usd = parseBinance(await get(u)); if (usd) break; }
   if (usd) {
     const [c, o] = await Promise.all([get(USDT_URL), get(USDT_COP_URL)]);
-    const clp = c && parseCriptoYa(c)?.value, cop = o && usdtCopRef(o)?.value;
+    // Misma fuente en Chile y Colombia: USDT en Binance P2P (si no viene, el respaldo de siempre).
+    const clp = c && (binanceP2pAsk(c, CLP_RANGE) ?? parseCriptoYa(c)?.value), cop = o && (binanceP2pAsk(o, COP_RANGE) ?? usdtCopRef(o)?.value);
     const out = coinPrices(usd, clp, cop);
     if (out && (clp || cop)) return { ...out, source: 'binance' };
   }
