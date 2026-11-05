@@ -1,7 +1,7 @@
-import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=29';
-import { setRewardsNav } from './rewards-nav.js?v=29';
-import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=29';
-import { esc, flag, flags } from './ui.js?v=29';
+import { ADVISORS, ORIGINS, ROUTES, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=30';
+import { setRewardsNav } from './rewards-nav.js?v=30';
+import { BRL_BRAKE, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, usdtCopRef } from './criptoya.js?v=30';
+import { esc, flag, flags } from './ui.js?v=30';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -325,7 +325,7 @@ function usdtQuote(r) {
     text: [`✅ Cotización JM Cambios · ${buy ? 'Compra' : 'Venta'} de USDT`,
       `Pagas: ${buy ? `${clpFmt(clp)} ${cur}` : `${usdtFmt(usdt)} USDT`}`,
       `Recibes: ${buy ? `${usdtFmt(usdt)} USDT` : `${clpFmt(clp)} ${cur}`}`,
-      'Comisión 0 % · Monto referencial, se confirma por WhatsApp.',
+      `Comisión 0 %${quoteWhen() ? ' · Cotización del ' + quoteWhen() : ''}`,
       'Cotiza tu operación 👉 https://jmcambios.cl'].join('\n') } : null;
   dst.value = good ? (srcIsUsdt ? clpFmt(clp) : usdtFmt(usdt)) : '';
   const min = buy ? r.min : r.buyMin;
@@ -391,6 +391,8 @@ function openNow() {
   return h * 60 + m >= 600 && h * 60 + m < 1350;
 }
 
+// Fecha y hora de las tasas (hora de Chile), para que se sepa de cuándo es la cotización compartida.
+const quoteWhen = () => (data?.updated ? new Date(data.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'America/Santiago' }) : '');
 // Texto que acompaña la imagen al compartir: los montos claros, en la moneda de cada uno.
 function shareText(r, o, send, get, bcvRef) {
   const recv = r.cur === 'VES' ? `${fmt(get, 0)} Bs` : `${fmt(get, r.dec)} ${r.cur}`;
@@ -398,7 +400,7 @@ function shareText(r, o, send, get, bcvRef) {
     `Pagas: ${fmt(send, 0)} ${o.cur}`,
     `Recibe: ${recv}`,
     ...(bcvRef ? [`Equivale a: ${fmt(get / bcvRef[1], 2)} ${bcvRef[0]} (${bcvRef[2]})`] : []),
-    'Comisión 0 % · Tasa referencial, se confirma por WhatsApp.',
+    `Comisión 0 %${quoteWhen() ? ' · Cotización del ' + quoteWhen() : ''}`,
     'Cotiza tu envío 👉 https://jmcambios.cl'].join('\n');
 }
 
