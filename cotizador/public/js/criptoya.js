@@ -75,6 +75,23 @@ export async function clpPerCop(marginPct, fetchFn = fetch) {
 // para un monto de ~30 USDT. CriptoYa no filtra por Pago Móvil: es una aproximación (Pago Móvil suele pagar algo menos).
 export const SUG_CLP_URL = 'https://criptoya.com/api/usdt/clp/30';
 export const SUG_VES_URL = 'https://criptoya.com/api/usdt/ves/30';
+// Venezuela → Chile: USDT en bolívares (precio para comprar, "ask") del P2P elegido en el panel, y lo que paga Vita en CLP ("bid").
+export const USDT_VES_URL = 'https://criptoya.com/api/usdt/ves/1';
+const VES_RANGE = [5, 100000];
+export function vesExchanges(text) {
+  let d;
+  try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return []; }
+  if (!d || typeof d !== 'object') return [];
+  return Object.entries(d).filter(([, x]) => Number(x?.ask) >= VES_RANGE[0] && Number(x?.ask) <= VES_RANGE[1]).map(([k, x]) => ({ key: k, ask: Number(x.ask) }));
+}
+export async function clpPerVes(source, marginPct, fetchFn = fetch) {
+  const [v, l] = await Promise.all([USDT_VES_URL, USDT_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
+  const list = v ? vesExchanges(v) : [];
+  const ves = list.find((x) => x.key === source)?.ask, clp = l && vitaPrice(l, 'bid', CLP_RANGE);
+  if (!ves || !clp) return null;
+  const rate = clp / (ves * (1 + Number(marginPct || 0) / 100));
+  return rate > 0 ? { rate, ves, clp } : null;
+}
 function pick(text, side, prefer, range) {
   let d;
   try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }

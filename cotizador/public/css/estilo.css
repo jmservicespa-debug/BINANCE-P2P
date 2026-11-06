@@ -625,3 +625,4 @@ body.tema-fintech .tabs.kind button[aria-pressed="true"] { background: var(--bra
 .wallet-help p { margin: 8px 0 0; font-size: 13.5px; line-height: 1.45; color: var(--ink) }
 .wallet-help a { color: var(--brand); font-weight: 700 }
 .u-line .valid { font-size: 12.5px; font-weight: 600; color: var(--accent) }
+body.tema-fintech.panel select { width: 100%; font: inherit; font-size: 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink) }

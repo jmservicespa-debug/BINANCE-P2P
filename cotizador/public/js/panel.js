@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=49';
-import { esc, flag, flags } from './ui.js?v=49';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins } from './criptoya.js?v=49';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=50';
+import { esc, flag, flags } from './ui.js?v=50';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice } from './criptoya.js?v=50';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -18,7 +18,7 @@ async function api(path, opts = {}) {
 
 function showEditor(on) {
   $('login').hidden = on;
-  ['power', 'mkt', 'editor', 'usdt', 'usdtco', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  ['power', 'mkt', 'editor', 'usdt', 'usdtco', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
 }
 
 async function start() {
@@ -34,6 +34,7 @@ async function start() {
   loadUsdt(true);
   loadUsdtCo();
   loadUsdtBr();
+  loadVeCl();
   loadGoldCfg();
   loadBtcCfg();
   loadRewards();
@@ -586,6 +587,39 @@ async function saveUsdtCo() {
   if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
   msg.className = 'msg'; msg.textContent = body.published ? 'Guardado: los clientes ya ven USDT desde Colombia.' : 'Guardado (USDT Colombia apagado en el cotizador).';
 }
+// ------------------------------------------------------------------ Venezuela → Chile
+
+let vcList = [], vcClp = null;
+const P2P_NAME = (k) => ({ binancep2p: 'Binance P2P', bybitp2p: 'Bybit P2P', bitgetp2p: 'Bitget P2P', okexp2p: 'OKX P2P', kucoinp2p: 'KuCoin P2P', huobip2p: 'HTX P2P', mexcp2p: 'MEXC P2P' }[k] || k);
+function vcCalc() {
+  const m = Number(String($('vc-margin').value).replace(',', '.'));
+  const ves = vcList.find((x) => x.key === $('vc-src').value)?.ask;
+  $('vc-ref').textContent = ves && vcClp ? `1 USDT = ${fmt(ves, 2)} Bs (${P2P_NAME($('vc-src').value)}) · Vita paga ${fmt(vcClp, 2)} CLP` : '—';
+  if (!ves || !vcClp || !(m >= 0 && m <= 50)) { $('vc-rate').textContent = vcList.length ? 'Revisa la ganancia (0 a 50 %).' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
+  const rate = vcClp / (ves * (1 + m / 100));
+  $('vc-rate').innerHTML = `Tasa publicada: <b class="num">${rate.toFixed(4)}</b> · 10.000 Bs = <b class="num">${fmt(10000 * rate, 0)} CLP</b>`;
+}
+async function loadVeCl() {
+  const { status, body } = await api('/api/ve-cl');
+  if (status !== 200) return;
+  $('vc-margin').value = body.margin_pct; $('vc-min').value = fmt(Number(body.min), 0); $('vc-pub').checked = !!body.published;
+  const get = (u) => fetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  const [v, l] = await Promise.all([get(USDT_VES_URL), get(USDT_URL)]);
+  vcList = v ? vesExchanges(v) : []; vcClp = l ? vitaPrice(l, 'bid', [300, 3000]) : null;
+  const keys = [...new Set([body.source, ...vcList.map((x) => x.key)])];
+  $('vc-src').innerHTML = keys.map((k) => `<option value="${esc(k)}"${k === body.source ? ' selected' : ''}>${esc(P2P_NAME(k))}${vcList.some((x) => x.key === k) ? '' : ' (sin precio ahora)'}</option>`).join('');
+  vcCalc();
+}
+async function saveVeCl() {
+  const msg = $('vc-msg');
+  const { status, body } = await api('/api/ve-cl', { method: 'PUT', body: JSON.stringify({ margin_pct: $('vc-margin').value, min: $('vc-min').value, source: $('vc-src').value, published: $('vc-pub').checked }) });
+  msg.hidden = false;
+  if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
+  msg.className = 'msg'; msg.textContent = body.published ? 'Guardado: los clientes ya ven envíos desde Venezuela a Chile.' : 'Guardado (ruta Venezuela → Chile apagada).';
+}
+$('vc-margin').oninput = vcCalc; $('vc-src').onchange = vcCalc;
+$('vc-save').onclick = saveVeCl; $('vc-pub').onchange = saveVeCl;
+
 // ------------------------------------------------------------------ USDT Brasil (comprar y vender)
 
 let ubRef = null;

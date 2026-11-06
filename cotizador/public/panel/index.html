@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=49">
+<link rel="stylesheet" href="/css/estilo.css?v=50">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -139,6 +139,27 @@
     <button class="btn ghost" id="uc-save">Guardar</button>
   </section>
 
+  <section class="card" id="vecl" hidden aria-labelledby="h-vecl">
+    <div>
+      <h2 id="h-vecl">Envíos Venezuela → Chile</h2>
+      <span class="muted">El cliente paga bolívares y recibe pesos chilenos. Tasa = (lo que paga Vita por USDT en CLP) ÷ (USDT en bolívares del P2P elegido + tu ganancia). Bolívares × tasa = pesos.</span>
+    </div>
+    <label class="f" for="vc-src">P2P de referencia (USDT en bolívares, vía CriptoYa)
+      <select id="vc-src"></select></label>
+    <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="vc-ref">—</b></div>
+    <div class="row2">
+      <label class="f" for="vc-margin">Tu ganancia (%)
+        <span class="amount"><input id="vc-margin" inputmode="decimal" autocomplete="off"></span></label>
+      <label class="f" for="vc-min">Mínimo (Bs)
+        <span class="amount"><input id="vc-min" inputmode="numeric" autocomplete="off"></span></label>
+    </div>
+    <div class="usdt-price" id="vc-rate">—</div>
+    <div class="msg" id="vc-msg" hidden></div>
+    <label class="switch"><input type="checkbox" id="vc-pub"> <b>Ruta Venezuela → Chile activa en el cotizador</b></label>
+    <span class="muted">Marcado: en "Envíos" aparece Venezuela como país de origen. Sin marcar: no aparece.</span>
+    <button class="btn ghost" id="vc-save">Guardar</button>
+  </section>
+
   <section class="card" id="usdtbr" hidden aria-labelledby="h-usdtbr">
     <div>
       <h2 id="h-usdtbr">USDT Brasil (comprar y vender)</h2>
@@ -258,6 +279,6 @@
     <span class="muted">Cada enlace lleva el WhatsApp de esa persona. El enlace general muestra un solo botón sin nombre, a tu número.</span>
   </section>
 </main>
-<script type="module" src="/js/panel.js?v=49"></script>
+<script type="module" src="/js/panel.js?v=50"></script>
 </body>
 </html>

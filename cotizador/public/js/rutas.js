@@ -97,3 +97,8 @@ export function usdtNum(v) {
 export const belowMin = (route, sendAmount) => Boolean(route.min) && Number.isFinite(sendAmount) && sendAmount < route.min;
 
 export const routeById = (id) => ROUTES.find((r) => r.id === id);
+
+// Venezuela → Chile (automática): el cliente paga bolívares y recibe pesos chilenos.
+// Tasa = (lo que paga Vita por USDT en CLP) ÷ (precio del USDT en bolívares del P2P elegido × (1 + ganancia)). VES × tasa = CLP.
+export const VE_CL_ROUTE = { id: 've-cl', from: 'VE', to: ['CL'], name: 'Chile', cur: 'CLP', unit: 'Pesos chilenos', op: 'mul', dec: 0, min: 2000,
+  note: 'Recibe por transferencia bancaria en cualquier banco de Chile' };

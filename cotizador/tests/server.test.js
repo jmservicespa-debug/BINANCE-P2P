@@ -441,3 +441,20 @@ test('precio en dólares por el servidor: prueba fuentes en orden y guarda 2 min
   await cryptoUsd(e, 60000);  // dentro de 2 minutos: no vuelve a consultar
   assert.equal(calls.length, n);
 });
+
+test('Venezuela → Chile: se activa desde el panel y la tasa es Vita CLP ÷ (USDT Bs × (1 + ganancia))', async () => {
+  noBcv();
+  const { onRequestPut: putVeCl } = await import('../functions/api/ve-cl.js');
+  const { clpPerVes } = await import('../public/js/criptoya.js');
+  const e = await env();
+  assert.equal((await putVeCl({ request: req('/api/ve-cl', { method: 'PUT', body: { margin_pct: '3', min: '2000', source: 'bybitp2p', published: true } }), env: e })).status, 401);
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await (await getRates({ env: e })).json()).ve_cl, undefined);
+  assert.equal((await putVeCl({ request: req('/api/ve-cl', { method: 'PUT', cookie, body: { margin_pct: '4', min: '3.000', source: 'bybitp2p', published: true } }), env: e })).status, 200);
+  assert.deepEqual((await (await getRates({ env: e })).json()).ve_cl, { margin_pct: '4', min: 3000, source: 'bybitp2p' });
+  const fake = async (u) => ({ ok: true, text: async () => (String(u).includes('/ves/') ? '{"bybitp2p":{"ask":400,"bid":395},"binancep2p":{"ask":410}}' : '{"vitawallet":{"ask":990,"bid":980}}') });
+  const r = await clpPerVes('bybitp2p', '4', fake);
+  assert.equal(r.ves, 400); assert.equal(r.clp, 980);
+  assert.ok(Math.abs(r.rate - 980 / (400 * 1.04)) < 1e-9);
+});
