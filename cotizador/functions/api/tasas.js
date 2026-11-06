@@ -11,7 +11,7 @@ export const onRequestGet = async ({ env }) => {
   const cfg = await loadUsdtCfg(env);
   if (cfg.published) view.usdt = { margin_pct: cfg.margin_pct, buy_margin_pct: cfg.buy_margin_pct };
   const co = await loadUsdtCoCfg(env);
-  if (co.published) view.usdt_co = { margin_pct: co.margin_pct, min: Number(co.min) };
+  if (co.published) view.usdt_co = { margin_pct: co.margin_pct, min: Number(co.min), buy_margin_pct: co.buy_margin_pct ?? '3', buy_min: Number(co.buy_min ?? co.min) };
   const br = await loadUsdtBrCfg(env);
   if (br.published) view.usdt_br = { margin_pct: br.margin_pct, buy_margin_pct: br.buy_margin_pct };
   const gold = await loadGoldCfg(env);

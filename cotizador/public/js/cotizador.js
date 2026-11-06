@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=48';
-import { setRewardsNav } from './rewards-nav.js?v=48';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=48';
-import { esc, flag, flags } from './ui.js?v=48';
+import { ADVISORS, BTC_ROUTES, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=49';
+import { setRewardsNav } from './rewards-nav.js?v=49';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins } from './criptoya.js?v=49';
+import { esc, flag, flags } from './ui.js?v=49';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -326,7 +326,7 @@ function usdtQuote(r) {
   const sym = r.sym || 'USDT', dec = r.dec ?? 2, k = 10 ** dec;
   const af = (v) => fmt(v, dec);  // cantidad de USDT u oro
   const pf = (v) => fmt(v, v >= 1000 ? 0 : 2);  // precio por unidad
-  const sellOk = Boolean(r.buyMin);  // Colombia (USDT): solo se le vende al cliente
+  const sellOk = Boolean(r.buyMin);  // todas las rutas tienen mínimo de compra: se puede comprar y vender
   $('u-tabs').hidden = !sellOk;
   // Oro: el cliente elige qué token recibir (solo los que están activos en su país).
   // Solo se elige token si hay más de uno encendido; con uno solo (ej. XAUt) va directo.
@@ -648,10 +648,13 @@ async function loadUsdtCo() {
   data.routes = data.routes.filter((x) => x.id !== USDT_CO_ROUTE.id);
   if (!data?.usdt_co) return;
   USDT_CO_ROUTE.min = Number(data.usdt_co.min) || 50000;
-  let ref = null;
-  try { const res = await fetch(USDT_COP_URL, { cache: 'no-store' }); ref = res.ok ? usdtCopRef(await res.text()) : null; } catch { ref = null; }
+  USDT_CO_ROUTE.buyMin = Number(data.usdt_co.buy_min) || USDT_CO_ROUTE.min;  // también le compramos USDT al cliente
+  let ref = null, bid = null;
+  try { const res = await fetch(USDT_COP_URL, { cache: 'no-store' }); const t = res.ok ? await res.text() : null; ref = t && usdtCopRef(t); bid = t && usdtCopBid(t); } catch { ref = null; }
   const price = ref ? ref.value * (1 + Number(data.usdt_co.margin_pct) / 100) : NaN;
-  data.routes.push({ id: USDT_CO_ROUTE.id, status: Number.isFinite(price) ? 'on' : 'ask', rate: Number.isFinite(price) ? price.toFixed(2) : '', buyRate: '' });
+  const buy = bid ? bid * (1 - Number(data.usdt_co.buy_margin_pct ?? 3) / 100) : NaN;
+  data.routes.push({ id: USDT_CO_ROUTE.id, status: Number.isFinite(price) ? 'on' : 'ask', rate: Number.isFinite(price) ? price.toFixed(2) : '',
+    buyRate: Number.isFinite(buy) && buy > 0 ? buy.toFixed(2) : '' });
 }
 // USDT desde Brasil: precio de Binance P2P (o Bybit P2P) en reales vía CriptoYa ± las ganancias del panel.
 async function loadUsdtBr() {

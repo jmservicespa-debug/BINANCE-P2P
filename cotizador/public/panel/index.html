@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=48">
+<link rel="stylesheet" href="/css/estilo.css?v=49">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -115,8 +115,8 @@
 
   <section class="card" id="usdtco" hidden aria-labelledby="h-usdtco">
     <div>
-      <h2 id="h-usdtco">USDT Colombia (venta al cliente)</h2>
-      <span class="muted">El cliente te compra USDT con pesos colombianos. Precio = USDT en Binance P2P Colombia (vía CriptoYa, donde recompras) + tu ganancia.</span>
+      <h2 id="h-usdtco">USDT Colombia (comprar y vender)</h2>
+      <span class="muted">El cliente te compra USDT con pesos colombianos o te los vende. Precio = USDT en Binance P2P Colombia (vía CriptoYa) + tu ganancia al vender, o − tu ganancia al comprar.</span>
     </div>
     <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="uc-ref">—</b><span class="muted" id="uc-src"></span></div>
     <div class="row2">
@@ -126,6 +126,13 @@
         <span class="amount"><input id="uc-min" inputmode="numeric" autocomplete="off"></span></label>
     </div>
     <div class="usdt-price">Tu precio de venta: <b class="num" id="uc-price">—</b> COP por USDT <span class="muted" id="uc-trm"></span></div>
+    <div class="row2">
+      <label class="f" for="uc-buy">Ganancia al comprar (%)
+        <span class="amount"><input id="uc-buy" inputmode="decimal" autocomplete="off"></span></label>
+      <label class="f" for="uc-buymin">Mínimo al comprar (COP)
+        <span class="amount"><input id="uc-buymin" inputmode="numeric" autocomplete="off"></span></label>
+    </div>
+    <div class="usdt-price">Le compras al cliente a: <b class="num" id="uc-bid">—</b> COP por USDT</div>
     <div class="msg" id="uc-msg" hidden></div>
     <label class="switch"><input type="checkbox" id="uc-pub"> <b>USDT activo en el cotizador (desde Colombia)</b></label>
     <span class="muted">Marcado: los clientes ven "USDT" al elegir Colombia. Sin marcar: no aparece.</span>
@@ -251,6 +258,6 @@
     <span class="muted">Cada enlace lleva el WhatsApp de esa persona. El enlace general muestra un solo botón sin nombre, a tu número.</span>
   </section>
 </main>
-<script type="module" src="/js/panel.js?v=48"></script>
+<script type="module" src="/js/panel.js?v=49"></script>
 </body>
 </html>

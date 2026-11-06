@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=48';
-import { esc, flag, flags } from './ui.js?v=48';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, marketCoins } from './criptoya.js?v=48';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=49';
+import { esc, flag, flags } from './ui.js?v=49';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins } from './criptoya.js?v=49';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -564,12 +564,16 @@ function ucCalc() {
   // Comparación con la TRM (referencia para vender "a precio TRM o mejor").
   $('uc-trm').textContent = ucTrm && Number.isFinite(price)
     ? `· TRM hoy ${fmt(ucTrm, 2)}: tu precio está ${fmt(Math.abs((price / ucTrm - 1) * 100), 1)} % ${price >= ucTrm ? 'sobre' : 'bajo'} la TRM` : '';
+  const b = Number(String($('uc-buy').value).replace(',', '.'));
+  $('uc-bid').textContent = ucBid && b >= 0 && b <= 50 ? fmt(ucBid * (1 - b / 100), 2) : '—';
 }
+let ucBid = null;
 async function loadUsdtCo() {
   const { status, body } = await api('/api/usdt-co');
   if (status !== 200) return;
   $('uc-margin').value = body.margin_pct; $('uc-min').value = fmt(Number(body.min), 0); $('uc-pub').checked = !!body.published;
-  try { const res = await fetch(USDT_COP_URL, { cache: 'no-store' }); ucRef = res.ok ? usdtCopRef(await res.text()) : null; } catch { ucRef = null; }
+  $('uc-buy').value = body.buy_margin_pct ?? '3'; $('uc-buymin').value = fmt(Number(body.buy_min ?? body.min), 0);
+  try { const res = await fetch(USDT_COP_URL, { cache: 'no-store' }); const t = res.ok ? await res.text() : null; ucRef = t && usdtCopRef(t); ucBid = t && usdtCopBid(t); } catch { ucRef = null; }
   try { const r = await fetch('/api/indicadores', { cache: 'no-store' }); ucTrm = r.ok ? (await r.json())?.co?.trm?.value ?? null : null; } catch { ucTrm = null; }
   $('uc-ref').textContent = ucRef ? `${fmt(ucRef.value, 2)} COP` : '—';
   $('uc-src').textContent = ucRef ? `(${{ binancep2p: 'Binance P2P', vita: 'Vita Wallet', mediana: 'mediana de exchanges' }[ucRef.source]} vía CriptoYa)` : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".';
@@ -577,7 +581,7 @@ async function loadUsdtCo() {
 }
 async function saveUsdtCo() {
   const msg = $('uc-msg');
-  const { status, body } = await api('/api/usdt-co', { method: 'PUT', body: JSON.stringify({ margin_pct: $('uc-margin').value, min: $('uc-min').value, published: $('uc-pub').checked }) });
+  const { status, body } = await api('/api/usdt-co', { method: 'PUT', body: JSON.stringify({ margin_pct: $('uc-margin').value, min: $('uc-min').value, published: $('uc-pub').checked, buy_margin_pct: $('uc-buy').value, buy_min: $('uc-buymin').value }) });
   msg.hidden = false;
   if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
   msg.className = 'msg'; msg.textContent = body.published ? 'Guardado: los clientes ya ven USDT desde Colombia.' : 'Guardado (USDT Colombia apagado en el cotizador).';
@@ -684,6 +688,6 @@ $('jr-pub').onchange = async () => {
   msg.className = 'msg'; msg.textContent = body.published ? 'Activado: los clientes ya ven el botón de JM Rewards.' : 'Apagado: el botón de JM Rewards no aparece en el cotizador.';
 };
 
-$('uc-margin').oninput = ucCalc;
+$('uc-margin').oninput = ucCalc; $('uc-buy').oninput = ucCalc;
 $('uc-save').onclick = saveUsdtCo;
 $('uc-pub').onchange = saveUsdtCo;

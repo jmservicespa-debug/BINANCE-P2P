@@ -334,7 +334,8 @@ export async function saveUsdtCfg(request, env, now = Date.now()) {
 
 // ------------------------------------------------------------------ USDT/COP (venta al cliente en Colombia)
 
-const COP_CFG = { margin_pct: '2', min: '50000', published: false };
+// Colombia: vender USDT al cliente y también comprárselo (precio de compra = bid de Binance P2P − ganancia al comprar).
+const COP_CFG = { margin_pct: '2', min: '50000', published: false, buy_margin_pct: '3', buy_min: '50000' };
 export async function loadUsdtCoCfg(env) {
   try { return { ...COP_CFG, ...JSON.parse((await env.TASAS.get('usdt_co_cfg')) || '{}') }; } catch { return { ...COP_CFG }; }
 }
@@ -351,7 +352,11 @@ export async function saveUsdtCoCfg(request, env, now = Date.now()) {
   if (!(m !== '' && Number(m) >= 0 && Number(m) <= 50)) return json({ error: 'La ganancia debe estar entre 0 y 50 %.' }, 400);
   const min = String(body?.min ?? '').replace(/\D/g, '');
   if (!(Number(min) >= 1000 && Number(min) <= 100000000)) return json({ error: 'El mínimo no es válido.' }, 400);
-  const cfg = { margin_pct: m, min, published: body?.published === true };
+  const bm = String(body?.buy_margin_pct ?? '3').trim().replace(',', '.');
+  if (!(bm !== '' && Number(bm) >= 0 && Number(bm) <= 50)) return json({ error: 'La ganancia al comprar debe estar entre 0 y 50 %.' }, 400);
+  const bmin = String(body?.buy_min ?? min).replace(/\D/g, '');
+  if (!(Number(bmin) >= 1000 && Number(bmin) <= 100000000)) return json({ error: 'El mínimo al comprar no es válido.' }, 400);
+  const cfg = { margin_pct: m, min, published: body?.published === true, buy_margin_pct: bm, buy_min: bmin };
   await env.TASAS.put('usdt_co_cfg', JSON.stringify(cfg));
   return json(cfg);
 }

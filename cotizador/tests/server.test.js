@@ -296,7 +296,7 @@ test('USDT Colombia: referencia de Binance P2P Colombia y configuración del pan
   const cookie = login.headers.get('set-cookie').split(';')[0];
   assert.equal((await (await getRates({ request: req('/api/tasas'), env: e })).json()).usdt_co, undefined);  // apagado al inicio
   assert.equal((await putCo({ request: req('/api/usdt-co', { method: 'PUT', body: { margin_pct: '2', min: '50.000', published: true }, cookie }), env: e })).status, 200);
-  assert.deepEqual((await (await getRates({ request: req('/api/tasas'), env: e })).json()).usdt_co, { margin_pct: '2', min: 50000 });
+  assert.deepEqual((await (await getRates({ request: req('/api/tasas'), env: e })).json()).usdt_co, { margin_pct: '2', min: 50000, buy_margin_pct: '3', buy_min: 50000 });
   assert.equal((await putCo({ request: req('/api/usdt-co', { method: 'PUT', body: { margin_pct: '90', min: '50000' }, cookie }), env: e })).status, 400);
   assert.equal((await getCo({ request: req('/api/usdt-co'), env: e })).status, 401);
 });

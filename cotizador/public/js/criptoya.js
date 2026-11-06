@@ -96,6 +96,20 @@ export async function marketClVe(fetchFn = fetch) {
 
 // USDT en pesos colombianos para vender al cliente: precio de venta (ask) de Binance P2P Colombia (donde se recompra);
 // si no viene, Vita Wallet; si tampoco, la mediana de los demás.
+// Lo que paga el mercado por cada USDT en Colombia (bid): Binance P2P, si no Vita, si no la mediana.
+export function usdtCopBid(text) {
+  let d;
+  try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }
+  if (!d || typeof d !== 'object') return null;
+  const ok = (v) => Number.isFinite(v) && v >= COP_RANGE[0] && v <= COP_RANGE[1];
+  const b = Number(d.binancep2p?.bid);
+  if (ok(b)) return b;
+  const vk = Object.keys(d).find((k) => /vita/i.test(k));
+  const v = Number(vk && d[vk]?.bid);
+  if (ok(v)) return v;
+  const all = Object.values(d).map((x) => Number(x?.bid)).filter(ok).sort((a, z) => a - z);
+  return all.length ? all[Math.floor(all.length / 2)] : null;
+}
 export function usdtCopRef(text) {
   let d;
   try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }
