@@ -546,6 +546,28 @@ export async function saveBrClCfg(request, env, now = Date.now()) {
   return json(cfg);
 }
 
+// ------------------------------------------------------------------ Estados Unidos → Chile (automática)
+export const USCL_CFG = { profit_pct: '0', fee: '1', min: '20', published: false };
+export const loadUsClCfg = (env) => loadCfg(env, 'uscl_cfg', USCL_CFG);
+export async function usClView(request, env, now = Date.now()) {
+  if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
+  return json(await loadUsClCfg(env));
+}
+export async function saveUsClCfg(request, env, now = Date.now()) {
+  const { body, error } = await adminBody(request, env, now);
+  if (error) return error;
+  const p = pctOk(body?.profit_pct ?? '0');
+  if (p === null) return json({ error: 'Tu comisión debe estar entre 0 y 50 %.' }, 400);
+  const fee = String(body?.fee ?? '1').trim().replace(',', '.');
+  if (!(fee !== '' && Number(fee) >= 0 && Number(fee) <= 50)) return json({ error: 'El cargo fijo debe estar entre 0 y 50 dólares.' }, 400);
+  const min = String(body?.min ?? '').replace(/\D/g, '');
+  if (!(Number(min) >= 1 && Number(min) <= 100000)) return json({ error: 'El mínimo no es válido.' }, 400);
+  if (Number(min) <= Number(fee)) return json({ error: 'El mínimo debe ser mayor que el cargo fijo.' }, 400);
+  const cfg = { profit_pct: p, fee, min, published: body?.published === true };
+  await env.TASAS.put('uscl_cfg', JSON.stringify(cfg));
+  return json(cfg);
+}
+
 // ------------------------------------------------------------------ Venezuela → Chile (automática)
 export const VECL_CFG = { margin_pct: '3', min: '2000', source: 'bybitp2p', published: false };
 export const loadVeClCfg = (env) => loadCfg(env, 'vecl_cfg', VECL_CFG);

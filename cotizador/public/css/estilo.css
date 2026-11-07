@@ -666,3 +666,5 @@ body.panel .c-txt b { color: var(--ink); font-weight: 700 }
 body.panel .card h3 { margin: 6px 0 0; font-size: 15px; font-weight: 700; color: var(--ink) }
 body.panel .grupo[data-c="EU"] { --g-color: #003399; --g-stripe: linear-gradient(90deg, #003399 0 80%, #FFCC00 80%) }
 body.panel .grupo[data-c="EU"] .g-head { background: linear-gradient(120deg, #002A80, #003399) }
+body.panel .grupo[data-c="US"] { --g-color: #B22234; --g-stripe: linear-gradient(90deg, #3C3B6E 0 40%, #fff 40% 70%, #B22234 70%) }
+body.panel .grupo[data-c="US"] .g-head { background: linear-gradient(120deg, #3C3B6E, #B22234) }

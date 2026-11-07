@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, VE_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=60';
-import { setRewardsNav } from './rewards-nav.js?v=60';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, refFrom, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=60';
-import { esc, flag, flags } from './ui.js?v=60';
+import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, VE_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=61';
+import { setRewardsNav } from './rewards-nav.js?v=61';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, clpPerUsd, refFrom, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=61';
+import { esc, flag, flags } from './ui.js?v=61';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -32,9 +32,9 @@ const GLOBE = '<svg class="flag" viewBox="0 0 24 24" aria-hidden="true"><circle 
 const rateOf = (id) => data?.routes.find((r) => r.id === id);
 const statusOf = (id) => rateOf(id)?.status ?? (rateOf(id)?.active ? 'on' : 'off');
 // Se muestran las rutas activas y las de mercado inestable (estas sin tasa: se pide por WhatsApp).
-const ALL = [...ROUTES, VE_CL_ROUTE, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, USDT_ROUTE, USDT_CO_ROUTE, USDT_BR_ROUTE, ...GOLD_ROUTES, ...BTC_ROUTES];
+const ALL = [...ROUTES, VE_CL_ROUTE, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, USDT_ROUTE, USDT_CO_ROUTE, USDT_BR_ROUTE, ...GOLD_ROUTES, ...BTC_ROUTES];
 // Brasil aparece como "Próximamente" hasta que se activa alguna de sus rutas (USDT desde Brasil) en el panel.
-const ORIG = { ...ORIGINS, BR: { name: 'Brasil', cur: 'BRL' }, VE: { name: 'Venezuela', cur: 'VES' } };
+const ORIG = { ...ORIGINS, BR: { name: 'Brasil', cur: 'BRL' }, VE: { name: 'Venezuela', cur: 'VES' }, US: { name: 'Estados Unidos', cur: 'USD' } };
 // Marca de Binance junto a "dólar Binance" (la gente conoce el USDT así). JM Cambios es comerciante independiente.
 const BNB = '<svg class="bnb" viewBox="0 0 126 126" aria-hidden="true"><g fill="#F0B90B"><path d="M63 46 80 63 63 80 46 63z"/>'
   + '<path d="M28 54 37 63 28 72 19 63zM98 54 107 63 98 72 89 63z"/><path d="M63 9 96 42 84 54 63 33 42 54 30 42z"/><path d="M63 117 30 84 42 72 63 93 84 72 96 84z"/></g></svg>';
@@ -69,7 +69,7 @@ function renderOrigins() {
     $('origins').innerHTML = assetOrigins().map((k) => `<button data-o="${k}" aria-pressed="${k === origin}">${flag(k)} ${esc(ORIG[k].name)}</button>`).join('');
   } else $('origins').innerHTML = Object.entries(ORIGINS).map(([k, o]) =>
     `<button data-o="${k}" aria-pressed="${k === origin}">${flag(k)} ${esc(o.name)}</button>`).join('')
-    + (activeRoutes('VE', 'send').length ? `<button data-o="VE" aria-pressed="${'VE' === origin}">${flag('VE')} Venezuela</button>` : '')  // solo si está activa en el panel
+    + ['VE', 'US'].filter((k) => activeRoutes(k, 'send').length).map((k) => `<button data-o="${k}" aria-pressed="${k === origin}">${flag(k)} ${esc(ORIG[k].name)}</button>`).join('')  // solo si está activa en el panel
     + Object.entries(SOON).map(([k, s]) => `<button data-o="${k}" aria-pressed="${k === origin}">${flag(k)} ${esc(s.name)}</button>`).join('')
     + `<button data-o="${OTHER}" aria-pressed="${origin === OTHER}">${GLOBE} Otro país</button>`;
   $('origins').querySelectorAll('button').forEach((b) => b.onclick = () => {
@@ -206,13 +206,16 @@ function calc() {
   if (belowMin(r, send)) { minimum(r, o, send); return; }
   $('r-big').classList.remove('ask');
   $('r-free').hidden = false;
+  const fee = Number(r.fee) || 0, feeTxt = `${fmt(fee, fee % 1 ? 2 : 0)} ${o.cur}`;
+  $('r-free-t').textContent = fee ? `Comisión 0 % · Cargo fijo ${feeTxt}` : 'Comisión 0 % · Sin cargos extras';
   $('r-break').hidden = false;
   $('r-break').innerHTML = [
     ['Monto a enviar', `${fmt(send, 0)} ${o.cur}`],
     ['Comisión', `0 ${o.cur}`],
-    ['Cargos extras', `0 ${o.cur}`],
+    ['Cargos extras', fee ? `${feeTxt} (cargo fijo de la plataforma)` : `0 ${o.cur}`],
     ['Tasa del día', rate],
-    ['Cálculo', `${fmt(send, 0)} ${o.cur} ${r.op === 'mul' ? '×' : '÷'} ${rate} ${mode === 'send' ? '=' : '≈'} ${fmt(get, r.dec)} ${r.cur}`],
+    ...(r.pay ? [['Forma de pago', r.pay]] : []),
+    ['Cálculo', `${fee ? `(${fmt(send, 0)} − ${fmt(fee, fee % 1 ? 2 : 0)})` : fmt(send, 0)} ${o.cur} ${r.op === 'mul' ? '×' : '÷'} ${rate} ${mode === 'send' ? '=' : '≈'} ${fmt(get, r.dec)} ${r.cur}`],
   ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')
     + `<dt class="total">Total a pagar</dt><dd class="total">${fmt(send, 0)} ${o.cur}</dd>`;
   $('r-label').textContent = mode === 'send' ? `Recibe en ${r.name}` : 'Debes enviar';
@@ -255,10 +258,10 @@ function calc() {
   const ok = Number.isFinite(send) && Number.isFinite(get) && send > 0;
   const text = !ok ? '' : ref
     ? `Hola, necesito que lleguen ${fmt(get, 0)} Bs a ${r.name} (equivalentes a ${fmt2(usd)} ${refName}), enviando desde ${o.name}. Según el cotizador debo pagar ${fmt(send, 0)} ${o.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`
-    : `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${dot(r.name)} Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`;
+    : `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${dot(r.name)} Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${rate}, sin comisión${fee ? `, cargo fijo ${feeTxt}` : ''}).${r.pay ? ` ${r.pay}.` : ''} ¿Me confirmas?`;
   $('wa').innerHTML = waButtons(text);
   lastQuote = ok ? { from: [r.from], fromLabel: `Envías desde ${o.name}`, fromAmt: `${fmt(send, 0)} ${o.cur}`,
-    to: r.to, toLabel: `Recibe en ${r.name}`, toAmt: `${fmt(get, r.dec)} ${r.cur}`, rate,
+    to: r.to, toLabel: `Recibe en ${r.name}`, toAmt: `${fmt(get, r.dec)} ${r.cur}`, rate, chip: fee ? `✓  Comisión 0 % · Cargo fijo ${feeTxt}` : null,
     text: shareText(r, o, send, get, mode === 'eur' && eurOk ? ['EUR', eur, 'euro BCV'] : bcvOk ? ['USD', bcv, 'dólar BCV'] : trmOk ? ['USD', trm, 'dólar TRM'] : null) } : null;
   $('share').hidden = !ok;
 }
@@ -489,6 +492,8 @@ function shareText(r, o, send, get, bcvRef) {
     `Recibe: ${recv}`,
     ...(bcvRef ? [`Equivale a: ${fmt(get / bcvRef[1], 2)} ${bcvRef[0]} (${bcvRef[2]})`] : []),
     'Comisión 0 %',
+    ...(r.fee ? [`Cargo fijo: ${fmt(r.fee, r.fee % 1 ? 2 : 0)} ${o.cur}`] : []),
+    ...(r.pay ? [r.pay] : []),
     'Cotiza tu envío 👉 https://jmcambios.cl'].join('\n');
 }
 
@@ -543,7 +548,7 @@ async function shareQuote(q) {
   tx = await flagRow(q.to, 594, 'rgba(255,255,255,.9)');
   g.fillStyle = 'rgba(255,255,255,.78)'; g.font = F(600, 34); g.fillText(q.toLabel, tx, 606);
   g.fillStyle = '#FFFFFF'; g.font = F(800, 100); g.fillText(q.toAmt, 120, 730, 840);
-  g.font = F(700, 28); const chip = '✓  Comisión 0 % · Sin cargos extras'; const cw = g.measureText(chip).width + 48;
+  g.font = F(700, 28); const chip = q.chip || '✓  Comisión 0 % · Sin cargos extras'; const cw = g.measureText(chip).width + 48;
   g.fillStyle = '#E8F6EF'; g.beginPath(); g.roundRect(120, 768, cw, 52, 26); g.fill();
   g.fillStyle = '#0B6B45'; g.fillText(chip, 144, 804);
   g.fillStyle = '#6B6578'; g.font = F(500, 30);
@@ -751,6 +756,15 @@ async function loadBrCl() {
   const got = await clpPerBrl(data.br_cl.source, data.br_cl.profit_pct);
   data.routes.push({ id: BR_CL_ROUTE.id, status: got ? 'on' : 'ask', rate: got ? got.rate.toFixed(2) : '', active: true });
 }
+// Estados Unidos → Chile: dólares (menos el cargo fijo) vendidos a lo que paga Vita por USDT, menos la comisión.
+async function loadUsCl() {
+  data.routes = data.routes.filter((x) => x.id !== US_CL_ROUTE.id);
+  if (!data?.us_cl) return;
+  US_CL_ROUTE.min = Number(data.us_cl.min) || 20;
+  US_CL_ROUTE.fee = Number(data.us_cl.fee) || 0;
+  const got = await clpPerUsd(data.us_cl.profit_pct);
+  data.routes.push({ id: US_CL_ROUTE.id, status: got ? 'on' : 'ask', rate: got ? got.rate.toFixed(2) : '', active: true });
+}
 async function loadBrl() {
   const r = data?.routes.find((x) => x.id === 'cl-br' && x.auto);
   if (!r) return;
@@ -768,7 +782,7 @@ async function load() {
   } catch {
     if (!data) { $('error').hidden = false; $('error').textContent = 'No pudimos cargar las tasas. Revisa tu conexión o escríbenos por WhatsApp.'; data = { routes: [], bcv: null, bcv_eur: null }; }
   }
-  await Promise.all([loadUsdt(), loadUsdtCo(), loadUsdtBr(), loadGold(), loadBtc(), loadVeCl(), loadBrCo(), loadCoBr(), loadBrCl(), loadBrl(), loadCoCl()]);
+  await Promise.all([loadUsdt(), loadUsdtCo(), loadUsdtBr(), loadGold(), loadBtc(), loadVeCl(), loadBrCo(), loadCoBr(), loadBrCl(), loadUsCl(), loadBrl(), loadCoCl()]);
   // Botón de JM Rewards: solo aparece si se activó en el panel.
   $('jmr').hidden = !data.rewards?.url;
   if (data.rewards?.url) $('jmr').href = data.rewards.url;

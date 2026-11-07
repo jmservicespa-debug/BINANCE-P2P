@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=60">
+<link rel="stylesheet" href="/css/estilo.css?v=61">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -33,7 +33,7 @@
   </form>
 
   <nav class="gnav" id="gnav" hidden aria-label="Secciones del panel">
-    <a href="#g-gen">General</a><a href="#g-CL">Chile</a><a href="#g-CO">Colombia</a><a href="#g-BR">Brasil</a><a href="#g-VE">Venezuela</a><a href="#g-EU">Europa</a><a href="#g-cripto">Oro y Bitcoin</a><a href="#g-tools">Herramientas</a>
+    <a href="#g-gen">General</a><a href="#g-CL">Chile</a><a href="#g-CO">Colombia</a><a href="#g-BR">Brasil</a><a href="#g-VE">Venezuela</a><a href="#g-EU">Europa</a><a href="#g-US">Estados Unidos</a><a href="#g-cripto">Oro y Bitcoin</a><a href="#g-tools">Herramientas</a>
   </nav>
 
   <div class="grupo" id="g-gen" data-c="gen" hidden>
@@ -281,6 +281,31 @@
     </section>
   </div>
 
+  <div class="grupo" id="g-US" data-c="US" hidden>
+    <div class="g-head"><span class="g-flags" data-flags="US"></span><div><b>Estados Unidos</b><small>Envíos desde Estados Unidos</small></div></div>
+    <section class="card" id="uscl" hidden aria-labelledby="h-uscl">
+      <div class="c-head"><span class="c-flags" data-flags="US,CL"></span><h2 id="h-uscl">Envío Estados Unidos → Chile (automático)</h2></div>
+      <p class="c-txt"><b>Qué es:</b> el cliente paga dólares con un link de pago de Cash App y recibe pesos chilenos.</p>
+      <p class="c-txt"><b>Cómo se calcula:</b> (dólares − cargo fijo) × (lo que paga Vita por USDT en pesos chilenos − tu comisión). El cargo fijo se le muestra al cliente.</p>
+      <div class="usdt-ref"><span class="muted">Precio de referencia</span><b class="num" id="ul-ref">—</b></div>
+      <div class="row2">
+        <label class="f" for="ul-profit">Tu comisión (%)
+          <span class="amount"><input id="ul-profit" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f" for="ul-fee">Cargo fijo (USD)
+          <span class="amount"><input id="ul-fee" inputmode="decimal" autocomplete="off"></span></label>
+      </div>
+      <div class="row2">
+        <label class="f" for="ul-min">Mínimo (USD)
+          <span class="amount"><input id="ul-min" inputmode="numeric" autocomplete="off"></span></label>
+      </div>
+      <div class="usdt-price" id="ul-rate">—</div>
+      <div class="msg" id="ul-msg" hidden></div>
+      <label class="switch"><input type="checkbox" id="ul-pub"> <b>Activo en el cotizador</b></label>
+      <span class="muted">Marcado: aparece Estados Unidos como país de origen. Sin marcar: no aparece.</span>
+      <button class="btn ghost" id="ul-save">Guardar</button>
+    </section>
+  </div>
+
   <div class="grupo" id="g-cripto" data-c="cripto" hidden>
     <div class="g-head"><span class="g-flags" data-flags="CL,CO"></span><div><b>Oro y Bitcoin</b><small>Comprar y vender desde Chile y Colombia</small></div></div>
     <section class="card" id="oro" hidden aria-labelledby="h-oro">
@@ -387,6 +412,6 @@
     </section>
   </div>
 </main>
-<script type="module" src="/js/panel.js?v=60"></script>
+<script type="module" src="/js/panel.js?v=61"></script>
 </body>
 </html>

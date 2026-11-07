@@ -535,3 +535,23 @@ test('USDT Chile, Colombia y Brasil: se puede elegir el exchange de referencia (
   const r = refFrom('{"bitgetp2p":{"ask":5.6,"bid":5.45},"binancep2p":{"ask":5.65}}', BRL_RANGE, 'bitget');
   assert.deepEqual(r, { value: 5.6, bid: 5.45, source: 'bitgetp2p' });
 });
+
+test('Estados Unidos → Chile: (dólares − cargo fijo) × Vita CLP × (1 − comisión)', async () => {
+  noBcv();
+  const { onRequestPut: putUsCl } = await import('../functions/api/us-cl.js');
+  const { clpPerUsd } = await import('../public/js/criptoya.js');
+  const { US_CL_ROUTE, convert, invert } = await import('../public/js/rutas.js');
+  const e = await env();
+  assert.equal((await putUsCl({ request: req('/api/us-cl', { method: 'PUT', body: { profit_pct: '3', fee: '1', min: '20', published: true } }), env: e })).status, 401);
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await (await getRates({ env: e })).json()).us_cl, undefined);
+  assert.equal((await putUsCl({ request: req('/api/us-cl', { method: 'PUT', cookie, body: { profit_pct: '3', fee: '1', min: '20', published: true } }), env: e })).status, 200);
+  assert.deepEqual((await (await getRates({ env: e })).json()).us_cl, { profit_pct: '3', fee: 1, min: 20 });
+  const fake = async () => ({ ok: true, text: async () => '{"vitawallet":{"ask":990,"bid":980}}' });
+  const r = await clpPerUsd('3', fake);
+  assert.ok(Math.abs(r.rate - 980 * 0.97) < 1e-9);
+  const route = { ...US_CL_ROUTE, fee: 1 };
+  assert.ok(Math.abs(convert(route, '950.60', 100) - 99 * 950.6) < 1e-6);
+  assert.ok(Math.abs(invert(route, '950.60', 99 * 950.6) - 100) < 1e-6);
+});

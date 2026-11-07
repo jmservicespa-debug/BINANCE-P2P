@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=60';
-import { esc, flag, flags } from './ui.js?v=60';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=60';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=61';
+import { esc, flag, flags } from './ui.js?v=61';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=61';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -29,7 +29,7 @@ async function api(path, opts = {}) {
 
 function showEditor(on) {
   $('login').hidden = on;
-  ['power', 'mkt', 'tasas-CL', 'tasas-CO', 'tasas-EU', 'bcvsec', 'usdt', 'usdtco', 'brco', 'cobr', 'brcl', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  ['power', 'mkt', 'tasas-CL', 'tasas-CO', 'tasas-EU', 'bcvsec', 'usdt', 'usdtco', 'brco', 'cobr', 'brcl', 'uscl', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
   document.querySelectorAll('.grupo, #gnav').forEach((el) => { el.hidden = !on; });
 }
 
@@ -52,6 +52,7 @@ async function start() {
   loadBrCo();
   loadCoBr();
   loadBrCl();
+  loadUsCl();
   loadGoldCfg();
   loadBtcCfg();
   loadRewards();
@@ -796,6 +797,33 @@ async function saveBrCl() {
 }
 $('bl-profit').oninput = blCalc; $('bl-src').onchange = blCalc;
 $('bl-save').onclick = saveBrCl; $('bl-pub').onchange = saveBrCl;
+
+// ------------------------------------------------------------------ Estados Unidos → Chile
+let ulClp = null;
+function ulCalc() {
+  const n = (id) => Number(String($(id).value || '0').replace(',', '.'));
+  const p = n('ul-profit'), fee = n('ul-fee');
+  $('ul-ref').textContent = ulClp ? `Vita paga ${fmt(ulClp, 2)} CLP por USDT` : '—';
+  if (!ulClp || !(p >= 0 && p <= 50) || !(fee >= 0 && fee <= 50)) { $('ul-rate').textContent = ulClp ? 'Revisa la comisión (0 a 50 %) y el cargo fijo.' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
+  const rate = Number((ulClp * (1 - p / 100)).toFixed(2));
+  $('ul-rate').innerHTML = `Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100 USD = (100 − ${fmt(fee, fee % 1 ? 2 : 0)}) × ${fmt(rate, 2)} = <b class="num">${fmt(Math.max(0, 100 - fee) * rate, 0)} CLP</b>`;
+}
+async function loadUsCl() {
+  const { status, body } = await api('/api/us-cl');
+  if (status !== 200) return;
+  $('ul-profit').value = body.profit_pct ?? '0'; $('ul-fee').value = body.fee ?? '1'; $('ul-min').value = fmt(Number(body.min), 0); $('ul-pub').checked = !!body.published;
+  try { const r = await fetch(USDT_URL, { cache: 'no-store' }); ulClp = r.ok ? vitaPrice(await r.text(), 'bid', [300, 3000]) : null; } catch { ulClp = null; }
+  ulCalc();
+}
+async function saveUsCl() {
+  const msg = $('ul-msg');
+  const { status, body } = await api('/api/us-cl', { method: 'PUT', body: JSON.stringify({ profit_pct: $('ul-profit').value || '0', fee: $('ul-fee').value || '0', min: $('ul-min').value, published: $('ul-pub').checked }) });
+  msg.hidden = false;
+  if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
+  msg.className = 'msg'; msg.textContent = body.published ? 'Guardado: los clientes ya ven envíos desde Estados Unidos a Chile.' : 'Guardado (ruta Estados Unidos → Chile apagada).';
+}
+$('ul-profit').oninput = ulCalc; $('ul-fee').oninput = ulCalc;
+$('ul-save').onclick = saveUsCl; $('ul-pub').onchange = saveUsCl;
 
 // ------------------------------------------------------------------ Venezuela → Chile
 

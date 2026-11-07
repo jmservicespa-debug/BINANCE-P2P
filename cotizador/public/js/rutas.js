@@ -54,8 +54,10 @@ export function amountNum(s) {
   return t ? parseFloat(t) : NaN;
 }
 
-export const convert = (route, rate, amount) => route.op === 'mul' ? amount * rateNum(rate) : amount / rateNum(rate);
-export const invert = (route, rate, received) => route.op === 'mul' ? received / rateNum(rate) : received * rateNum(rate);
+// fee: cargo fijo en la moneda de origen que se descuenta antes de convertir (ej. 1 USD en Estados Unidos → Chile).
+const feeOf = (route) => Number(route.fee) || 0;
+export const convert = (route, rate, amount) => { const a = Math.max(0, amount - feeOf(route)); return route.op === 'mul' ? a * rateNum(rate) : a / rateNum(rate); };
+export const invert = (route, rate, received) => (route.op === 'mul' ? received / rateNum(rate) : received * rateNum(rate)) + feeOf(route);
 
 export function fmt(v, dec) {
   if (!Number.isFinite(v)) return '—';
@@ -108,5 +110,8 @@ export const CO_BR_ROUTE = { id: 'co-br', from: 'CO', to: ['BR'], name: 'Brasil'
   note: 'Recibe en reales por Pix' };
 export const BR_CL_ROUTE = { id: 'br-cl', from: 'BR', to: ['CL'], name: 'Chile', cur: 'CLP', unit: 'Pesos chilenos', op: 'mul', dec: 0, min: 50,
   note: 'Recibe por transferencia bancaria en cualquier banco de Chile' };
+export const US_CL_ROUTE = { id: 'us-cl', from: 'US', to: ['CL'], name: 'Chile', cur: 'CLP', unit: 'Pesos chilenos', op: 'mul', dec: 0, min: 20, fee: 1,
+  pay: 'Pago con link de Cash App',
+  note: 'Pagas en dólares con un link de pago de Cash App (te lo enviamos por WhatsApp). Recibe por transferencia en cualquier banco de Chile' };
 export const VE_CL_ROUTE = { id: 've-cl', from: 'VE', to: ['CL'], name: 'Chile', cur: 'CLP', unit: 'Pesos chilenos', op: 'mul', dec: 0, min: 2000,
   note: 'Recibe por transferencia bancaria en cualquier banco de Chile' };

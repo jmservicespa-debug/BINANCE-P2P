@@ -162,6 +162,15 @@ export async function clpPerBrl(source, profitPct, fetchFn = fetch) {
   const rate = clp / (brl * (1 + Number(profitPct || 0) / 100));
   return rate > 0 ? { rate, brl, clp } : null;
 }
+// Estados Unidos → Chile: los dólares se venden en Chile a lo que paga Vita por USDT, menos tu comisión.
+// Tasa = pesos chilenos por dólar (el cargo fijo se descuenta aparte, antes de convertir).
+export async function clpPerUsd(profitPct, fetchFn = fetch) {
+  const l = await fetchFn(USDT_URL, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  const clp = l && vitaPrice(l, 'bid', CLP_RANGE);
+  if (!clp) return null;
+  const rate = clp * (1 - Number(profitPct || 0) / 100);
+  return rate > 0 ? { rate, clp } : null;
+}
 export function usdtCopBid(text) {
   let d;
   try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }
