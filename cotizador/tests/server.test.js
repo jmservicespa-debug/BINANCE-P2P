@@ -455,8 +455,8 @@ test('Venezuela → Chile: se activa desde el panel y la tasa es Vita CLP ÷ (US
   assert.deepEqual((await (await getRates({ env: e })).json()).ve_cl, { margin_pct: '4', min: 3000, source: 'bybitp2p' });
   const fake = async (u) => ({ ok: true, text: async () => (String(u).includes('/ves/') ? '{"bybitp2p":{"ask":400,"bid":395},"binancep2p":{"ask":410}}' : '{"vitawallet":{"ask":990,"bid":980}}') });
   const r = await clpPerVes('bybitp2p', '4', fake);
-  assert.equal(r.ves, 400); assert.equal(r.clp, 980);
-  assert.ok(Math.abs(r.rate - 980 / (400 * 1.04)) < 1e-9);
+  assert.equal(r.ves, 400); assert.equal(r.clp, 990);
+  assert.ok(Math.abs(r.rate - 990 / (400 * 1.04)) < 1e-9);
 });
 
 test('Brasil → Colombia: tasa = Binance P2P COP (ask, precio alto) ÷ (USDT BRL del exchange × (1 + ajuste))', async () => {
@@ -501,7 +501,7 @@ test('Brasil: el exchange elegido se encuentra aunque CriptoYa lo llame con "p2p
   assert.equal((await copPerBrl('bitgetp2p', '2', fake)).brl, 5.6);
 });
 
-test('Brasil → Chile: tasa = Vita CLP (bid) ÷ (USDT BRL de Bitget × (1 + ganancia))', async () => {
+test('Brasil → Chile: tasa = Vita CLP (venta) ÷ (USDT BRL de Bitget × (1 + ganancia))', async () => {
   noBcv();
   const { onRequestPut: putBrCl } = await import('../functions/api/br-cl.js');
   const { clpPerBrl } = await import('../public/js/criptoya.js');
@@ -514,8 +514,8 @@ test('Brasil → Chile: tasa = Vita CLP (bid) ÷ (USDT BRL de Bitget × (1 + gan
   assert.deepEqual((await (await getRates({ env: e })).json()).br_cl, { profit_pct: '3', min: 50, source: 'bitget' });
   const fake = async (u) => ({ ok: true, text: async () => (String(u).includes('/brl/') ? '{"bitgetp2p":{"ask":5.6,"bid":5.45}}' : '{"vitawallet":{"ask":990,"bid":980}}') });
   const r = await clpPerBrl('bitget', '3', fake);
-  assert.equal(r.brl, 5.6); assert.equal(r.clp, 980);
-  assert.ok(Math.abs(r.rate - 980 / (5.6 * 1.03)) < 1e-9);
+  assert.equal(r.brl, 5.6); assert.equal(r.clp, 990);
+  assert.ok(Math.abs(r.rate - 990 / (5.6 * 1.03)) < 1e-9);
 });
 
 test('USDT Chile, Colombia y Brasil: se puede elegir el exchange de referencia (vacío = automático)', async () => {

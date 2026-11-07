@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=63">
+<link rel="stylesheet" href="/css/estilo.css?v=64">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -187,7 +187,7 @@
     <section class="card" id="brcl" hidden aria-labelledby="h-brcl">
       <div class="c-head"><span class="c-flags" data-flags="BR,CL"></span><h2 id="h-brcl">Envío Brasil → Chile (automático)</h2></div>
       <p class="c-txt"><b>Qué es:</b> el cliente paga reales y recibe pesos chilenos.</p>
-      <p class="c-txt"><b>Cómo se calcula:</b> (lo que paga Vita por USDT en pesos chilenos) ÷ (USDT en reales del exchange + tu ganancia). Reales × tasa = pesos chilenos.</p>
+      <p class="c-txt"><b>Cómo se calcula:</b> (precio de venta del USDT en Vita Wallet) ÷ (USDT en reales del exchange + tu ganancia). Reales × tasa = pesos chilenos.</p>
       <label class="f" for="bl-src">Referencia (exchange de Brasil donde compras, vía CriptoYa)
         <select id="bl-src"></select></label>
       <div class="usdt-ref"><span class="muted">Precio de referencia</span><b class="num" id="bl-ref">—</b></div>
@@ -230,7 +230,7 @@
     <section class="card" id="vecl" hidden aria-labelledby="h-vecl">
       <div class="c-head"><span class="c-flags" data-flags="VE,CL"></span><h2 id="h-vecl">Envío Venezuela → Chile (automático)</h2></div>
       <p class="c-txt"><b>Qué es:</b> el cliente paga bolívares y recibe pesos chilenos.</p>
-      <p class="c-txt"><b>Cómo se calcula:</b> (lo que paga Vita por USDT en pesos chilenos) ÷ (USDT en bolívares del P2P + tu ganancia). Bolívares × tasa = pesos.</p>
+      <p class="c-txt"><b>Cómo se calcula:</b> (precio de venta del USDT en Vita Wallet) ÷ (USDT en bolívares del P2P + tu ganancia). Bolívares × tasa = pesos.</p>
       <label class="f" for="vc-src">Referencia (P2P de USDT en bolívares, vía CriptoYa)
         <select id="vc-src"></select></label>
       <div class="usdt-ref"><span class="muted">Precio de referencia</span><b class="num" id="vc-ref">—</b></div>
@@ -412,6 +412,6 @@
     </section>
   </div>
 </main>
-<script type="module" src="/js/panel.js?v=63"></script>
+<script type="module" src="/js/panel.js?v=64"></script>
 </body>
 </html>

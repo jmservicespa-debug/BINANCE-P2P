@@ -87,7 +87,7 @@ export function vesExchanges(text) {
 export async function clpPerVes(source, marginPct, fetchFn = fetch) {
   const [v, l] = await Promise.all([USDT_VES_URL, USDT_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
   const list = v ? vesExchanges(v) : [];
-  const ves = list.find((x) => x.key === source)?.ask, clp = l && vitaPrice(l, 'bid', CLP_RANGE);
+  const ves = list.find((x) => x.key === source)?.ask, clp = l && parseCriptoYa(l)?.value;  // precio de venta de Vita (como USDT Chile)
   if (!ves || !clp) return null;
   const rate = clp / (ves * (1 + Number(marginPct || 0) / 100));
   return rate > 0 ? { rate, ves, clp } : null;
@@ -157,7 +157,7 @@ export async function copPerBrlSell(source, profitPct, fetchFn = fetch) {
 // Tasa = pesos chilenos por cada real; reales × tasa = pesos.
 export async function clpPerBrl(source, profitPct, fetchFn = fetch) {
   const [b, l] = await Promise.all([USDT_BRL_URL, USDT_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
-  const brl = pickExchange(b ? brlExchanges(b) : [], source)?.ask, clp = l && vitaPrice(l, 'bid', CLP_RANGE);
+  const brl = pickExchange(b ? brlExchanges(b) : [], source)?.ask, clp = l && parseCriptoYa(l)?.value;  // precio de venta de Vita (como USDT Chile)
   if (!brl || !clp) return null;
   const rate = clp / (brl * (1 + Number(profitPct || 0) / 100));
   return rate > 0 ? { rate, brl, clp } : null;

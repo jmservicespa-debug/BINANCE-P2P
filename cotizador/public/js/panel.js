@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=63';
-import { esc, flag, flags } from './ui.js?v=63';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=63';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=64';
+import { esc, flag, flags } from './ui.js?v=64';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=64';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -771,7 +771,7 @@ let blList = [], blClp = null;
 function blCalc() {
   const p = Number(String($('bl-profit').value || '0').replace(',', '.'));
   const brl = blList.find((x) => x.key === $('bl-src').value)?.ask;
-  $('bl-ref').textContent = brl && blClp ? `1 USDT = ${fmt(brl, 4)} BRL (${EX_NAME($('bl-src').value)}) · Vita paga ${fmt(blClp, 2)} CLP por USDT` : '—';
+  $('bl-ref').textContent = brl && blClp ? `1 USDT = ${fmt(brl, 4)} BRL (${EX_NAME($('bl-src').value)}) · Vita Wallet vende el USDT a ${fmt(blClp, 2)} CLP` : '—';
   if (!brl || !blClp || !(p >= 0 && p <= 50)) { $('bl-rate').textContent = blList.length ? 'Revisa la ganancia (0 a 50 %) o elige otro exchange.' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
   const rate = blClp / (brl * (1 + p / 100));
   $('bl-rate').innerHTML = `USDT con tu ganancia: <b class="num">${fmt(brl * (1 + p / 100), 4)} BRL</b> · Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100 BRL = <b class="num">${fmt(100 * rate, 0)} CLP</b>`;
@@ -782,7 +782,7 @@ async function loadBrCl() {
   $('bl-profit').value = body.profit_pct ?? '0'; $('bl-min').value = fmt(Number(body.min), 0); $('bl-pub').checked = !!body.published;
   const get = (u) => fetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   const [b, l] = await Promise.all([get(USDT_BRL_URL), get(USDT_URL)]);
-  blList = b ? brlExchanges(b) : []; blClp = l ? vitaPrice(l, 'bid', [300, 3000]) : null;
+  blList = b ? brlExchanges(b) : []; blClp = l ? parseCriptoYa(l)?.value ?? null : null;
   const src = pickExchange(blList, body.source)?.key || body.source;
   const keys = [...new Set([src, ...blList.map((x) => x.key)])];
   $('bl-src').innerHTML = keys.map((k) => `<option value="${esc(k)}"${k === src ? ' selected' : ''}>${esc(EX_NAME(k))}${blList.some((x) => x.key === k) ? '' : ' (sin precio ahora)'}</option>`).join('');
@@ -833,7 +833,7 @@ const P2P_NAME = (k) => ({ binancep2p: 'Binance P2P', bybitp2p: 'Bybit P2P', bit
 function vcCalc() {
   const m = Number(String($('vc-margin').value).replace(',', '.'));
   const ves = vcList.find((x) => x.key === $('vc-src').value)?.ask;
-  $('vc-ref').textContent = ves && vcClp ? `1 USDT = ${fmt(ves, 2)} Bs (${P2P_NAME($('vc-src').value)}) · Vita paga ${fmt(vcClp, 2)} CLP` : '—';
+  $('vc-ref').textContent = ves && vcClp ? `1 USDT = ${fmt(ves, 2)} Bs (${P2P_NAME($('vc-src').value)}) · Vita Wallet vende el USDT a ${fmt(vcClp, 2)} CLP` : '—';
   if (!ves || !vcClp || !(m >= 0 && m <= 50)) { $('vc-rate').textContent = vcList.length ? 'Revisa la ganancia (0 a 50 %).' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
   const rate = vcClp / (ves * (1 + m / 100));
   $('vc-rate').innerHTML = `Tasa publicada: <b class="num">${rate.toFixed(4)}</b> · 10.000 Bs = <b class="num">${fmt(10000 * rate, 0)} CLP</b>`;
@@ -844,7 +844,7 @@ async function loadVeCl() {
   $('vc-margin').value = body.margin_pct; $('vc-min').value = fmt(Number(body.min), 0); $('vc-pub').checked = !!body.published;
   const get = (u) => fetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   const [v, l] = await Promise.all([get(USDT_VES_URL), get(USDT_URL)]);
-  vcList = v ? vesExchanges(v) : []; vcClp = l ? vitaPrice(l, 'bid', [300, 3000]) : null;
+  vcList = v ? vesExchanges(v) : []; vcClp = l ? parseCriptoYa(l)?.value ?? null : null;
   const keys = [...new Set([body.source, ...vcList.map((x) => x.key)])];
   $('vc-src').innerHTML = keys.map((k) => `<option value="${esc(k)}"${k === body.source ? ' selected' : ''}>${esc(P2P_NAME(k))}${vcList.some((x) => x.key === k) ? '' : ' (sin precio ahora)'}</option>`).join('');
   vcCalc();
