@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=56">
+<link rel="stylesheet" href="/css/estilo.css?v=57">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -137,6 +137,27 @@
     <label class="switch"><input type="checkbox" id="uc-pub"> <b>USDT activo en el cotizador (desde Colombia)</b></label>
     <span class="muted">Marcado: los clientes ven "USDT" al elegir Colombia. Sin marcar: no aparece.</span>
     <button class="btn ghost" id="uc-save">Guardar</button>
+  </section>
+
+  <section class="card" id="brcl" hidden aria-labelledby="h-brcl">
+    <div>
+      <h2 id="h-brcl">Envíos Brasil → Chile</h2>
+      <span class="muted">El cliente paga reales y recibe pesos chilenos. Tasa = (lo que paga Vita por USDT en pesos chilenos) ÷ (USDT en reales del exchange elegido + tu ganancia). Reales × tasa = pesos chilenos.</span>
+    </div>
+    <label class="f" for="bl-src">Exchange de Brasil donde compras (USDT en reales, vía CriptoYa)
+      <select id="bl-src"></select></label>
+    <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="bl-ref">—</b></div>
+    <div class="row2">
+      <label class="f" for="bl-profit">Tu ganancia (%)
+        <span class="amount"><input id="bl-profit" inputmode="decimal" autocomplete="off"></span></label>
+      <label class="f" for="bl-min">Mínimo (BRL)
+        <span class="amount"><input id="bl-min" inputmode="numeric" autocomplete="off"></span></label>
+    </div>
+    <div class="usdt-price" id="bl-rate">—</div>
+    <div class="msg" id="bl-msg" hidden></div>
+    <label class="switch"><input type="checkbox" id="bl-pub"> <b>Ruta Brasil → Chile activa en el cotizador</b></label>
+    <span class="muted">Marcado: en "Envíos", desde Brasil aparece Chile como destino. Sin marcar: no aparece.</span>
+    <button class="btn ghost" id="bl-save">Guardar</button>
   </section>
 
   <section class="card" id="cobr" hidden aria-labelledby="h-cobr">
@@ -328,6 +349,6 @@
     <span class="muted">Cada enlace lleva el WhatsApp de esa persona. El enlace general muestra un solo botón sin nombre, a tu número.</span>
   </section>
 </main>
-<script type="module" src="/js/panel.js?v=56"></script>
+<script type="module" src="/js/panel.js?v=57"></script>
 </body>
 </html>

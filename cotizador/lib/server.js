@@ -517,6 +517,27 @@ export async function saveCoBrCfg(request, env, now = Date.now()) {
   return json(cfg);
 }
 
+// ------------------------------------------------------------------ Brasil → Chile (automática)
+export const BRCL_CFG = { profit_pct: '0', min: '50', source: 'bitget', published: false };
+export const loadBrClCfg = (env) => loadCfg(env, 'brcl_cfg', BRCL_CFG);
+export async function brClView(request, env, now = Date.now()) {
+  if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
+  return json(await loadBrClCfg(env));
+}
+export async function saveBrClCfg(request, env, now = Date.now()) {
+  const { body, error } = await adminBody(request, env, now);
+  if (error) return error;
+  const p = pctOk(body?.profit_pct ?? '0');
+  if (p === null) return json({ error: 'Tu ganancia debe estar entre 0 y 50 %.' }, 400);
+  const min = String(body?.min ?? '').replace(/\D/g, '');
+  if (!(Number(min) >= 1 && Number(min) <= 10000000)) return json({ error: 'El mínimo no es válido.' }, 400);
+  const source = String(body?.source ?? '').trim();
+  if (!/^[a-z0-9_]{2,30}$/i.test(source)) return json({ error: 'Elige el exchange de referencia.' }, 400);
+  const cfg = { profit_pct: p, min, source, published: body?.published === true };
+  await env.TASAS.put('brcl_cfg', JSON.stringify(cfg));
+  return json(cfg);
+}
+
 // ------------------------------------------------------------------ Venezuela → Chile (automática)
 export const VECL_CFG = { margin_pct: '3', min: '2000', source: 'bybitp2p', published: false };
 export const loadVeClCfg = (env) => loadCfg(env, 'vecl_cfg', VECL_CFG);

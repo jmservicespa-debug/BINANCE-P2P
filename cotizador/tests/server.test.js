@@ -500,3 +500,20 @@ test('Brasil: el exchange elegido se encuentra aunque CriptoYa lo llame con "p2p
   assert.equal((await copPerBrlSell('bitget', '3', fake)).brl, 5.45);
   assert.equal((await copPerBrl('bitgetp2p', '2', fake)).brl, 5.6);
 });
+
+test('Brasil → Chile: tasa = Vita CLP (bid) ÷ (USDT BRL de Bitget × (1 + ganancia))', async () => {
+  noBcv();
+  const { onRequestPut: putBrCl } = await import('../functions/api/br-cl.js');
+  const { clpPerBrl } = await import('../public/js/criptoya.js');
+  const e = await env();
+  assert.equal((await putBrCl({ request: req('/api/br-cl', { method: 'PUT', body: { profit_pct: '3', min: '50', source: 'bitget', published: true } }), env: e })).status, 401);
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await (await getRates({ env: e })).json()).br_cl, undefined);
+  assert.equal((await putBrCl({ request: req('/api/br-cl', { method: 'PUT', cookie, body: { profit_pct: '3', min: '50', source: 'bitget', published: true } }), env: e })).status, 200);
+  assert.deepEqual((await (await getRates({ env: e })).json()).br_cl, { profit_pct: '3', min: 50, source: 'bitget' });
+  const fake = async (u) => ({ ok: true, text: async () => (String(u).includes('/brl/') ? '{"bitgetp2p":{"ask":5.6,"bid":5.45}}' : '{"vitawallet":{"ask":990,"bid":980}}') });
+  const r = await clpPerBrl('bitget', '3', fake);
+  assert.equal(r.brl, 5.6); assert.equal(r.clp, 980);
+  assert.ok(Math.abs(r.rate - 980 / (5.6 * 1.03)) < 1e-9);
+});

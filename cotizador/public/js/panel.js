@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=56';
-import { esc, flag, flags } from './ui.js?v=56';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange } from './criptoya.js?v=56';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=57';
+import { esc, flag, flags } from './ui.js?v=57';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange } from './criptoya.js?v=57';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -18,7 +18,7 @@ async function api(path, opts = {}) {
 
 function showEditor(on) {
   $('login').hidden = on;
-  ['power', 'mkt', 'editor', 'usdt', 'usdtco', 'brco', 'cobr', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  ['power', 'mkt', 'editor', 'usdt', 'usdtco', 'brco', 'cobr', 'brcl', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
 }
 
 async function start() {
@@ -37,6 +37,7 @@ async function start() {
   loadVeCl();
   loadBrCo();
   loadCoBr();
+  loadBrCl();
   loadGoldCfg();
   loadBtcCfg();
   loadRewards();
@@ -723,6 +724,38 @@ async function saveCoBr() {
 }
 $('cb-profit').oninput = cbCalc; $('cb-src').onchange = cbCalc;
 $('cb-save').onclick = saveCoBr; $('cb-pub').onchange = saveCoBr;
+
+// ------------------------------------------------------------------ Brasil → Chile
+let blList = [], blClp = null;
+function blCalc() {
+  const p = Number(String($('bl-profit').value || '0').replace(',', '.'));
+  const brl = blList.find((x) => x.key === $('bl-src').value)?.ask;
+  $('bl-ref').textContent = brl && blClp ? `1 USDT = ${fmt(brl, 4)} BRL (${EX_NAME($('bl-src').value)}) · Vita paga ${fmt(blClp, 2)} CLP por USDT` : '—';
+  if (!brl || !blClp || !(p >= 0 && p <= 50)) { $('bl-rate').textContent = blList.length ? 'Revisa la ganancia (0 a 50 %) o elige otro exchange.' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
+  const rate = blClp / (brl * (1 + p / 100));
+  $('bl-rate').innerHTML = `USDT con tu ganancia: <b class="num">${fmt(brl * (1 + p / 100), 4)} BRL</b> · Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100 BRL = <b class="num">${fmt(100 * rate, 0)} CLP</b>`;
+}
+async function loadBrCl() {
+  const { status, body } = await api('/api/br-cl');
+  if (status !== 200) return;
+  $('bl-profit').value = body.profit_pct ?? '0'; $('bl-min').value = fmt(Number(body.min), 0); $('bl-pub').checked = !!body.published;
+  const get = (u) => fetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  const [b, l] = await Promise.all([get(USDT_BRL_URL), get(USDT_URL)]);
+  blList = b ? brlExchanges(b) : []; blClp = l ? vitaPrice(l, 'bid', [300, 3000]) : null;
+  const src = pickExchange(blList, body.source)?.key || body.source;
+  const keys = [...new Set([src, ...blList.map((x) => x.key)])];
+  $('bl-src').innerHTML = keys.map((k) => `<option value="${esc(k)}"${k === src ? ' selected' : ''}>${esc(EX_NAME(k))}${blList.some((x) => x.key === k) ? '' : ' (sin precio ahora)'}</option>`).join('');
+  blCalc();
+}
+async function saveBrCl() {
+  const msg = $('bl-msg');
+  const { status, body } = await api('/api/br-cl', { method: 'PUT', body: JSON.stringify({ profit_pct: $('bl-profit').value || '0', min: $('bl-min').value, source: $('bl-src').value, published: $('bl-pub').checked }) });
+  msg.hidden = false;
+  if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
+  msg.className = 'msg'; msg.textContent = body.published ? 'Guardado: los clientes ya ven envíos desde Brasil a Chile.' : 'Guardado (ruta Brasil → Chile apagada).';
+}
+$('bl-profit').oninput = blCalc; $('bl-src').onchange = blCalc;
+$('bl-save').onclick = saveBrCl; $('bl-pub').onchange = saveBrCl;
 
 // ------------------------------------------------------------------ Venezuela → Chile
 

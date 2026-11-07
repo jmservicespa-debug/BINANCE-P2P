@@ -106,5 +106,7 @@ export const BR_CO_ROUTE = { id: 'br-co', from: 'BR', to: ['CO'], name: 'Colombi
   note: 'Recibe en pesos colombianos por Nequi, Bancolombia u otro banco' };
 export const CO_BR_ROUTE = { id: 'co-br', from: 'CO', to: ['BR'], name: 'Brasil', cur: 'BRL', unit: 'Reales Pix', op: 'div', dec: 0, min: 50000,
   note: 'Recibe en reales por Pix' };
+export const BR_CL_ROUTE = { id: 'br-cl', from: 'BR', to: ['CL'], name: 'Chile', cur: 'CLP', unit: 'Pesos chilenos', op: 'mul', dec: 0, min: 50,
+  note: 'Recibe por transferencia bancaria en cualquier banco de Chile' };
 export const VE_CL_ROUTE = { id: 've-cl', from: 'VE', to: ['CL'], name: 'Chile', cur: 'CLP', unit: 'Pesos chilenos', op: 'mul', dec: 0, min: 2000,
   note: 'Recibe por transferencia bancaria en cualquier banco de Chile' };

@@ -140,6 +140,15 @@ export async function copPerBrlSell(source, profitPct, fetchFn = fetch) {
   const rate = (cop * (1 + Number(profitPct || 0) / 100)) / brl;
   return rate > 0 ? { rate, brl, cop } : null;
 }
+// Brasil → Chile: USDT en reales del exchange elegido (+ tu ganancia), vendido en Chile a lo que paga Vita (bid).
+// Tasa = pesos chilenos por cada real; reales × tasa = pesos.
+export async function clpPerBrl(source, profitPct, fetchFn = fetch) {
+  const [b, l] = await Promise.all([USDT_BRL_URL, USDT_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
+  const brl = pickExchange(b ? brlExchanges(b) : [], source)?.ask, clp = l && vitaPrice(l, 'bid', CLP_RANGE);
+  if (!brl || !clp) return null;
+  const rate = clp / (brl * (1 + Number(profitPct || 0) / 100));
+  return rate > 0 ? { rate, brl, clp } : null;
+}
 export function usdtCopBid(text) {
   let d;
   try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }
