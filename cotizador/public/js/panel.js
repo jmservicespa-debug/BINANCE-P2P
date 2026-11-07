@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=50';
-import { esc, flag, flags } from './ui.js?v=50';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice } from './criptoya.js?v=50';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=51';
+import { esc, flag, flags } from './ui.js?v=51';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice } from './criptoya.js?v=51';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -441,9 +441,77 @@ async function drawFlyers() {
     flyerBlobs[k] = blob;
     $('fly-' + k).src = URL.createObjectURL(blob);
   }
+  await drawCalcCoVe();
 }
 
-const FLYER_SLUG = { CL: 'chile', CO: 'colombia', EU: 'europa' };
+// Calculadora Colombia → Venezuela: tabla de montos con la tasa publicada (pesos ÷ tasa = bolívares), con la imagen de JM Cambios.
+const CALC_AMOUNTS = [10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000, 120000, 150000, 200000, 300000, 500000];
+async function drawCalcCoVe() {
+  const rate = statusOf('co-ve') === 'on' ? rateNum(saved.rates['co-ve']) : null;
+  if (!rate) { $('fly-TCOVE').removeAttribute('src'); $('fly-TCOVE').alt = 'Activa y publica la tasa Colombia → Venezuela para generar la calculadora.'; delete flyerBlobs.TCOVE; return; }
+  try { await Promise.all(['800 60px Inter', '600 30px Inter', '400 40px Michroma'].map((f) => document.fonts.load(f))); } catch { /* letra de respaldo */ }
+  const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  const F = (w, px) => `${w} ${px}px Inter, Montserrat, sans-serif`;
+  const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#1A0722'); bg.addColorStop(.5, '#2E0B3A'); bg.addColorStop(1, '#3A0F48');
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  const glow = g.createRadialGradient(W * .8, 260, 0, W * .8, 260, 520); glow.addColorStop(0, 'rgba(122,69,176,.45)'); glow.addColorStop(1, 'rgba(122,69,176,0)');
+  g.fillStyle = glow; g.fillRect(0, 0, W, 900);
+  // Logo
+  g.save(); g.translate(70, 54); g.scale(70 / 450, 70 / 450); g.translate(-20, -14);
+  g.beginPath(); [[245, 22], [462, 148], [462, 402], [245, 528], [28, 402], [28, 148]].forEach(([x, y]) => g.lineTo(x, y)); g.closePath(); g.clip();
+  g.fillStyle = '#fff'; [[0, 0, 250, 365], [283, 0, 77, 550], [0, 395, 360, 155], [385, 0, 165, 550]].forEach(([x, y, w, h]) => g.fillRect(x, y, w, h));
+  g.restore();
+  g.fillStyle = '#fff'; g.textAlign = 'left'; g.font = '400 34px Michroma, Inter, sans-serif'; g.fillText('JMCAMBIOS', 160, 106);
+  // Banderas
+  const drawF = async (code, cx, cy, r) => {
+    const svg = flag(code).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" ');
+    const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+    try { const im = await loadImg(url); g.save(); g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.clip(); g.drawImage(im, cx - r, cy - r, r * 2, r * 2); g.restore();
+      g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.lineWidth = 4; g.strokeStyle = '#fff'; g.stroke(); } catch { /* sin bandera */ } finally { URL.revokeObjectURL(url); }
+  };
+  // Título
+  g.font = F(700, 22); g.fillStyle = '#F2C14E'; g.fillText('CALCULADORA DE ENVÍO', 70, 200);
+  g.font = F(800, 58); g.fillStyle = '#fff'; g.fillText('Colombia', 70, 268);
+  const wCol = g.measureText('Colombia').width;
+  g.fillStyle = '#F2C14E'; g.fillText('→', 70 + wCol + 18, 268);
+  g.fillStyle = '#fff'; g.fillText('Venezuela', 70 + wCol + 18 + g.measureText('→').width + 18, 268);
+  await drawF('CO', 860, 230, 40); await drawF('VE', 940, 230, 40);
+  g.font = F(500, 26); g.fillStyle = 'rgba(255,255,255,.75)'; g.fillText('Pesos colombianos ➜ Bolívares · comisión 0 %', 70, 316);
+  // Tasa
+  g.fillStyle = 'rgba(255,255,255,.08)'; g.beginPath(); g.roundRect(70, 350, W - 140, 104, 24); g.fill();
+  g.strokeStyle = 'rgba(242,193,78,.55)'; g.lineWidth = 2; g.beginPath(); g.roundRect(71, 351, W - 142, 102, 23); g.stroke();
+  g.font = F(700, 28); g.fillStyle = 'rgba(255,255,255,.8)'; g.fillText('TASA DEL DÍA', 110, 414);
+  g.textAlign = 'right'; g.font = F(800, 60); g.fillStyle = '#F2C14E'; g.fillText(saved.rates['co-ve'], W - 110, 425);
+  // Tabla
+  const top = 500, rowH = 62, x0 = 70, x1 = W - 70, mid = W / 2;
+  g.fillStyle = '#4A1259'; g.beginPath(); g.roundRect(x0, top, x1 - x0, 58, [18, 18, 0, 0]); g.fill();
+  g.font = F(800, 26); g.fillStyle = '#fff'; g.textAlign = 'center';
+  g.fillText('ENVÍAS (COP)', (x0 + mid) / 2, top + 38); g.fillText('RECIBE (Bs)', (mid + x1) / 2, top + 38);
+  CALC_AMOUNTS.forEach((cop, i) => {
+    const y = top + 58 + i * rowH;
+    g.fillStyle = i % 2 ? 'rgba(255,255,255,.06)' : 'rgba(255,255,255,.11)'; g.fillRect(x0, y, x1 - x0, rowH);
+    g.textAlign = 'right'; g.font = F(600, 34); g.fillStyle = '#fff';
+    g.fillText(`$${fmt(cop, 0)}`, mid - 60, y + 43);
+    g.font = F(800, 34); g.fillStyle = '#FFE3A0';
+    g.fillText(`${fmt(cop / rate, 2)} Bs`, x1 - 60, y + 43);
+  });
+  const end = top + 58 + CALC_AMOUNTS.length * rowH;
+  g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 1.5;
+  g.beginPath(); g.moveTo(mid, top + 58); g.lineTo(mid, end); g.stroke();
+  // Pie
+  g.textAlign = 'center'; g.font = F(500, 20); g.fillStyle = 'rgba(255,255,255,.6)';
+  g.fillText(`Pesos ÷ ${saved.rates['co-ve']} = bolívares · Tasa referencial, se confirma por WhatsApp · ${new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long' })}`, W / 2, end + 50);
+  g.fillStyle = '#F2C14E'; g.beginPath(); g.roundRect(70, H - 250, W - 140, 100, 26); g.fill();
+  g.fillStyle = '#2A1200'; g.font = F(800, 36); g.fillText('Cotiza cualquier monto en jmcambios.cl', W / 2, H - 186);
+  g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(0, H - 100, W, 100);
+  g.fillStyle = '#fff'; g.font = F(700, 28); g.fillText('WhatsApp +56 9 3352 9706 · +56 9 3363 8659', W / 2, H - 40);
+  const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
+  flyerBlobs.TCOVE = blob;
+  $('fly-TCOVE').src = URL.createObjectURL(blob);
+}
+
+const FLYER_SLUG = { CL: 'chile', CO: 'colombia', EU: 'europa', TCOVE: 'calculadora-colombia-venezuela' };
 const flyerName = (k) => `tasas-${FLYER_SLUG[k] || k.toLowerCase()}-${new Date().toISOString().slice(0, 10)}.png`;
 document.querySelectorAll('[data-dl]').forEach((b) => b.onclick = () => {
   const k = b.dataset.dl;

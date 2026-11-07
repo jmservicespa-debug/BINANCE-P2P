@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, VE_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=50';
-import { setRewardsNav } from './rewards-nav.js?v=50';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes } from './criptoya.js?v=50';
-import { esc, flag, flags } from './ui.js?v=50';
+import { ADVISORS, BTC_ROUTES, VE_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=51';
+import { setRewardsNav } from './rewards-nav.js?v=51';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes } from './criptoya.js?v=51';
+import { esc, flag, flags } from './ui.js?v=51';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
