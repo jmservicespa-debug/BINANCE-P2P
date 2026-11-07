@@ -472,7 +472,9 @@ export async function cryptoUsd(env, now = Date.now()) {
 }
 
 // ------------------------------------------------------------------ Brasil → Colombia (automática)
-export const BRCO_CFG = { margin_pct: '2', min: '50', source: 'foxbit', published: false };
+export const BRCO_CFG = { margin_pct: '2', profit_pct: '0', min: '50', source: 'foxbit', published: false };
+// Ajuste total que usa el cotizador: costo de compra + tu ganancia (se suman).
+export const brCoTotalPct = (c) => String(Math.round((Number(c.margin_pct || 0) + Number(c.profit_pct || 0)) * 1000) / 1000);
 export const loadBrCoCfg = (env) => loadCfg(env, 'brco_cfg', BRCO_CFG);
 export async function brCoView(request, env, now = Date.now()) {
   if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
@@ -482,12 +484,14 @@ export async function saveBrCoCfg(request, env, now = Date.now()) {
   const { body, error } = await adminBody(request, env, now);
   if (error) return error;
   const m = pctOk(body?.margin_pct);
-  if (m === null) return json({ error: 'El ajuste debe estar entre 0 y 50 %.' }, 400);
+  if (m === null) return json({ error: 'El costo de compra debe estar entre 0 y 50 %.' }, 400);
+  const p = pctOk(body?.profit_pct ?? '0');
+  if (p === null) return json({ error: 'Tu ganancia debe estar entre 0 y 50 %.' }, 400);
   const min = String(body?.min ?? '').replace(/\D/g, '');
   if (!(Number(min) >= 1 && Number(min) <= 10000000)) return json({ error: 'El mínimo no es válido.' }, 400);
   const source = String(body?.source ?? '').trim();
   if (!/^[a-z0-9_]{2,30}$/i.test(source)) return json({ error: 'Elige el exchange de referencia.' }, 400);
-  const cfg = { margin_pct: m, min, source, published: body?.published === true };
+  const cfg = { margin_pct: m, profit_pct: p, min, source, published: body?.published === true };
   await env.TASAS.put('brco_cfg', JSON.stringify(cfg));
   return json(cfg);
 }

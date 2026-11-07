@@ -467,8 +467,9 @@ test('Brasil → Colombia: tasa = Binance P2P COP (bid) ÷ (USDT BRL del exchang
   const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
   const cookie = ok.headers.get('set-cookie').split(';')[0];
   assert.equal((await (await getRates({ env: e })).json()).br_co, undefined);
-  assert.equal((await putBrCo({ request: req('/api/br-co', { method: 'PUT', cookie, body: { margin_pct: '2', min: '50', source: 'foxbit', published: true } }), env: e })).status, 200);
-  assert.deepEqual((await (await getRates({ env: e })).json()).br_co, { margin_pct: '2', min: 50, source: 'foxbit' });
+  assert.equal((await putBrCo({ request: req('/api/br-co', { method: 'PUT', cookie, body: { margin_pct: '2', profit_pct: '1,5', min: '50', source: 'foxbit', published: true } }), env: e })).status, 200);
+  assert.deepEqual((await (await getRates({ env: e })).json()).br_co, { margin_pct: '3.5', min: 50, source: 'foxbit' });
+  assert.equal((await putBrCo({ request: req('/api/br-co', { method: 'PUT', cookie, body: { margin_pct: '2', profit_pct: '80', min: '50', source: 'foxbit', published: true } }), env: e })).status, 400);
   const fake = async (u) => ({ ok: true, text: async () => (String(u).includes('/brl/') ? '{"foxbit":{"ask":5.5,"bid":5.4}}' : '{"binancep2p":{"ask":3900,"bid":3850}}') });
   const r = await copPerBrl('foxbit', '2', fake);
   assert.equal(r.brl, 5.5); assert.equal(r.cop, 3850);
