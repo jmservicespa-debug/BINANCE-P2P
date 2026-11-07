@@ -73,6 +73,9 @@ export const USDT_CO_ROUTE = { ...USDT_ROUTE, id: 'co-usdt', from: 'CO', min: 50
 // USDT desde Brasil: comprar y vender. Precio = USDT en reales (Binance P2P o Bybit P2P vía CriptoYa) ± la ganancia del panel.
 // Mínimo: el equivalente a 10 USDT al precio del momento (se calcula al cargar).
 // En Brasil se presenta como "dólar digital" (sin mencionar Binance).
+// USDC desde Brasil: igual que USDT Brasil (mismas ganancias y referencia), se ofrece si está marcado en el panel.
+export const USDC_BR_ROUTE = { id: 'br-usdc', from: 'BR', to: ['USDC'], name: 'USDC', cur: 'USDC', sym: 'USDC', op: 'div', dec: 2, min: 0, buyMin: 0, minUsdt: 10,
+  digital: true, unit: 'Dólar digital', note: 'Recibes los USDC en tu wallet (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente.' };
 export const USDT_BR_ROUTE = { ...USDT_ROUTE, id: 'br-usdt', from: 'BR', min: 0, buyMin: 0, minUsdt: 10, digital: true, unit: 'Dólar digital',
   note: 'Recibes los USDT en tu wallet (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente.' };
 

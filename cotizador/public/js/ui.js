@@ -12,6 +12,7 @@ const FLAGS = {
   PA: '<rect width="30" height="30" fill="#fff"/><rect x="15" width="15" height="15" fill="#D21034"/><rect y="15" width="15" height="15" fill="#005293"/><circle cx="7.5" cy="7.5" r="2.5" fill="#005293"/><circle cx="22.5" cy="22.5" r="2.5" fill="#D21034"/>',
   EU: '<rect width="30" height="30" fill="#003399"/>'
     + Array.from({ length: 12 }, (_, i) => { const a = (Math.PI * i) / 6; return `<circle cx="${(15 + 8 * Math.cos(a)).toFixed(2)}" cy="${(15 + 8 * Math.sin(a)).toFixed(2)}" r="1.3" fill="#FFCC00"/>`; }).join(''),
+  USDC: '<rect width="30" height="30" fill="#2775CA"/><path d="M11 8.4a7.8 7.8 0 0 0 0 13.2M19 8.4a7.8 7.8 0 0 1 0 13.2" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/><path d="M17.6 11.6c-.5-.9-1.5-1.4-2.6-1.4-1.6 0-2.7.8-2.7 2.1 0 2.9 5.5 1.6 5.5 4.6 0 1.3-1.2 2.2-2.8 2.2-1.2 0-2.3-.6-2.8-1.6M15 8.6v1.6M15 19.2v1.6" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>',
   USDT: '<rect width="30" height="30" fill="#26A17B"/><path d="M8 9h14v3.4h-5.2V23h-3.6V12.4H8z" fill="#fff"/><ellipse cx="15" cy="15.4" rx="7" ry="1.9" fill="none" stroke="#fff" stroke-width="1.4"/>',
   AR: '<rect width="30" height="10" fill="#74ACDF"/><rect y="10" width="30" height="10" fill="#fff"/><rect y="20" width="30" height="10" fill="#74ACDF"/><circle cx="15" cy="15" r="2.6" fill="#F6B40E"/>',
   MX: '<rect width="10" height="30" fill="#006847"/><rect x="10" width="10" height="30" fill="#fff"/><rect x="20" width="10" height="30" fill="#CE1126"/><circle cx="15" cy="15" r="2.6" fill="#8B5A2B"/>',

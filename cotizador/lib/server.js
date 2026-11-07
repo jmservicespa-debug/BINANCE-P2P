@@ -392,7 +392,7 @@ export async function saveUsdtBrCfg(request, env, now = Date.now()) {
   if (m === null || b === null) return json({ error: 'Las ganancias deben estar entre 0 y 50 %.' }, 400);
   const source = srcOk(body?.source ?? '');
   if (source === null) return json({ error: 'Elige una referencia válida.' }, 400);
-  const cfg = { margin_pct: m, buy_margin_pct: b, published: body?.published === true, source };
+  const cfg = { margin_pct: m, buy_margin_pct: b, published: body?.published === true, source, usdc: body?.usdc === true };
   await env.TASAS.put('usdt_br_cfg', JSON.stringify(cfg));
   return json(cfg);
 }

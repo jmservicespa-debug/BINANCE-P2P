@@ -557,3 +557,15 @@ test('Estados Unidos → Chile: (dólares − cargo fijo) × Vita CLP × (1 − 
   assert.ok(Math.abs(convert(route, '950.60', 100) - 99 * 950.6) < 1e-6);
   assert.ok(Math.abs(invert(route, '950.60', 99 * 950.6) - 100) < 1e-6);
 });
+
+test('USDC Brasil: se activa con la casilla del panel y se publica junto al USDT', async () => {
+  noBcv();
+  const { onRequestPut: putBr } = await import('../functions/api/usdt-br.js');
+  const e = await env();
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await putBr({ request: req('/api/usdt-br', { method: 'PUT', cookie, body: { margin_pct: '3', buy_margin_pct: '3', published: true, source: '', usdc: true } }), env: e })).status, 200);
+  assert.equal((await (await getRates({ env: e })).json()).usdt_br.usdc, true);
+  assert.equal((await putBr({ request: req('/api/usdt-br', { method: 'PUT', cookie, body: { margin_pct: '3', buy_margin_pct: '3', published: true, source: '' } }), env: e })).status, 200);
+  assert.equal((await (await getRates({ env: e })).json()).usdt_br.usdc, undefined);
+});

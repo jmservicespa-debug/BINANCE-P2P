@@ -13,7 +13,7 @@ export const onRequestGet = async ({ env }) => {
   const co = await loadUsdtCoCfg(env);
   if (co.published) view.usdt_co = { margin_pct: co.margin_pct, min: Number(co.min), buy_margin_pct: co.buy_margin_pct ?? '3', buy_min: Number(co.buy_min ?? co.min), ...(co.source ? { source: co.source } : {}) };
   const br = await loadUsdtBrCfg(env);
-  if (br.published) view.usdt_br = { margin_pct: br.margin_pct, buy_margin_pct: br.buy_margin_pct, ...(br.source ? { source: br.source } : {}) };
+  if (br.published) view.usdt_br = { margin_pct: br.margin_pct, buy_margin_pct: br.buy_margin_pct, ...(br.source ? { source: br.source } : {}), ...(br.usdc ? { usdc: true } : {}) };
   const gold = await loadGoldCfg(env);
   if (gold.cl || gold.co) view.gold = { margin_pct: gold.margin_pct, buy_margin_pct: gold.buy_margin_pct, cl: gold.cl, co: gold.co,
     fee: gold.fee_on ? { PAXG: Number(gold.fee_paxg), XAUT: Number(gold.fee_xaut) } : null,
