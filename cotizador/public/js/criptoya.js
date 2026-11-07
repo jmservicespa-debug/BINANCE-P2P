@@ -29,7 +29,6 @@ export function parseCriptoYa(text) {
 
 // Brasil automático: precio del USDT en reales (mediana de los exchanges que lista CriptoYa).
 export const USDT_BRL_URL = 'https://criptoya.com/api/usdt/brl/1';
-export const USDC_BRL_URL = 'https://criptoya.com/api/usdc/brl/1';
 export const BRL_RANGE = [2, 20];  // reales por USDT fuera de este rango = dato absurdo
 
 export function parseBrl(text) {

@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=66';
-import { esc, flag, flags } from './ui.js?v=66';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDC_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=66';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=67';
+import { esc, flag, flags } from './ui.js?v=67';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=67';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -867,20 +867,17 @@ function ubCalc() {
   const m = pctIn('ub-margin'), b = pctIn('ub-buy');
   $('ub-sell').textContent = ubRef && m >= 0 && m <= 50 ? fmt(ubRef.value * (1 + m / 100), 4) : '—';
   $('ub-bid').textContent = ubRef?.bid && b >= 0 && b <= 50 ? fmt(ubRef.bid * (1 - b / 100), 4) : '—';
-  const k = $('ub-srcsel').value, c = (k && ucdList.find((e) => e.key === k)) || ucdAuto;
-  $('ub-usdc-p').textContent = c && m >= 0 && m <= 50 ? `USDC (${EXN(c.key || c.source)}): vendes a ${fmt(c.ask ?? c.value, 4)} × (1 + ganancia) = ${fmt((c.ask ?? c.value) * (1 + m / 100), 4)} BRL${c.bid ? ` · compras a ${fmt(c.bid * (1 - b / 100), 4)} BRL` : ''}` : 'USDC: sin precio en CriptoYa ahora.';
 }
 async function loadUsdtBr() {
   const { status, body } = await api('/api/usdt-br');
   if (status !== 200) return;
   $('ub-margin').value = body.margin_pct; $('ub-buy').value = body.buy_margin_pct; $('ub-pub').checked = !!body.published;
   try { const res = await fetch(USDT_BRL_URL, { cache: 'no-store' }); const t = res.ok ? await res.text() : null; ubAuto = t && usdtBrlRef(t); ubList = t ? exchangesIn(t, BRL_RANGE) : []; } catch { ubAuto = null; ubList = []; }
-  try { const r = await fetch(USDC_BRL_URL, { cache: 'no-store' }); const t = r.ok ? await r.text() : null; ucdAuto = t && usdtBrlRef(t); ucdList = t ? exchangesIn(t, BRL_RANGE) : []; } catch { ucdAuto = null; ucdList = []; }
   $('ub-usdc').checked = !!body.usdc;
   fillSrc('ub-srcsel', ubList, body.source || '', 'Automático (Binance P2P o Bybit P2P)', 4);
   ubApply();
 }
-let ubList = [], ubAuto = null, ucdList = [], ucdAuto = null;
+let ubList = [], ubAuto = null;
 function ubApply() {
   const k = $('ub-srcsel').value, x = k && ubList.find((e) => e.key === k);
   ubRef = !k ? ubAuto : x ? { value: x.ask, bid: x.bid, source: k } : null;

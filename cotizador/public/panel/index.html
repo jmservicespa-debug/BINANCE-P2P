@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=66">
+<link rel="stylesheet" href="/css/estilo.css?v=67">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -218,10 +218,9 @@
       </div>
       <div class="usdt-price">Vendes a <b class="num" id="ub-sell">—</b> BRL por USDT</div>
       <div class="usdt-price">Compras a <b class="num" id="ub-bid">—</b> BRL por USDT</div>
-      <div class="usdt-price" id="ub-usdc-p">USDC: —</div>
       <div class="msg" id="ub-msg" hidden></div>
       <label class="switch"><input type="checkbox" id="ub-usdc"> <b>Ofrecer también USDC</b></label>
-      <span class="muted">Marcado: junto al USDT aparece el USDC (con su logo), con las mismas ganancias y la misma referencia (si ese exchange no tiene USDC, usa Binance P2P).</span>
+      <span class="muted">Marcado: junto al USDT aparece el USDC (con su logo), al mismo precio que el USDT. Solo sirve para que el cliente elija qué moneda entrega o recibe.</span>
       <label class="switch"><input type="checkbox" id="ub-pub"> <b>Activo en el cotizador</b></label>
       <span class="muted">Marcado: los clientes ven el dólar digital al elegir Brasil. Sin marcar: no aparece.</span>
       <button class="btn ghost" id="ub-save">Guardar</button>
@@ -415,6 +414,6 @@
     </section>
   </div>
 </main>
-<script type="module" src="/js/panel.js?v=66"></script>
+<script type="module" src="/js/panel.js?v=67"></script>
 </body>
 </html>
