@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, VE_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum, rateNum } from './rutas.js?v=64';
-import { setRewardsNav } from './rewards-nav.js?v=64';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, clpPerUsd, refFrom, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=64';
-import { esc, flag, flags } from './ui.js?v=64';
+import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, VE_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum, rateNum } from './rutas.js?v=65';
+import { setRewardsNav } from './rewards-nav.js?v=65';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, clpPerUsd, refFrom, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=65';
+import { esc, flag, flags } from './ui.js?v=65';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -92,7 +92,7 @@ function renderDests() {
   $('dests').innerHTML = list.map((r) => r.btc
     ? `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flag('BTC')}<span>Bitcoin<small>BTC · red Lightning${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`
     : r.gold
-    ? `<button data-r="${r.id}" aria-pressed="${golds.some((g) => g.id === route)}">${flag('XAUT')}<span>Oro tokenizado<small>${golds.length > 1 ? 'XAUt o PAXG' : `${r.sym} · red ${r.net.replace(' (ERC-20)', '')}`} · 1 = 1 onza</small></span></button>` : `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${r.cur === 'USDT' ? BNB : ''}${esc(r.unit)} (${esc(r.sym || r.cur)})${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`).join('')
+    ? `<button data-r="${r.id}" aria-pressed="${golds.some((g) => g.id === route)}">${flag('XAUT')}<span>Oro tokenizado<small>${golds.length > 1 ? 'XAUt o PAXG' : `${r.sym} · red ${r.net.replace(' (ERC-20)', '')}`} · 1 = 1 onza</small></span></button>` : `<button data-r="${r.id}" aria-pressed="${r.id === route}">${flags(r.to)}<span>${esc(r.name)}<small>${r.cur === 'USDT' && !r.digital ? BNB : ''}${esc(r.unit)} (${esc(r.sym || r.cur)})${statusOf(r.id) === 'ask' ? '<br>Mercado inestable' : ''}</small></span></button>`).join('')
     + (kind === 'asset' ? '' : `<button data-r="${OTHER}" aria-pressed="${route === OTHER}">${GLOBE}<span>Otro destino<small>Tasa por WhatsApp</small></span></button>`);
   $('dests').querySelectorAll('button').forEach((b) => b.onclick = () => {
     if (mode !== 'send' && b.dataset.r !== route) $('amount').value = '';  // la casilla está en la moneda del destino
@@ -175,7 +175,7 @@ function calc() {
   const isAsset = r?.cur === 'USDT' || Boolean(r?.gold || r?.btc);  // USDT, oro tokenizado y Bitcoin: comprar o vender
   $('usdt-ui').hidden = !isAsset;
   $('std').hidden = isAsset;
-  if (isAsset) $('h-cot').textContent = r.gold ? `Oro tokenizado · ${r.sym}` : r.btc ? 'Bitcoin (BTC)' : 'USDT · dólar Binance';
+  if (isAsset) $('h-cot').textContent = r.gold ? `Oro tokenizado · ${r.sym}` : r.btc ? 'Bitcoin (BTC)' : r.digital ? 'USDT · dólar digital' : 'USDT · dólar Binance';
   if (isAsset) { usdtQuote(r); return; }
   if (!r) { $('r-get').hidden = true; $('r-free').hidden = true; $('r-break').hidden = true; $('share').hidden = true; $('r-min').textContent = ''; $('r-big').textContent = '—'; $('r-send').textContent = ''; $('r-rate').textContent = ''; $('r-bcv').hidden = true; $('wa').innerHTML = waButtons(''); return; }
   // Opciones con la moneda, para que quede claro qué se escribe: "Pesos que envío" · "Bolívares que llegan".
@@ -371,7 +371,7 @@ function usdtQuote(r) {
     ? `${buy ? 'Enviamos BTC por Lightning Network.' : 'Envíanos tus BTC por Lightning Network.'} Si prefieres la red principal (on-chain), la comisión de red la asumes tú. Verifica que tu wallet use la red correcta antes de ${buy ? 'comprar' : 'vender'}. El precio de Bitcoin sube y baja. JM Cambios es un comerciante independiente.`
     : r.gold
     ? `${buy ? `Enviamos ${sym} solo por la red ${r.net}.` : `Envíanos tus ${sym} solo por la red ${r.net}.`} Verifica que tu wallet use esa red antes de ${buy ? 'comprar' : 'vender'}. El precio del oro sube y baja. JM Cambios es un comerciante independiente, no es ${issuer}.`
-    : buy ? r.note : 'Envías los USDT a la wallet o cuenta de Binance que te indiquemos (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente, no es Binance.';
+    : buy ? r.note : r.digital ? 'Envías los USDT a la wallet que te indiquemos (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente.' : 'Envías los USDT a la wallet o cuenta de Binance que te indiquemos (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente, no es Binance.';
   // Ayuda para crear la wallet según el producto (solo oro y Bitcoin).
   $('w-help').hidden = !(r.gold || r.btc);
   if (r.gold || r.btc) $('w-help-body').innerHTML = (r.btc
@@ -409,7 +409,7 @@ function usdtQuote(r) {
   const good = Number.isFinite(qty) && Number.isFinite(clp) && qty > 0 && clp > 0;
   // Compartir: solo montos, sin mostrar el precio por unidad.
   uQuote = good ? { from: [buy ? r.from : r.to[0]], fromLabel: buy ? 'Pagas' : 'Entregas', fromAmt: buy ? `${clpFmt(clp)} ${cur}` : `${af(qty)} ${sym}`,
-    to: [buy ? r.to[0] : r.from], toLabel: 'Recibes', toAmt: buy ? `${af(qty)} ${sym}` : `${clpFmt(clp)} ${cur}`, rate: null, gold: Boolean(r.gold), btc: Boolean(r.btc),
+    to: [buy ? r.to[0] : r.from], toLabel: 'Recibes', toAmt: buy ? `${af(qty)} ${sym}` : `${clpFmt(clp)} ${cur}`, rate: null, gold: Boolean(r.gold), btc: Boolean(r.btc), digital: Boolean(r.digital),
     text: [`✅ Cotización JM Cambios · ${buy ? 'Compra' : 'Venta'} de ${sym}${r.gold ? ' (oro tokenizado)' : ''}`,
       `Pagas: ${buy ? `${clpFmt(clp)} ${cur}` : `${af(qty)} ${sym}`}`,
       `Recibes: ${buy ? `${af(qty)} ${sym}` : `${clpFmt(clp)} ${cur}`}`,
@@ -559,7 +559,7 @@ async function shareQuote(q) {
     g.fillText('Tasa referencial: se confirma por WhatsApp antes de enviar.', 84, 972);
   } else {
     g.fillText('Monto referencial: se confirma por WhatsApp antes de operar.', 84, 928);
-    g.font = F(500, 24); g.fillText(q.gold ? 'Oro tokenizado: 1 token = 1 onza. JM Cambios es un comerciante independiente, no es Paxos ni Tether.' : q.btc ? 'Red Lightning; on-chain, comisión de red a cargo del cliente. JM Cambios es comerciante independiente.' : 'JM Cambios es un comerciante independiente, no es Binance.', 84, 968, 912);
+    g.font = F(500, 24); g.fillText(q.gold ? 'Oro tokenizado: 1 token = 1 onza. JM Cambios es un comerciante independiente, no es Paxos ni Tether.' : q.btc ? 'Red Lightning; on-chain, comisión de red a cargo del cliente. JM Cambios es comerciante independiente.' : q.digital ? 'JM Cambios es un comerciante independiente.' : 'JM Cambios es un comerciante independiente, no es Binance.', 84, 968, 912);
   }
   g.fillStyle = '#4A1259'; g.beginPath(); g.roundRect(80, 1096, 920, 116, 28); g.fill();
   g.fillStyle = '#FFFFFF'; g.textAlign = 'center'; g.font = F(700, 42); g.fillText('Cotiza tú también en jmcambios.cl', 540, 1168);

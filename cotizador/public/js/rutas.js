@@ -72,7 +72,9 @@ export const USDT_ROUTE = { id: 'cl-usdt', from: 'CL', to: ['USDT'], name: 'USDT
 export const USDT_CO_ROUTE = { ...USDT_ROUTE, id: 'co-usdt', from: 'CO', min: 50000, buyMin: null };
 // USDT desde Brasil: comprar y vender. Precio = USDT en reales (Binance P2P o Bybit P2P vía CriptoYa) ± la ganancia del panel.
 // Mínimo: el equivalente a 10 USDT al precio del momento (se calcula al cargar).
-export const USDT_BR_ROUTE = { ...USDT_ROUTE, id: 'br-usdt', from: 'BR', min: 0, buyMin: 0, minUsdt: 10 };
+// En Brasil se presenta como "dólar digital" (sin mencionar Binance).
+export const USDT_BR_ROUTE = { ...USDT_ROUTE, id: 'br-usdt', from: 'BR', min: 0, buyMin: 0, minUsdt: 10, digital: true, unit: 'Dólar digital',
+  note: 'Recibes los USDT en tu wallet (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente.' };
 
 // Oro tokenizado (Chile y Colombia): 1 token = 1 onza troy de oro. Precio = CoinGecko en pesos ± la ganancia del panel.
 // Cada token se envía por una sola red: PAXG por Ethereum (ERC-20) y XAUt por Solana.
