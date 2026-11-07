@@ -100,5 +100,9 @@ export const routeById = (id) => ROUTES.find((r) => r.id === id);
 
 // Venezuela → Chile (automática): el cliente paga bolívares y recibe pesos chilenos.
 // Tasa = (lo que paga Vita por USDT en CLP) ÷ (precio del USDT en bolívares del P2P elegido × (1 + ganancia)). VES × tasa = CLP.
+// Brasil → Colombia (automática): el cliente paga reales y recibe pesos colombianos.
+// Tasa = (lo que paga Binance P2P Colombia por USDT) ÷ (USDT en reales del exchange elegido × (1 + ajuste)). BRL × tasa = COP.
+export const BR_CO_ROUTE = { id: 'br-co', from: 'BR', to: ['CO'], name: 'Colombia', cur: 'COP', unit: 'Pesos colombianos', op: 'mul', dec: 0, min: 50,
+  note: 'Recibe en pesos colombianos por Nequi, Bancolombia u otro banco' };
 export const VE_CL_ROUTE = { id: 've-cl', from: 'VE', to: ['CL'], name: 'Chile', cur: 'CLP', unit: 'Pesos chilenos', op: 'mul', dec: 0, min: 2000,
   note: 'Recibe por transferencia bancaria en cualquier banco de Chile' };

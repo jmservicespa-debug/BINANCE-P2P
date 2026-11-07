@@ -114,6 +114,20 @@ export async function marketClVe(fetchFn = fetch) {
 // USDT en pesos colombianos para vender al cliente: precio de venta (ask) de Binance P2P Colombia (donde se recompra);
 // si no viene, Vita Wallet; si tampoco, la mediana de los demás.
 // Lo que paga el mercado por cada USDT en Colombia (bid): Binance P2P, si no Vita, si no la mediana.
+// Brasil → Colombia: USDT en reales (ask) del exchange elegido y lo que paga Binance P2P Colombia (bid).
+export function brlExchanges(text) {
+  let d;
+  try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return []; }
+  if (!d || typeof d !== 'object') return [];
+  return Object.entries(d).filter(([, x]) => Number(x?.ask) >= BRL_RANGE[0] && Number(x?.ask) <= BRL_RANGE[1]).map(([k, x]) => ({ key: k, ask: Number(x.ask) }));
+}
+export async function copPerBrl(source, adjPct, fetchFn = fetch) {
+  const [b, c] = await Promise.all([USDT_BRL_URL, USDT_COP_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
+  const brl = (b ? brlExchanges(b) : []).find((x) => x.key === source)?.ask, cop = c && usdtCopBid(c);
+  if (!brl || !cop) return null;
+  const rate = cop / (brl * (1 + Number(adjPct || 0) / 100));
+  return rate > 0 ? { rate, brl, cop } : null;
+}
 export function usdtCopBid(text) {
   let d;
   try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }

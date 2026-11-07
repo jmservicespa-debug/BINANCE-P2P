@@ -458,3 +458,19 @@ test('Venezuela → Chile: se activa desde el panel y la tasa es Vita CLP ÷ (US
   assert.equal(r.ves, 400); assert.equal(r.clp, 980);
   assert.ok(Math.abs(r.rate - 980 / (400 * 1.04)) < 1e-9);
 });
+
+test('Brasil → Colombia: tasa = Binance P2P COP (bid) ÷ (USDT BRL del exchange × (1 + ajuste))', async () => {
+  noBcv();
+  const { onRequestPut: putBrCo } = await import('../functions/api/br-co.js');
+  const { copPerBrl } = await import('../public/js/criptoya.js');
+  const e = await env();
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await (await getRates({ env: e })).json()).br_co, undefined);
+  assert.equal((await putBrCo({ request: req('/api/br-co', { method: 'PUT', cookie, body: { margin_pct: '2', min: '50', source: 'foxbit', published: true } }), env: e })).status, 200);
+  assert.deepEqual((await (await getRates({ env: e })).json()).br_co, { margin_pct: '2', min: 50, source: 'foxbit' });
+  const fake = async (u) => ({ ok: true, text: async () => (String(u).includes('/brl/') ? '{"foxbit":{"ask":5.5,"bid":5.4}}' : '{"binancep2p":{"ask":3900,"bid":3850}}') });
+  const r = await copPerBrl('foxbit', '2', fake);
+  assert.equal(r.brl, 5.5); assert.equal(r.cop, 3850);
+  assert.ok(Math.abs(r.rate - 3850 / (5.5 * 1.02)) < 1e-9);
+});
