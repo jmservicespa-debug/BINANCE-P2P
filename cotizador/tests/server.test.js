@@ -475,3 +475,20 @@ test('Brasil → Colombia: tasa = Binance P2P COP (ask, precio alto) ÷ (USDT BR
   assert.equal(r.brl, 5.5); assert.equal(r.cop, 3900);
   assert.ok(Math.abs(r.rate - 3900 / (5.5 * 1.02)) < 1e-9);
 });
+
+test('Colombia → Brasil: tasa = Binance P2P COP (ask) × (1 + ganancia) ÷ precio de compra del exchange en reales', async () => {
+  noBcv();
+  const { onRequestPut: putCoBr } = await import('../functions/api/co-br.js');
+  const { copPerBrlSell } = await import('../public/js/criptoya.js');
+  const e = await env();
+  assert.equal((await putCoBr({ request: req('/api/co-br', { method: 'PUT', body: { profit_pct: '3', min: '50000', source: 'foxbit', published: true } }), env: e })).status, 401);
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await (await getRates({ env: e })).json()).co_br, undefined);
+  assert.equal((await putCoBr({ request: req('/api/co-br', { method: 'PUT', cookie, body: { profit_pct: '3', min: '50.000', source: 'foxbit', published: true } }), env: e })).status, 200);
+  assert.deepEqual((await (await getRates({ env: e })).json()).co_br, { profit_pct: '3', min: 50000, source: 'foxbit' });
+  const fake = async (u) => ({ ok: true, text: async () => (String(u).includes('/brl/') ? '{"foxbit":{"ask":5.5,"bid":5.4}}' : '{"binancep2p":{"ask":3900,"bid":3850}}') });
+  const r = await copPerBrlSell('foxbit', '3', fake);
+  assert.equal(r.brl, 5.4); assert.equal(r.cop, 3900);
+  assert.ok(Math.abs(r.rate - 3900 * 1.03 / 5.4) < 1e-9);
+});

@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=54';
-import { esc, flag, flags } from './ui.js?v=54';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges } from './criptoya.js?v=54';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=55';
+import { esc, flag, flags } from './ui.js?v=55';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges } from './criptoya.js?v=55';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -18,7 +18,7 @@ async function api(path, opts = {}) {
 
 function showEditor(on) {
   $('login').hidden = on;
-  ['power', 'mkt', 'editor', 'usdt', 'usdtco', 'brco', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  ['power', 'mkt', 'editor', 'usdt', 'usdtco', 'brco', 'cobr', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
 }
 
 async function start() {
@@ -36,6 +36,7 @@ async function start() {
   loadUsdtBr();
   loadVeCl();
   loadBrCo();
+  loadCoBr();
   loadGoldCfg();
   loadBtcCfg();
   loadRewards();
@@ -689,6 +690,37 @@ async function saveBrCo() {
 }
 $('bc-margin').oninput = bcCalc; $('bc-profit').oninput = bcCalc; $('bc-src').onchange = bcCalc;
 $('bc-save').onclick = saveBrCo; $('bc-pub').onchange = saveBrCo;
+
+// ------------------------------------------------------------------ Colombia → Brasil
+let cbList = [], cbCop = null;
+function cbCalc() {
+  const p = Number(String($('cb-profit').value || '0').replace(',', '.'));
+  const x = cbList.find((e) => e.key === $('cb-src').value), brl = x?.bid;
+  $('cb-ref').textContent = brl && cbCop ? `Binance P2P Colombia: 1 USDT = ${fmt(cbCop, 2)} COP · ${EX_NAME($('cb-src').value)} paga ${fmt(brl, 4)} BRL por USDT` : (x && !brl ? `${EX_NAME($('cb-src').value)} no muestra precio de compra ahora.` : '—');
+  if (!brl || !cbCop || !(p >= 0 && p <= 50)) { $('cb-rate').textContent = cbList.length ? 'Revisa la ganancia (0 a 50 %) o elige otro exchange.' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
+  const rate = cbCop * (1 + p / 100) / brl;
+  $('cb-rate').innerHTML = `USDT con tu ganancia: <b class="num">${fmt(cbCop * (1 + p / 100), 2)} COP</b> · Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100.000 COP = <b class="num">${fmt(100000 / rate, 2)} BRL</b>`;
+}
+async function loadCoBr() {
+  const { status, body } = await api('/api/co-br');
+  if (status !== 200) return;
+  $('cb-profit').value = body.profit_pct ?? '0'; $('cb-min').value = fmt(Number(body.min), 0); $('cb-pub').checked = !!body.published;
+  const get = (u) => fetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  const [b, c] = await Promise.all([get(USDT_BRL_URL), get(USDT_COP_URL)]);
+  cbList = b ? brlExchanges(b) : []; cbCop = c ? usdtCopRef(c)?.value ?? null : null;
+  const keys = [...new Set([body.source, ...cbList.map((x) => x.key)])];
+  $('cb-src').innerHTML = keys.map((k) => `<option value="${esc(k)}"${k === body.source ? ' selected' : ''}>${esc(EX_NAME(k))}${cbList.some((x) => x.key === k && x.bid) ? '' : ' (sin precio ahora)'}</option>`).join('');
+  cbCalc();
+}
+async function saveCoBr() {
+  const msg = $('cb-msg');
+  const { status, body } = await api('/api/co-br', { method: 'PUT', body: JSON.stringify({ profit_pct: $('cb-profit').value || '0', min: $('cb-min').value, source: $('cb-src').value, published: $('cb-pub').checked }) });
+  msg.hidden = false;
+  if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
+  msg.className = 'msg'; msg.textContent = body.published ? 'Guardado: los clientes ya ven envíos desde Colombia a Brasil.' : 'Guardado (ruta Colombia → Brasil apagada).';
+}
+$('cb-profit').oninput = cbCalc; $('cb-src').onchange = cbCalc;
+$('cb-save').onclick = saveCoBr; $('cb-pub').onchange = saveCoBr;
 
 // ------------------------------------------------------------------ Venezuela → Chile
 

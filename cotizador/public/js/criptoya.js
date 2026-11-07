@@ -119,13 +119,22 @@ export function brlExchanges(text) {
   let d;
   try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return []; }
   if (!d || typeof d !== 'object') return [];
-  return Object.entries(d).filter(([, x]) => Number(x?.ask) >= BRL_RANGE[0] && Number(x?.ask) <= BRL_RANGE[1]).map(([k, x]) => ({ key: k, ask: Number(x.ask) }));
+  return Object.entries(d).filter(([, x]) => Number(x?.ask) >= BRL_RANGE[0] && Number(x?.ask) <= BRL_RANGE[1]).map(([k, x]) => ({ key: k, ask: Number(x.ask), bid: Number(x.bid) >= BRL_RANGE[0] && Number(x.bid) <= BRL_RANGE[1] ? Number(x.bid) : null }));
 }
 export async function copPerBrl(source, adjPct, fetchFn = fetch) {
   const [b, c] = await Promise.all([USDT_BRL_URL, USDT_COP_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
   const brl = (b ? brlExchanges(b) : []).find((x) => x.key === source)?.ask, cop = c && usdtCopRef(c)?.value;
   if (!brl || !cop) return null;
   const rate = cop / (brl * (1 + Number(adjPct || 0) / 100));
+  return rate > 0 ? { rate, brl, cop } : null;
+}
+// Colombia → Brasil: compras USDT en Binance P2P Colombia (precio alto) + tu ganancia, y lo vendes en Brasil al precio de compra del exchange (bid).
+// Tasa = pesos por cada real; pesos ÷ tasa = reales.
+export async function copPerBrlSell(source, profitPct, fetchFn = fetch) {
+  const [b, c] = await Promise.all([USDT_BRL_URL, USDT_COP_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
+  const brl = (b ? brlExchanges(b) : []).find((x) => x.key === source)?.bid, cop = c && usdtCopRef(c)?.value;
+  if (!brl || !cop) return null;
+  const rate = (cop * (1 + Number(profitPct || 0) / 100)) / brl;
   return rate > 0 ? { rate, brl, cop } : null;
 }
 export function usdtCopBid(text) {

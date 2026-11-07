@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=54">
+<link rel="stylesheet" href="/css/estilo.css?v=55">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -137,6 +137,27 @@
     <label class="switch"><input type="checkbox" id="uc-pub"> <b>USDT activo en el cotizador (desde Colombia)</b></label>
     <span class="muted">Marcado: los clientes ven "USDT" al elegir Colombia. Sin marcar: no aparece.</span>
     <button class="btn ghost" id="uc-save">Guardar</button>
+  </section>
+
+  <section class="card" id="cobr" hidden aria-labelledby="h-cobr">
+    <div>
+      <h2 id="h-cobr">Envíos Colombia → Brasil</h2>
+      <span class="muted">El cliente paga pesos colombianos y recibe reales por Pix. Tasa = (precio del USDT en Binance P2P Colombia + tu ganancia) ÷ (lo que paga el exchange de Brasil por cada USDT). Pesos ÷ tasa = reales.</span>
+    </div>
+    <label class="f" for="cb-src">Exchange de Brasil donde vendes (vía CriptoYa)
+      <select id="cb-src"></select></label>
+    <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="cb-ref">—</b></div>
+    <div class="row2">
+      <label class="f" for="cb-profit">Tu ganancia (%)
+        <span class="amount"><input id="cb-profit" inputmode="decimal" autocomplete="off"></span></label>
+      <label class="f" for="cb-min">Mínimo (COP)
+        <span class="amount"><input id="cb-min" inputmode="numeric" autocomplete="off"></span></label>
+    </div>
+    <div class="usdt-price" id="cb-rate">—</div>
+    <div class="msg" id="cb-msg" hidden></div>
+    <label class="switch"><input type="checkbox" id="cb-pub"> <b>Ruta Colombia → Brasil activa en el cotizador</b></label>
+    <span class="muted">Marcado: en "Envíos", desde Colombia aparece Brasil como destino. Sin marcar: no aparece.</span>
+    <button class="btn ghost" id="cb-save">Guardar</button>
   </section>
 
   <section class="card" id="brco" hidden aria-labelledby="h-brco">
@@ -307,6 +328,6 @@
     <span class="muted">Cada enlace lleva el WhatsApp de esa persona. El enlace general muestra un solo botón sin nombre, a tu número.</span>
   </section>
 </main>
-<script type="module" src="/js/panel.js?v=54"></script>
+<script type="module" src="/js/panel.js?v=55"></script>
 </body>
 </html>
