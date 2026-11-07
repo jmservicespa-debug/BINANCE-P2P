@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=62';
-import { esc, flag, flags } from './ui.js?v=62';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=62';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=63';
+import { esc, flag, flags } from './ui.js?v=63';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=63';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -803,7 +803,7 @@ let ulClp = null;
 function ulCalc() {
   const n = (id) => Number(String($(id).value || '0').replace(',', '.'));
   const p = n('ul-profit'), fee = n('ul-fee');
-  $('ul-ref').textContent = ulClp ? `Vita paga ${fmt(ulClp, 2)} CLP por USDT` : '—';
+  $('ul-ref').textContent = ulClp ? `Vita Wallet vende el USDT a ${fmt(ulClp, 2)} CLP` : '—';
   if (!ulClp || !(p >= 0 && p <= 50) || !(fee >= 0 && fee <= 50)) { $('ul-rate').textContent = ulClp ? 'Revisa la comisión (0 a 50 %) y el cargo fijo.' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
   const rate = Number((ulClp * (1 - p / 100)).toFixed(2));
   const t100 = Number((rate * Math.max(0, 100 - fee) / 100).toFixed(2));
@@ -813,7 +813,7 @@ async function loadUsCl() {
   const { status, body } = await api('/api/us-cl');
   if (status !== 200) return;
   $('ul-profit').value = body.profit_pct ?? '0'; $('ul-fee').value = body.fee ?? '1'; $('ul-min').value = fmt(Number(body.min), 0); $('ul-pub').checked = !!body.published;
-  try { const r = await fetch(USDT_URL, { cache: 'no-store' }); ulClp = r.ok ? vitaPrice(await r.text(), 'bid', [300, 3000]) : null; } catch { ulClp = null; }
+  try { const r = await fetch(USDT_URL, { cache: 'no-store' }); ulClp = r.ok ? parseCriptoYa(await r.text())?.value ?? null : null; } catch { ulClp = null; }
   ulCalc();
 }
 async function saveUsCl() {

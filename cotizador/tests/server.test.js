@@ -550,7 +550,9 @@ test('Estados Unidos → Chile: (dólares − cargo fijo) × Vita CLP × (1 − 
   assert.deepEqual((await (await getRates({ env: e })).json()).us_cl, { profit_pct: '3', fee: 1, min: 20 });
   const fake = async () => ({ ok: true, text: async () => '{"vitawallet":{"ask":990,"bid":980}}' });
   const r = await clpPerUsd('3', fake);
-  assert.ok(Math.abs(r.rate - 980 * 0.97) < 1e-9);
+  assert.ok(Math.abs(r.rate - 990 * 0.97) < 1e-9);
+  const sinBid = await clpPerUsd('3', async () => ({ ok: true, text: async () => '{"vitawallet":{"ask":990}}' }));
+  assert.ok(Math.abs(sinBid.rate - 990 * 0.97) < 1e-9);
   const route = { ...US_CL_ROUTE, fee: 1 };
   assert.ok(Math.abs(convert(route, '950.60', 100) - 99 * 950.6) < 1e-6);
   assert.ok(Math.abs(invert(route, '950.60', 99 * 950.6) - 100) < 1e-6);
