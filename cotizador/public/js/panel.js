@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=58';
-import { esc, flag, flags } from './ui.js?v=58';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=58';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=59';
+import { esc, flag, flags } from './ui.js?v=59';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=59';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -29,11 +29,11 @@ async function api(path, opts = {}) {
 
 function showEditor(on) {
   $('login').hidden = on;
-  ['power', 'mkt', 'editor', 'usdt', 'usdtco', 'brco', 'cobr', 'brcl', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  ['power', 'mkt', 'tasas-CL', 'tasas-CO', 'tasas-EU', 'bcvsec', 'usdt', 'usdtco', 'brco', 'cobr', 'brcl', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
   document.querySelectorAll('.grupo, #gnav').forEach((el) => { el.hidden = !on; });
 }
 
-document.querySelectorAll('.grupo [data-flags]').forEach((el) => { el.innerHTML = el.dataset.flags.split(',').map(flag).join(''); });
+document.querySelectorAll('[data-flags]').forEach((el) => { el.innerHTML = el.dataset.flags.split(',').map(flag).join(''); });
 
 async function start() {
   const { status, body } = await api('/api/sesion');
@@ -121,7 +121,7 @@ let paused = false;
 function renderPower(p) {
   paused = p;
   $('power-txt').textContent = paused
-    ? 'Tasas APAGADAS: los clientes ven "Actualizando tasas".'
+    ? 'Tasas apagadas: los clientes ven "Actualizando tasas".'
     : 'Tasas encendidas: los clientes cotizan con las tasas publicadas.';
   $('power-btn').textContent = paused ? 'Encender todas las tasas' : 'Apagar todas las tasas';
   $('power-btn').className = paused ? 'btn' : 'btn ghost';
@@ -135,9 +135,8 @@ $('power-btn').onclick = async () => {
 };
 
 function renderRoutes() {
-  $('last').textContent = saved.updated ? `Última publicación: ${new Date(saved.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}` : '';
-  $('routes').innerHTML = Object.entries(ORIGINS).map(([k, o]) => `<h3 style="margin-top:8px">Desde ${esc(o.name)}</h3>`
-    + ROUTES.filter((r) => r.from === k).map((r) => {
+  $('last').textContent = saved.updated ? `· Última publicación de tasas: ${new Date(saved.updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}` : '';
+  for (const [k, o] of Object.entries(ORIGINS)) $('routes-' + k).innerHTML = ROUTES.filter((r) => r.from === k).map((r) => {
       const st = statusOf(r.id);
       return `<div class="route${st === 'on' ? '' : ' off'}" id="row-${r.id}">
         ${flags(r.to)}
@@ -145,7 +144,7 @@ function renderRoutes() {
         <input type="text" id="in-${r.id}" value="${esc(r.auto ? (saved.cocl?.margin_pct ?? '3') : (saved.rates[r.id] || ''))}" inputmode="decimal" aria-label="${r.auto ? 'Ganancia %' : 'Tasa'} ${esc(o.name)} a ${esc(r.name)}">
         <span class="ex"><span id="ex-${r.id}"></span><select id="st-${r.id}" aria-label="Estado ${esc(o.name)} a ${esc(r.name)}">${STATUS.map(([v, t]) => `<option value="${v}"${v === st ? ' selected' : ''}>${t}</option>`).join('')}</select></span>
       </div>${r.id === 'cl-br' ? provBox() : ''}${r.id === 'cl-ve' ? sugBox() : ''}${r.auto ? fixBox() : ''}`;
-    }).join('')).join('');
+    }).join('');
   for (const r of ROUTES) {
     if (r.auto) {  // Colombia → Chile: muestra la tasa de ahora con la ganancia escrita
       let seq = 0;
@@ -362,41 +361,45 @@ function renderLinks() {
     .map(([who, url]) => `<div class="adv"><span>${esc(who)}</span><code>${esc(url)}</code></div>`).join('');
 }
 
-$('save').onclick = async () => {
+async function saveRates(ev) {
+  const card = ev.currentTarget.closest('section');
+  document.querySelectorAll('.save-msg').forEach((m) => { m.hidden = true; });
+  const msg = card.querySelector('.save-msg');
+  const btns = document.querySelectorAll('.save-rates');
   const body = { rates: {}, status: {}, bcv_manual: $('bcv').value.trim() || null, bcv_manual_eur: $('bcv-eur').value.trim() || null };
   for (const r of ROUTES) { body.rates[r.id] = r.auto ? '' : $('in-' + r.id).value.trim(); body.status[r.id] = $('st-' + r.id).value; }
   body.cocl = { margin_pct: $('in-co-cl').value.trim(), fixed: $('fx-co-cl').value.trim() || null };
   body.brl = { ref: $('prov-brl').value.trim(), margin_pct: $('prov-m').value.trim(), auto: $('prov-auto').checked,
     cal_cross: brlCross };  // calibración: el mercado en el momento en que anotaste a tu proveedor
   if (body.brl.auto && !brlCross) {
-    $('save-msg').hidden = false; $('save-msg').className = 'msg bad';
-    $('save-msg').textContent = 'Reales automático necesita el precio del mercado y no se pudo leer. Desmarca la casilla o inténtalo de nuevo.';
+    msg.hidden = false; msg.className = 'msg bad save-msg';
+    msg.textContent = 'Reales automático necesita el precio del mercado y no se pudo leer. Desmarca la casilla o inténtalo de nuevo.';
     return;
   }
   const okPct = (v) => { const t = String(v).replace(',', '.'); return t !== '' && Number(t) >= 0 && Number(t) <= 50; };
   const bad = ROUTES.filter((r) => (r.auto ? !okPct(body.cocl.margin_pct) || (body.cocl.fixed && !(rateNum(body.cocl.fixed) < 1)) : body.status[r.id] === 'on' && !rateNum(body.rates[r.id])));
   bad.forEach((r) => $('in-' + r.id).classList.add('bad'));
-  const msg = $('save-msg');
   msg.hidden = false;
   const badBcv = [[body.bcv_manual, 'Dólar BCV manual'], [body.bcv_manual_eur, 'Euro BCV manual']].filter(([v]) => v && !rateNum(v)).map(([, n]) => n);
   if (bad.length || badBcv.length) {
-    msg.className = 'msg bad';
+    msg.className = 'msg bad save-msg';
     msg.textContent = 'Revisa: ' + [...bad.map((r) => `${ORIGINS[r.from].name} → ${r.name}`), ...badBcv].join(', ') + '.';
     return;
   }
-  $('save').disabled = true;
+  btns.forEach((b) => { b.disabled = true; });
   const { status, body: res } = await api('/api/tasas', { method: 'PUT', body: JSON.stringify(body) });
-  $('save').disabled = false;
-  if (status === 401) { msg.className = 'msg bad'; msg.textContent = 'Tu sesión venció. Entra de nuevo; lo que escribiste no se guardó.'; showEditor(false); return; }
-  if (status !== 200) { msg.className = 'msg bad'; msg.textContent = res.error || 'No se pudo guardar. Intenta de nuevo.'; return; }
+  btns.forEach((b) => { b.disabled = false; });
+  if (status === 401) { msg.className = 'msg bad save-msg'; msg.textContent = 'Tu sesión venció. Entra de nuevo; lo que escribiste no se guardó.'; showEditor(false); return; }
+  if (status !== 200) { msg.className = 'msg bad save-msg'; msg.textContent = res.error || 'No se pudo guardar. Intenta de nuevo.'; return; }
   saved = { ...body, updated: res.updated };
-  msg.className = 'msg';
+  msg.className = 'msg save-msg';
   msg.textContent = `Publicado (${new Date(res.updated).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}): el cotizador ya muestra estas tasas y los flyers están listos abajo.`;
   renderRoutes();
   renderBcv(res.bcv, res.bcv_eur);
   checkMarket();
   drawFlyers();
-};
+}
+document.querySelectorAll('.save-rates').forEach((b) => { b.onclick = saveRates; });
 
 // ------------------------------------------------------------------ flyers
 
@@ -650,7 +653,7 @@ async function brlLive() {
   }
   box.textContent = txt + ' Al guardar, se calibra con el número de tu proveedor.';
 }
-setInterval(() => { if (!$('editor').hidden && $('prov-auto')?.checked) brlLive(); }, 60 * 1000);
+setInterval(() => { if (!$('tasas-CL').hidden && $('prov-auto')?.checked) brlLive(); }, 60 * 1000);
 
 
 // ------------------------------------------------------------------ USDT Colombia (venta al cliente)
