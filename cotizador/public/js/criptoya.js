@@ -121,9 +121,12 @@ export function brlExchanges(text) {
   if (!d || typeof d !== 'object') return [];
   return Object.entries(d).filter(([, x]) => Number(x?.ask) >= BRL_RANGE[0] && Number(x?.ask) <= BRL_RANGE[1]).map(([k, x]) => ({ key: k, ask: Number(x.ask), bid: Number(x.bid) >= BRL_RANGE[0] && Number(x.bid) <= BRL_RANGE[1] ? Number(x.bid) : null }));
 }
+// Busca el exchange elegido aunque CriptoYa lo nombre distinto ("bitget" = "bitgetp2p").
+const exBase = (k) => String(k || '').toLowerCase().replace(/p2p$/, '');
+export const pickExchange = (list, source) => list.find((x) => x.key === source) || list.find((x) => exBase(x.key) === exBase(source));
 export async function copPerBrl(source, adjPct, fetchFn = fetch) {
   const [b, c] = await Promise.all([USDT_BRL_URL, USDT_COP_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
-  const brl = (b ? brlExchanges(b) : []).find((x) => x.key === source)?.ask, cop = c && usdtCopRef(c)?.value;
+  const brl = pickExchange(b ? brlExchanges(b) : [], source)?.ask, cop = c && usdtCopRef(c)?.value;
   if (!brl || !cop) return null;
   const rate = cop / (brl * (1 + Number(adjPct || 0) / 100));
   return rate > 0 ? { rate, brl, cop } : null;
@@ -132,7 +135,7 @@ export async function copPerBrl(source, adjPct, fetchFn = fetch) {
 // Tasa = pesos por cada real; pesos ÷ tasa = reales.
 export async function copPerBrlSell(source, profitPct, fetchFn = fetch) {
   const [b, c] = await Promise.all([USDT_BRL_URL, USDT_COP_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
-  const brl = (b ? brlExchanges(b) : []).find((x) => x.key === source)?.bid, cop = c && usdtCopRef(c)?.value;
+  const brl = pickExchange(b ? brlExchanges(b) : [], source)?.bid, cop = c && usdtCopRef(c)?.value;
   if (!brl || !cop) return null;
   const rate = (cop * (1 + Number(profitPct || 0) / 100)) / brl;
   return rate > 0 ? { rate, brl, cop } : null;

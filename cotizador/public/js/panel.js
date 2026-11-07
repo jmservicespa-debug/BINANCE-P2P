@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=55';
-import { esc, flag, flags } from './ui.js?v=55';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges } from './criptoya.js?v=55';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=56';
+import { esc, flag, flags } from './ui.js?v=56';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange } from './criptoya.js?v=56';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -660,7 +660,7 @@ async function saveUsdtCo() {
 // ------------------------------------------------------------------ Brasil → Colombia
 
 let bcList = [], bcCop = null;
-const EX_NAME = (k) => ({ foxbit: 'Foxbit', binancep2p: 'Binance P2P', bybitp2p: 'Bybit P2P', mercadobitcoin: 'Mercado Bitcoin', novadax: 'NovaDAX', bitso: 'Bitso', ripio: 'Ripio' }[k] || k);
+const EX_NAME = (k) => ({ bitget: 'Bitget', bitgetp2p: 'Bitget P2P', foxbit: 'Foxbit', binancep2p: 'Binance P2P', bybitp2p: 'Bybit P2P', mercadobitcoin: 'Mercado Bitcoin', novadax: 'NovaDAX', bitso: 'Bitso', ripio: 'Ripio' }[k] || k);
 function bcCalc() {
   const n = (id) => Number(String($(id).value || '0').replace(',', '.'));
   const c = n('bc-margin'), p = n('bc-profit'), m = c + p;
@@ -677,8 +677,9 @@ async function loadBrCo() {
   const get = (u) => fetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   const [b, c] = await Promise.all([get(USDT_BRL_URL), get(USDT_COP_URL)]);
   bcList = b ? brlExchanges(b) : []; bcCop = c ? usdtCopRef(c)?.value ?? null : null;
-  const keys = [...new Set([body.source, ...bcList.map((x) => x.key)])];
-  $('bc-src').innerHTML = keys.map((k) => `<option value="${esc(k)}"${k === body.source ? ' selected' : ''}>${esc(EX_NAME(k))}${bcList.some((x) => x.key === k) ? '' : ' (sin precio ahora)'}</option>`).join('');
+  const src = pickExchange(bcList, body.source)?.key || body.source;
+  const keys = [...new Set([src, ...bcList.map((x) => x.key)])];
+  $('bc-src').innerHTML = keys.map((k) => `<option value="${esc(k)}"${k === src ? ' selected' : ''}>${esc(EX_NAME(k))}${bcList.some((x) => x.key === k) ? '' : ' (sin precio ahora)'}</option>`).join('');
   bcCalc();
 }
 async function saveBrCo() {
@@ -708,8 +709,9 @@ async function loadCoBr() {
   const get = (u) => fetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   const [b, c] = await Promise.all([get(USDT_BRL_URL), get(USDT_COP_URL)]);
   cbList = b ? brlExchanges(b) : []; cbCop = c ? usdtCopRef(c)?.value ?? null : null;
-  const keys = [...new Set([body.source, ...cbList.map((x) => x.key)])];
-  $('cb-src').innerHTML = keys.map((k) => `<option value="${esc(k)}"${k === body.source ? ' selected' : ''}>${esc(EX_NAME(k))}${cbList.some((x) => x.key === k && x.bid) ? '' : ' (sin precio ahora)'}</option>`).join('');
+  const src = pickExchange(cbList, body.source)?.key || body.source;
+  const keys = [...new Set([src, ...cbList.map((x) => x.key)])];
+  $('cb-src').innerHTML = keys.map((k) => `<option value="${esc(k)}"${k === src ? ' selected' : ''}>${esc(EX_NAME(k))}${cbList.some((x) => x.key === k && x.bid) ? '' : ' (sin precio ahora)'}</option>`).join('');
   cbCalc();
 }
 async function saveCoBr() {

@@ -492,3 +492,11 @@ test('Colombia → Brasil: tasa = Binance P2P COP (ask) × (1 + ganancia) ÷ pre
   assert.equal(r.brl, 5.4); assert.equal(r.cop, 3900);
   assert.ok(Math.abs(r.rate - 3900 * 1.03 / 5.4) < 1e-9);
 });
+
+test('Brasil: el exchange elegido se encuentra aunque CriptoYa lo llame con "p2p" (bitget = bitgetp2p)', async () => {
+  const { copPerBrl, copPerBrlSell } = await import('../public/js/criptoya.js');
+  const fake = async (u) => ({ ok: true, text: async () => (String(u).includes('/brl/') ? '{"bitgetp2p":{"ask":5.6,"bid":5.45},"foxbit":{"ask":5.5,"bid":5.4}}' : '{"binancep2p":{"ask":3900,"bid":3850}}') });
+  assert.equal((await copPerBrl('bitget', '2', fake)).brl, 5.6);
+  assert.equal((await copPerBrlSell('bitget', '3', fake)).brl, 5.45);
+  assert.equal((await copPerBrl('bitgetp2p', '2', fake)).brl, 5.6);
+});

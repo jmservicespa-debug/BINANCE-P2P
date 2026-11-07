@@ -472,7 +472,7 @@ export async function cryptoUsd(env, now = Date.now()) {
 }
 
 // ------------------------------------------------------------------ Brasil → Colombia (automática)
-export const BRCO_CFG = { margin_pct: '2', profit_pct: '0', min: '50', source: 'foxbit', published: false };
+export const BRCO_CFG = { margin_pct: '2', profit_pct: '0', min: '50', source: 'bitget', published: false };
 // Ajuste total que usa el cotizador: costo de compra + tu ganancia (se suman).
 export const brCoTotalPct = (c) => String(Math.round((Number(c.margin_pct || 0) + Number(c.profit_pct || 0)) * 1000) / 1000);
 export const loadBrCoCfg = (env) => loadCfg(env, 'brco_cfg', BRCO_CFG);
@@ -497,7 +497,7 @@ export async function saveBrCoCfg(request, env, now = Date.now()) {
 }
 
 // ------------------------------------------------------------------ Colombia → Brasil (automática)
-export const COBR_CFG = { profit_pct: '0', min: '50000', source: 'foxbit', published: false };
+export const COBR_CFG = { profit_pct: '0', min: '50000', source: 'bitget', published: false };
 export const loadCoBrCfg = (env) => loadCfg(env, 'cobr_cfg', COBR_CFG);
 export async function coBrView(request, env, now = Date.now()) {
   if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
