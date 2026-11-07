@@ -123,7 +123,7 @@ export function brlExchanges(text) {
 }
 export async function copPerBrl(source, adjPct, fetchFn = fetch) {
   const [b, c] = await Promise.all([USDT_BRL_URL, USDT_COP_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
-  const brl = (b ? brlExchanges(b) : []).find((x) => x.key === source)?.ask, cop = c && usdtCopBid(c);
+  const brl = (b ? brlExchanges(b) : []).find((x) => x.key === source)?.ask, cop = c && usdtCopRef(c)?.value;
   if (!brl || !cop) return null;
   const rate = cop / (brl * (1 + Number(adjPct || 0) / 100));
   return rate > 0 ? { rate, brl, cop } : null;

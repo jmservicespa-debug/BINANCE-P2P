@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=53';
-import { esc, flag, flags } from './ui.js?v=53';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges } from './criptoya.js?v=53';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=54';
+import { esc, flag, flags } from './ui.js?v=54';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges } from './criptoya.js?v=54';
 
 const $ = (id) => document.getElementById(id);
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
@@ -664,7 +664,7 @@ function bcCalc() {
   const n = (id) => Number(String($(id).value || '0').replace(',', '.'));
   const c = n('bc-margin'), p = n('bc-profit'), m = c + p;
   const brl = bcList.find((x) => x.key === $('bc-src').value)?.ask;
-  $('bc-ref').textContent = brl && bcCop ? `1 USDT = ${fmt(brl, 4)} BRL (${EX_NAME($('bc-src').value)}) · Binance P2P Colombia paga ${fmt(bcCop, 2)} COP` : '—';
+  $('bc-ref').textContent = brl && bcCop ? `1 USDT = ${fmt(brl, 4)} BRL (${EX_NAME($('bc-src').value)}) · Binance P2P Colombia cuando te compran: ${fmt(bcCop, 2)} COP` : '—';
   if (!brl || !bcCop || !(c >= 0 && c <= 50 && p >= 0 && p <= 50)) { $('bc-rate').textContent = bcList.length ? 'Revisa el ajuste y la ganancia (0 a 50 % cada uno).' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
   const rate = bcCop / (brl * (1 + m / 100));
   $('bc-rate').innerHTML = `Ajuste total ${fmt(m, 2)} % · Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100 BRL = <b class="num">${fmt(100 * rate, 0)} COP</b>`;
@@ -675,7 +675,7 @@ async function loadBrCo() {
   $('bc-margin').value = body.margin_pct; $('bc-profit').value = body.profit_pct ?? '0'; $('bc-min').value = fmt(Number(body.min), 0); $('bc-pub').checked = !!body.published;
   const get = (u) => fetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   const [b, c] = await Promise.all([get(USDT_BRL_URL), get(USDT_COP_URL)]);
-  bcList = b ? brlExchanges(b) : []; bcCop = c ? usdtCopBid(c) : null;
+  bcList = b ? brlExchanges(b) : []; bcCop = c ? usdtCopRef(c)?.value ?? null : null;
   const keys = [...new Set([body.source, ...bcList.map((x) => x.key)])];
   $('bc-src').innerHTML = keys.map((k) => `<option value="${esc(k)}"${k === body.source ? ' selected' : ''}>${esc(EX_NAME(k))}${bcList.some((x) => x.key === k) ? '' : ' (sin precio ahora)'}</option>`).join('');
   bcCalc();
