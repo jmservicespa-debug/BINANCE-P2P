@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, VE_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=59';
-import { setRewardsNav } from './rewards-nav.js?v=59';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, refFrom, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=59';
-import { esc, flag, flags } from './ui.js?v=59';
+import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, VE_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=60';
+import { setRewardsNav } from './rewards-nav.js?v=60';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, refFrom, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=60';
+import { esc, flag, flags } from './ui.js?v=60';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -137,7 +137,7 @@ async function loadIndicators() {
     const res = await fetch('/api/indicadores', { cache: 'no-store' });
     if (res.ok) ind = await res.json();
   } catch { /* sin indicadores: la franja muestra solo lo que haya */ }
-  ticker();
+  calc();  // con la TRM ya leída, la cotización hacia Colombia muestra su equivalente en dólares
 }
 
 // Seguimiento (solo conteos, sin datos de la persona): una visita y una cotización por ruta en cada sesión, y cada clic en WhatsApp.
@@ -230,7 +230,15 @@ function calc() {
   $('r-min').textContent = r.min ? `Envío mínimo: ${fmt(r.min, 0)} ${o.cur}` : '';
   // Debajo del resultado: cuánto equivalen los bolívares en dólares y en euros BCV.
   const day = (v) => (v?.date ? `(${v.date.split('-').reverse().join('/')})` : '');
-  $('r-bcv').hidden = !(bcvOk || eurOk);
+  // Hacia Colombia (llegan pesos): equivalente en dólares a la TRM del día.
+  const trm = ind?.co?.trm?.value, trmOk = r.to.includes('CO') && r.cur === 'COP' && trm > 0;
+  $('r-bcv').hidden = !(bcvOk || eurOk || trmOk);
+  $('t-usd-rows').hidden = !trmOk;
+  if (trmOk) {
+    $('t-rate').textContent = `${fmt(trm, 2)} COP/USD`;
+    $('t-usd').textContent = `${fmt(get / trm, 2)} USD`;
+    $('t-date').textContent = day(ind.co.trm);
+  }
   $('b-usd-rows').hidden = !bcvOk;
   $('b-eur-rows').hidden = !eurOk;
   if (bcvOk) {
@@ -251,7 +259,7 @@ function calc() {
   $('wa').innerHTML = waButtons(text);
   lastQuote = ok ? { from: [r.from], fromLabel: `Envías desde ${o.name}`, fromAmt: `${fmt(send, 0)} ${o.cur}`,
     to: r.to, toLabel: `Recibe en ${r.name}`, toAmt: `${fmt(get, r.dec)} ${r.cur}`, rate,
-    text: shareText(r, o, send, get, mode === 'eur' && eurOk ? ['EUR', eur, 'euro BCV'] : bcvOk ? ['USD', bcv, 'dólar BCV'] : null) } : null;
+    text: shareText(r, o, send, get, mode === 'eur' && eurOk ? ['EUR', eur, 'euro BCV'] : bcvOk ? ['USD', bcv, 'dólar BCV'] : trmOk ? ['USD', trm, 'dólar TRM'] : null) } : null;
   $('share').hidden = !ok;
 }
 
