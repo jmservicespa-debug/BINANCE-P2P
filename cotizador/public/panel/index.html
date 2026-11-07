@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=57">
+<link rel="stylesheet" href="/css/estilo.css?v=58">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -32,323 +32,346 @@
     <button class="btn" type="submit">Entrar</button>
   </form>
 
-  <section class="card" id="power" hidden aria-labelledby="h-power">
-    <div>
-      <h2 id="h-power">Cotizador</h2>
-      <span class="muted" id="power-txt">—</span>
-    </div>
-    <button class="btn" id="power-btn">—</button>
-  </section>
+  <nav class="gnav" id="gnav" hidden aria-label="Secciones del panel">
+    <a href="#g-gen">General</a><a href="#g-CL">Chile</a><a href="#g-CO">Colombia</a><a href="#g-BR">Brasil</a><a href="#g-VE">Venezuela</a><a href="#g-cripto">Oro y Bitcoin</a><a href="#g-tools">Flyers y más</a>
+  </nav>
 
-  <section class="card" id="mkt" hidden aria-labelledby="h-mkt">
-    <div>
-      <h2 id="h-mkt">Aviso del mercado</h2>
-      <span class="muted">Chile → Venezuela y Colombia → Chile: compara tus tasas publicadas con las sugeridas. Se revisa cada 5 minutos mientras el panel está abierto.</span>
-    </div>
-    <div class="msg" id="mkt-msg">Revisando el mercado…</div>
-    <div class="msg" id="mkt-co" hidden></div>
-    <label class="f" for="mkt-th">Avisarme si la diferencia pasa de (%)
-      <span class="amount"><input id="mkt-th" inputmode="decimal"></span></label>
-  </section>
+  <div class="grupo" id="g-gen" data-c="gen" hidden>
+    <div class="g-head"><span class="g-icon" aria-hidden="true">★</span><div><b>General</b><small>Encender el cotizador, aviso del mercado y tasas del día (todas las rutas manuales)</small></div></div>
+    <section class="card" id="power" hidden aria-labelledby="h-power">
+      <div>
+        <h2 id="h-power">Cotizador</h2>
+        <span class="muted" id="power-txt">—</span>
+      </div>
+      <button class="btn" id="power-btn">—</button>
+    </section>
+    <section class="card" id="mkt" hidden aria-labelledby="h-mkt">
+      <div>
+        <h2 id="h-mkt">Aviso del mercado</h2>
+        <span class="muted">Chile → Venezuela y Colombia → Chile: compara tus tasas publicadas con las sugeridas. Se revisa cada 5 minutos mientras el panel está abierto.</span>
+      </div>
+      <div class="msg" id="mkt-msg">Revisando el mercado…</div>
+      <div class="msg" id="mkt-co" hidden></div>
+      <label class="f" for="mkt-th">Avisarme si la diferencia pasa de (%)
+        <span class="amount"><input id="mkt-th" inputmode="decimal"></span></label>
+    </section>
+    <section class="card" id="editor" hidden aria-labelledby="h-tasas">
+      <div>
+        <h2 id="h-tasas">Tasas del día</h2>
+        <span class="muted">Escríbelas como en tu flyer (0.9320, 1085…). Al guardar se actualizan el cotizador y los flyers (Chile, Colombia y Europa). <span id="last"></span></span>
+      </div>
+      <div id="routes"></div>
+      <div>
+        <h3>Dólar BCV</h3>
+        <span class="muted" id="bcv-now">—</span>
+      </div>
+      <div class="route" style="border:0">
+        <span id="bcv-flag"></span>
+        <div><h3>Valor manual</h3><span class="op">Solo se usa si no se puede leer el BCV. Déjalo vacío si no lo necesitas.</span></div>
+        <input type="text" id="bcv" inputmode="decimal" aria-label="Dólar BCV manual" placeholder="—">
+      </div>
+      <div>
+        <h3>Euro BCV</h3>
+        <span class="muted" id="bcv-eur-now">—</span>
+      </div>
+      <div class="route" style="border:0">
+        <span id="bcv-eur-flag"></span>
+        <div><h3>Valor manual</h3><span class="op">Solo se usa si no se puede leer el euro del BCV. Déjalo vacío si no lo necesitas.</span></div>
+        <input type="text" id="bcv-eur" inputmode="decimal" aria-label="Euro BCV manual" placeholder="—">
+      </div>
+      <div class="msg" id="save-msg" hidden></div>
+      <button class="btn" id="save">Guardar y publicar</button>
+    </section>
+  </div>
 
-  <section class="card" id="editor" hidden aria-labelledby="h-tasas">
-    <div>
-      <h2 id="h-tasas">Tasas del día</h2>
-      <span class="muted">Escríbelas como en tu flyer (0.9320, 1085…). Al guardar se actualizan el cotizador y los flyers (Chile, Colombia y Europa). <span id="last"></span></span>
-    </div>
-    <div id="routes"></div>
-    <div>
-      <h3>Dólar BCV</h3>
-      <span class="muted" id="bcv-now">—</span>
-    </div>
-    <div class="route" style="border:0">
-      <span id="bcv-flag"></span>
-      <div><h3>Valor manual</h3><span class="op">Solo se usa si no se puede leer el BCV. Déjalo vacío si no lo necesitas.</span></div>
-      <input type="text" id="bcv" inputmode="decimal" aria-label="Dólar BCV manual" placeholder="—">
-    </div>
-    <div>
-      <h3>Euro BCV</h3>
-      <span class="muted" id="bcv-eur-now">—</span>
-    </div>
-    <div class="route" style="border:0">
-      <span id="bcv-eur-flag"></span>
-      <div><h3>Valor manual</h3><span class="op">Solo se usa si no se puede leer el euro del BCV. Déjalo vacío si no lo necesitas.</span></div>
-      <input type="text" id="bcv-eur" inputmode="decimal" aria-label="Euro BCV manual" placeholder="—">
-    </div>
-    <div class="msg" id="save-msg" hidden></div>
-    <button class="btn" id="save">Guardar y publicar</button>
-  </section>
+  <div class="grupo" id="g-CL" data-c="CL" hidden>
+    <div class="g-head"><span class="g-flags" data-flags="CL"></span><div><b>Chile</b><small>USDT en pesos chilenos</small></div></div>
+    <section class="card" id="usdt" hidden aria-labelledby="h-usdt">
+      <div>
+        <h2 id="h-usdt">USDT Chile (comprar y vender)</h2>
+        <span class="muted">Solo la ves tú. Toma el precio del USDT en pesos chilenos de la referencia que elijas (vía CriptoYa; automático = Vita Wallet): al vender le suma tu ganancia; al comprar le resta tu ganancia al comprar.</span>
+      </div>
+      <label class="f" for="u-srcsel">Referencia (USDT en pesos chilenos, vía CriptoYa)
+        <select id="u-srcsel"><option value="">Automático (Vita Wallet)</option></select></label>
+      <div class="usdt-ref">
+        <span class="muted">Referencia</span><b class="num" id="u-ref">—</b><span class="muted" id="u-src"></span>
+      </div>
+      <div class="row2">
+        <label class="f" for="u-margin">Ganancia al vender (%)
+          <span class="amount"><input id="u-margin" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f" for="u-buy">Ganancia al comprar (%)
+          <span class="amount"><input id="u-buy" inputmode="decimal" autocomplete="off"></span></label>
+      </div>
+      <label class="f" for="u-manual">Respaldo manual (precio de venta de referencia)
+        <span class="amount"><input id="u-manual" inputmode="decimal" autocomplete="off" placeholder="—"></span></label>
+      <div class="usdt-price">Tu precio de venta: <b class="num" id="u-price">—</b> CLP por USDT</div>
+      <div class="usdt-price">Tu precio de compra: <b class="num" id="u-bprice">—</b> CLP por USDT <span class="muted" id="u-bref"></span></div>
+      <div class="row2">
+        <label class="f" for="u-qty">El cliente quiere (USDT)
+          <span class="amount"><input id="u-qty" inputmode="decimal" autocomplete="off" value="100"></span></label>
+        <label class="f" for="u-clp">El cliente paga (CLP)
+          <span class="amount"><input id="u-clp" inputmode="decimal" autocomplete="off" value="100.000"></span></label>
+      </div>
+      <div class="usdt-out num"><div><span class="muted">Cobrar</span><b id="u-pay">—</b><span class="muted" id="u-pay-d"></span></div><div><span class="muted">Entregar</span><b id="u-get">—</b><span class="muted" id="u-get-d"></span></div></div>
+      <label class="f" for="u-sell">El cliente te vende (USDT)
+        <span class="amount"><input id="u-sell" inputmode="decimal" autocomplete="off" value="100"></span></label>
+      <div class="usdt-out num"><div><span class="muted">Pagarle</span><b id="u-bpay">—</b><span class="muted" id="u-bpay-d"></span></div></div>
+      <div class="msg" id="u-msg" hidden></div>
+      <label class="switch"><input type="checkbox" id="u-pub"> <b>USDT activo en el cotizador</b></label>
+      <span class="muted">Marcado: los clientes ven la opción USDT en Chile. Sin marcar: no aparece. Se guarda al instante.</span>
+      <button class="btn ghost" id="u-save">Guardar</button>
+    </section>
+  </div>
 
-  <section class="card" id="usdt" hidden aria-labelledby="h-usdt">
-    <div>
-      <h2 id="h-usdt">Calculadora USDT (Chile)</h2>
-      <span class="muted">Solo la ves tú. Toma el precio del USDT en pesos chilenos de Vita Wallet (vía CriptoYa): al vender le suma tu ganancia; al comprar le resta tu ganancia al comprar.</span>
-    </div>
-    <div class="usdt-ref">
-      <span class="muted">Referencia</span><b class="num" id="u-ref">—</b><span class="muted" id="u-src"></span>
-    </div>
-    <div class="row2">
-      <label class="f" for="u-margin">Ganancia al vender (%)
-        <span class="amount"><input id="u-margin" inputmode="decimal" autocomplete="off"></span></label>
-      <label class="f" for="u-buy">Ganancia al comprar (%)
-        <span class="amount"><input id="u-buy" inputmode="decimal" autocomplete="off"></span></label>
-    </div>
-    <label class="f" for="u-manual">Respaldo manual (precio de venta de referencia)
-      <span class="amount"><input id="u-manual" inputmode="decimal" autocomplete="off" placeholder="—"></span></label>
-    <div class="usdt-price">Tu precio de venta: <b class="num" id="u-price">—</b> CLP por USDT</div>
-    <div class="usdt-price">Tu precio de compra: <b class="num" id="u-bprice">—</b> CLP por USDT <span class="muted" id="u-bref"></span></div>
-    <div class="row2">
-      <label class="f" for="u-qty">El cliente quiere (USDT)
-        <span class="amount"><input id="u-qty" inputmode="decimal" autocomplete="off" value="100"></span></label>
-      <label class="f" for="u-clp">El cliente paga (CLP)
-        <span class="amount"><input id="u-clp" inputmode="decimal" autocomplete="off" value="100.000"></span></label>
-    </div>
-    <div class="usdt-out num"><div><span class="muted">Cobrar</span><b id="u-pay">—</b><span class="muted" id="u-pay-d"></span></div><div><span class="muted">Entregar</span><b id="u-get">—</b><span class="muted" id="u-get-d"></span></div></div>
-    <label class="f" for="u-sell">El cliente te vende (USDT)
-      <span class="amount"><input id="u-sell" inputmode="decimal" autocomplete="off" value="100"></span></label>
-    <div class="usdt-out num"><div><span class="muted">Pagarle</span><b id="u-bpay">—</b><span class="muted" id="u-bpay-d"></span></div></div>
-    <div class="msg" id="u-msg" hidden></div>
-    <label class="switch"><input type="checkbox" id="u-pub"> <b>USDT activo en el cotizador</b></label>
-    <span class="muted">Marcado: los clientes ven la opción USDT en Chile. Sin marcar: no aparece. Se guarda al instante.</span>
-    <button class="btn ghost" id="u-save">Guardar</button>
-  </section>
+  <div class="grupo" id="g-CO" data-c="CO" hidden>
+    <div class="g-head"><span class="g-flags" data-flags="CO"></span><div><b>Colombia</b><small>USDT en pesos colombianos y envíos desde Colombia</small></div></div>
+    <section class="card" id="usdtco" hidden aria-labelledby="h-usdtco">
+      <div>
+        <h2 id="h-usdtco">USDT Colombia (comprar y vender)</h2>
+        <span class="muted">El cliente te compra USDT con pesos colombianos o te los vende. Precio = USDT de la referencia que elijas (vía CriptoYa; automático = Binance P2P Colombia) + tu ganancia al vender, o − tu ganancia al comprar.</span>
+      </div>
+      <label class="f" for="uc-srcsel">Referencia (USDT en pesos colombianos, vía CriptoYa)
+        <select id="uc-srcsel"><option value="">Automático (Binance P2P)</option></select></label>
+      <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="uc-ref">—</b><span class="muted" id="uc-src"></span></div>
+      <div class="row2">
+        <label class="f" for="uc-margin">Tu ganancia (%)
+          <span class="amount"><input id="uc-margin" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f" for="uc-min">Mínimo (COP)
+          <span class="amount"><input id="uc-min" inputmode="numeric" autocomplete="off"></span></label>
+      </div>
+      <div class="usdt-price">Tu precio de venta: <b class="num" id="uc-price">—</b> COP por USDT <span class="muted" id="uc-trm"></span></div>
+      <div class="row2">
+        <label class="f" for="uc-buy">Ganancia al comprar (%)
+          <span class="amount"><input id="uc-buy" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f" for="uc-buymin">Mínimo al comprar (COP)
+          <span class="amount"><input id="uc-buymin" inputmode="numeric" autocomplete="off"></span></label>
+      </div>
+      <div class="usdt-price">Le compras al cliente a: <b class="num" id="uc-bid">—</b> COP por USDT</div>
+      <div class="msg" id="uc-msg" hidden></div>
+      <label class="switch"><input type="checkbox" id="uc-pub"> <b>USDT activo en el cotizador (desde Colombia)</b></label>
+      <span class="muted">Marcado: los clientes ven "USDT" al elegir Colombia. Sin marcar: no aparece.</span>
+      <button class="btn ghost" id="uc-save">Guardar</button>
+    </section>
+    <section class="card" id="cobr" hidden aria-labelledby="h-cobr">
+      <div>
+        <h2 id="h-cobr">Envíos Colombia → Brasil</h2>
+        <span class="muted">El cliente paga pesos colombianos y recibe reales por Pix. Tasa = (precio del USDT en Binance P2P Colombia + tu ganancia) ÷ (lo que paga el exchange de Brasil por cada USDT). Pesos ÷ tasa = reales.</span>
+      </div>
+      <label class="f" for="cb-src">Exchange de Brasil donde vendes (vía CriptoYa)
+        <select id="cb-src"></select></label>
+      <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="cb-ref">—</b></div>
+      <div class="row2">
+        <label class="f" for="cb-profit">Tu ganancia (%)
+          <span class="amount"><input id="cb-profit" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f" for="cb-min">Mínimo (COP)
+          <span class="amount"><input id="cb-min" inputmode="numeric" autocomplete="off"></span></label>
+      </div>
+      <div class="usdt-price" id="cb-rate">—</div>
+      <div class="msg" id="cb-msg" hidden></div>
+      <label class="switch"><input type="checkbox" id="cb-pub"> <b>Ruta Colombia → Brasil activa en el cotizador</b></label>
+      <span class="muted">Marcado: en "Envíos", desde Colombia aparece Brasil como destino. Sin marcar: no aparece.</span>
+      <button class="btn ghost" id="cb-save">Guardar</button>
+    </section>
+  </div>
 
-  <section class="card" id="usdtco" hidden aria-labelledby="h-usdtco">
-    <div>
-      <h2 id="h-usdtco">USDT Colombia (comprar y vender)</h2>
-      <span class="muted">El cliente te compra USDT con pesos colombianos o te los vende. Precio = USDT en Binance P2P Colombia (vía CriptoYa) + tu ganancia al vender, o − tu ganancia al comprar.</span>
-    </div>
-    <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="uc-ref">—</b><span class="muted" id="uc-src"></span></div>
-    <div class="row2">
-      <label class="f" for="uc-margin">Tu ganancia (%)
-        <span class="amount"><input id="uc-margin" inputmode="decimal" autocomplete="off"></span></label>
-      <label class="f" for="uc-min">Mínimo (COP)
-        <span class="amount"><input id="uc-min" inputmode="numeric" autocomplete="off"></span></label>
-    </div>
-    <div class="usdt-price">Tu precio de venta: <b class="num" id="uc-price">—</b> COP por USDT <span class="muted" id="uc-trm"></span></div>
-    <div class="row2">
-      <label class="f" for="uc-buy">Ganancia al comprar (%)
-        <span class="amount"><input id="uc-buy" inputmode="decimal" autocomplete="off"></span></label>
-      <label class="f" for="uc-buymin">Mínimo al comprar (COP)
-        <span class="amount"><input id="uc-buymin" inputmode="numeric" autocomplete="off"></span></label>
-    </div>
-    <div class="usdt-price">Le compras al cliente a: <b class="num" id="uc-bid">—</b> COP por USDT</div>
-    <div class="msg" id="uc-msg" hidden></div>
-    <label class="switch"><input type="checkbox" id="uc-pub"> <b>USDT activo en el cotizador (desde Colombia)</b></label>
-    <span class="muted">Marcado: los clientes ven "USDT" al elegir Colombia. Sin marcar: no aparece.</span>
-    <button class="btn ghost" id="uc-save">Guardar</button>
-  </section>
+  <div class="grupo" id="g-BR" data-c="BR" hidden>
+    <div class="g-head"><span class="g-flags" data-flags="BR"></span><div><b>Brasil</b><small>USDT en reales y envíos desde Brasil</small></div></div>
+    <section class="card" id="usdtbr" hidden aria-labelledby="h-usdtbr">
+      <div>
+        <h2 id="h-usdtbr">USDT Brasil (comprar y vender)</h2>
+        <span class="muted">El cliente paga o recibe reales. Precio = USDT de la referencia que elijas (vía CriptoYa; automático = Binance P2P Brasil o Bybit P2P) ± tu ganancia. Mínimo: el equivalente a 10 USDT.</span>
+      </div>
+      <label class="f" for="ub-srcsel">Referencia (USDT en reales, vía CriptoYa)
+        <select id="ub-srcsel"><option value="">Automático (Binance P2P o Bybit P2P)</option></select></label>
+      <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="ub-ref">—</b><span class="muted" id="ub-src"></span></div>
+      <div class="row2">
+        <label class="f" for="ub-margin">Ganancia al vender (%)
+          <span class="amount"><input id="ub-margin" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f" for="ub-buy">Ganancia al comprar (%)
+          <span class="amount"><input id="ub-buy" inputmode="decimal" autocomplete="off"></span></label>
+      </div>
+      <div class="usdt-price">Vendes a <b class="num" id="ub-sell">—</b> BRL · compras a <b class="num" id="ub-bid">—</b> BRL por USDT</div>
+      <div class="msg" id="ub-msg" hidden></div>
+      <label class="switch"><input type="checkbox" id="ub-pub"> <b>USDT activo en el cotizador (desde Brasil)</b></label>
+      <span class="muted">Marcado: Brasil deja de decir "Próximamente" y los clientes ven USDT. Sin marcar: no aparece.</span>
+      <button class="btn ghost" id="ub-save">Guardar</button>
+    </section>
+    <section class="card" id="brco" hidden aria-labelledby="h-brco">
+      <div>
+        <h2 id="h-brco">Envíos Brasil → Colombia</h2>
+        <span class="muted">El cliente paga reales y recibe pesos colombianos. Tasa = (precio del USDT en Binance P2P Colombia del lado alto, cuando a ti te compran) ÷ (USDT en reales del exchange elegido + ajuste para igualar el precio al que tú compras + tu ganancia aparte). Reales × tasa = pesos.</span>
+      </div>
+      <label class="f" for="bc-src">Exchange de referencia (USDT en reales, vía CriptoYa)
+        <select id="bc-src"></select></label>
+      <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="bc-ref">—</b></div>
+      <div class="row2">
+        <label class="f" for="bc-margin">Ajuste para igualar tu precio de compra (%)
+          <span class="amount"><input id="bc-margin" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f" for="bc-profit">Tu ganancia (%)
+          <span class="amount"><input id="bc-profit" inputmode="decimal" autocomplete="off"></span></label>
+      </div>
+      <div class="row2">
+        <label class="f" for="bc-min">Mínimo (BRL)
+          <span class="amount"><input id="bc-min" inputmode="numeric" autocomplete="off"></span></label>
+      </div>
+      <div class="usdt-price" id="bc-rate">—</div>
+      <div class="msg" id="bc-msg" hidden></div>
+      <label class="switch"><input type="checkbox" id="bc-pub"> <b>Ruta Brasil → Colombia activa en el cotizador</b></label>
+      <span class="muted">Marcado: en "Envíos", Brasil deja de decir "Próximamente" y muestra Colombia. Sin marcar: no aparece.</span>
+      <button class="btn ghost" id="bc-save">Guardar</button>
+    </section>
+    <section class="card" id="brcl" hidden aria-labelledby="h-brcl">
+      <div>
+        <h2 id="h-brcl">Envíos Brasil → Chile</h2>
+        <span class="muted">El cliente paga reales y recibe pesos chilenos. Tasa = (lo que paga Vita por USDT en pesos chilenos) ÷ (USDT en reales del exchange elegido + tu ganancia). Reales × tasa = pesos chilenos.</span>
+      </div>
+      <label class="f" for="bl-src">Exchange de Brasil donde compras (USDT en reales, vía CriptoYa)
+        <select id="bl-src"></select></label>
+      <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="bl-ref">—</b></div>
+      <div class="row2">
+        <label class="f" for="bl-profit">Tu ganancia (%)
+          <span class="amount"><input id="bl-profit" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f" for="bl-min">Mínimo (BRL)
+          <span class="amount"><input id="bl-min" inputmode="numeric" autocomplete="off"></span></label>
+      </div>
+      <div class="usdt-price" id="bl-rate">—</div>
+      <div class="msg" id="bl-msg" hidden></div>
+      <label class="switch"><input type="checkbox" id="bl-pub"> <b>Ruta Brasil → Chile activa en el cotizador</b></label>
+      <span class="muted">Marcado: en "Envíos", desde Brasil aparece Chile como destino. Sin marcar: no aparece.</span>
+      <button class="btn ghost" id="bl-save">Guardar</button>
+    </section>
+  </div>
 
-  <section class="card" id="brcl" hidden aria-labelledby="h-brcl">
-    <div>
-      <h2 id="h-brcl">Envíos Brasil → Chile</h2>
-      <span class="muted">El cliente paga reales y recibe pesos chilenos. Tasa = (lo que paga Vita por USDT en pesos chilenos) ÷ (USDT en reales del exchange elegido + tu ganancia). Reales × tasa = pesos chilenos.</span>
-    </div>
-    <label class="f" for="bl-src">Exchange de Brasil donde compras (USDT en reales, vía CriptoYa)
-      <select id="bl-src"></select></label>
-    <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="bl-ref">—</b></div>
-    <div class="row2">
-      <label class="f" for="bl-profit">Tu ganancia (%)
-        <span class="amount"><input id="bl-profit" inputmode="decimal" autocomplete="off"></span></label>
-      <label class="f" for="bl-min">Mínimo (BRL)
-        <span class="amount"><input id="bl-min" inputmode="numeric" autocomplete="off"></span></label>
-    </div>
-    <div class="usdt-price" id="bl-rate">—</div>
-    <div class="msg" id="bl-msg" hidden></div>
-    <label class="switch"><input type="checkbox" id="bl-pub"> <b>Ruta Brasil → Chile activa en el cotizador</b></label>
-    <span class="muted">Marcado: en "Envíos", desde Brasil aparece Chile como destino. Sin marcar: no aparece.</span>
-    <button class="btn ghost" id="bl-save">Guardar</button>
-  </section>
+  <div class="grupo" id="g-VE" data-c="VE" hidden>
+    <div class="g-head"><span class="g-flags" data-flags="VE"></span><div><b>Venezuela</b><small>Envíos desde Venezuela</small></div></div>
+    <section class="card" id="vecl" hidden aria-labelledby="h-vecl">
+      <div>
+        <h2 id="h-vecl">Envíos Venezuela → Chile</h2>
+        <span class="muted">El cliente paga bolívares y recibe pesos chilenos. Tasa = (lo que paga Vita por USDT en CLP) ÷ (USDT en bolívares del P2P elegido + tu ganancia). Bolívares × tasa = pesos.</span>
+      </div>
+      <label class="f" for="vc-src">P2P de referencia (USDT en bolívares, vía CriptoYa)
+        <select id="vc-src"></select></label>
+      <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="vc-ref">—</b></div>
+      <div class="row2">
+        <label class="f" for="vc-margin">Tu ganancia (%)
+          <span class="amount"><input id="vc-margin" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f" for="vc-min">Mínimo (Bs)
+          <span class="amount"><input id="vc-min" inputmode="numeric" autocomplete="off"></span></label>
+      </div>
+      <div class="usdt-price" id="vc-rate">—</div>
+      <div class="msg" id="vc-msg" hidden></div>
+      <label class="switch"><input type="checkbox" id="vc-pub"> <b>Ruta Venezuela → Chile activa en el cotizador</b></label>
+      <span class="muted">Marcado: en "Envíos" aparece Venezuela como país de origen. Sin marcar: no aparece.</span>
+      <button class="btn ghost" id="vc-save">Guardar</button>
+    </section>
+  </div>
 
-  <section class="card" id="cobr" hidden aria-labelledby="h-cobr">
-    <div>
-      <h2 id="h-cobr">Envíos Colombia → Brasil</h2>
-      <span class="muted">El cliente paga pesos colombianos y recibe reales por Pix. Tasa = (precio del USDT en Binance P2P Colombia + tu ganancia) ÷ (lo que paga el exchange de Brasil por cada USDT). Pesos ÷ tasa = reales.</span>
-    </div>
-    <label class="f" for="cb-src">Exchange de Brasil donde vendes (vía CriptoYa)
-      <select id="cb-src"></select></label>
-    <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="cb-ref">—</b></div>
-    <div class="row2">
-      <label class="f" for="cb-profit">Tu ganancia (%)
-        <span class="amount"><input id="cb-profit" inputmode="decimal" autocomplete="off"></span></label>
-      <label class="f" for="cb-min">Mínimo (COP)
-        <span class="amount"><input id="cb-min" inputmode="numeric" autocomplete="off"></span></label>
-    </div>
-    <div class="usdt-price" id="cb-rate">—</div>
-    <div class="msg" id="cb-msg" hidden></div>
-    <label class="switch"><input type="checkbox" id="cb-pub"> <b>Ruta Colombia → Brasil activa en el cotizador</b></label>
-    <span class="muted">Marcado: en "Envíos", desde Colombia aparece Brasil como destino. Sin marcar: no aparece.</span>
-    <button class="btn ghost" id="cb-save">Guardar</button>
-  </section>
+  <div class="grupo" id="g-cripto" data-c="cripto" hidden>
+    <div class="g-head"><span class="g-flags" data-flags="CL,CO"></span><div><b>Oro y Bitcoin</b><small>Desde Chile y Colombia</small></div></div>
+    <section class="card" id="oro" hidden aria-labelledby="h-oro">
+      <div>
+        <h2 id="h-oro">Oro tokenizado (PAXG y XAUt)</h2>
+        <span class="muted">Comprar y vender desde Chile (mínimo 30.000 CLP) y Colombia (mínimo 100.000 COP). Precio = PAXG/USDT (1 onza, sirve para XAUt y PAXG) × USDT en pesos (Binance P2P vía CriptoYa, Chile y Colombia) ± tu ganancia. PAXG se envía solo por Ethereum (ERC-20) y XAUt solo por Solana.</span>
+      </div>
+      <div class="usdt-ref"><span class="muted">Referencia (1 onza)</span><b class="num" id="go-ref">—</b></div>
+      <div class="row2">
+        <label class="f" for="go-margin">Ganancia al vender (%)
+          <span class="amount"><input id="go-margin" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f" for="go-buy">Ganancia al comprar (%)
+          <span class="amount"><input id="go-buy" inputmode="decimal" autocomplete="off"></span></label>
+      </div>
+      <div class="usdt-price" id="go-prices">—</div>
+      <div class="msg" id="go-msg" hidden></div>
+      <label class="switch"><input type="checkbox" id="go-fee"> <b>Descontar la comisión de red de lo que recibe el cliente (al comprar)</b></label>
+      <div class="row2">
+        <label class="f" for="go-fee-x">Comisión XAUt · Solana (US$)
+          <span class="amount"><input id="go-fee-x" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f" for="go-fee-p">Comisión PAXG · Ethereum (US$)
+          <span class="amount"><input id="go-fee-p" inputmode="decimal" autocomplete="off"></span></label>
+      </div>
+      <span class="muted">Marcado: la cotización ya muestra los tokens que llegan después de pagar la red (ej. US$1). Sin marcar: la comisión la asumes tú.</span>
+      <label class="switch"><input type="checkbox" id="go-xaut"> <b>Ofrecer XAUt (Tether Gold · red Solana)</b></label>
+      <label class="switch"><input type="checkbox" id="go-paxg"> <b>Ofrecer PAXG (Pax Gold · red Ethereum)</b></label>
+      <span class="muted">Con un solo token encendido, el cliente no elige: ve directo ese token y su red.</span>
+      <label class="switch"><input type="checkbox" id="go-priv"> <b>Solo con enlace privado</b></label>
+      <span class="muted">Marcado: no aparece en jmcambios.cl para todos; solo lo ve quien entra con tu enlace <b>jmcambios.cl/?k=privado</b> (envíalo por WhatsApp a tus clientes de confianza).</span>
+      <label class="switch"><input type="checkbox" id="go-cl"> <b>Oro activo en el cotizador desde Chile</b></label>
+      <label class="switch"><input type="checkbox" id="go-co"> <b>Oro activo en el cotizador desde Colombia</b></label>
+      <span class="muted">Marcado: los clientes ven "PAXG · oro" y "XAUt · oro" al elegir ese país. Sin marcar: no aparece.</span>
+      <button class="btn ghost" id="go-save">Guardar</button>
+    </section>
+    <section class="card" id="btcsec" hidden aria-labelledby="h-btc">
+      <div>
+        <h2 id="h-btc">Bitcoin (BTC)</h2>
+        <span class="muted">Comprar y vender desde Chile (mínimo 10.000 CLP) y Colombia (mínimo 30.000 COP). Precio = BTC/USDT de Binance × USDT en pesos (Binance P2P vía CriptoYa, Chile y Colombia) ± tu ganancia. Se envía por Lightning Network; si el cliente quiere on-chain, asume la comisión de red.</span>
+      </div>
+      <div class="usdt-ref"><span class="muted">Referencia (1 BTC)</span><b class="num" id="bt-ref">—</b></div>
+      <div class="row2">
+        <label class="f" for="bt-margin">Ganancia al vender (%)
+          <span class="amount"><input id="bt-margin" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f" for="bt-buy">Ganancia al comprar (%)
+          <span class="amount"><input id="bt-buy" inputmode="decimal" autocomplete="off"></span></label>
+      </div>
+      <div class="usdt-price" id="bt-prices">—</div>
+      <div class="msg" id="bt-msg" hidden></div>
+      <label class="switch"><input type="checkbox" id="bt-priv"> <b>Solo con enlace privado</b></label>
+      <span class="muted">Marcado: no aparece en jmcambios.cl para todos; solo lo ve quien entra con tu enlace <b>jmcambios.cl/?k=privado</b> (envíalo por WhatsApp a tus clientes de confianza).</span>
+      <label class="switch"><input type="checkbox" id="bt-cl"> <b>Bitcoin activo en el cotizador desde Chile</b></label>
+      <label class="switch"><input type="checkbox" id="bt-co"> <b>Bitcoin activo en el cotizador desde Colombia</b></label>
+      <span class="muted">Marcado: los clientes ven "Bitcoin" en la pestaña "USDT, oro y Bitcoin". Sin marcar: no aparece.</span>
+      <button class="btn ghost" id="bt-save">Guardar</button>
+    </section>
+  </div>
 
-  <section class="card" id="brco" hidden aria-labelledby="h-brco">
-    <div>
-      <h2 id="h-brco">Envíos Brasil → Colombia</h2>
-      <span class="muted">El cliente paga reales y recibe pesos colombianos. Tasa = (precio del USDT en Binance P2P Colombia del lado alto, cuando a ti te compran) ÷ (USDT en reales del exchange elegido + ajuste para igualar el precio al que tú compras + tu ganancia aparte). Reales × tasa = pesos.</span>
-    </div>
-    <label class="f" for="bc-src">Exchange de referencia (USDT en reales, vía CriptoYa)
-      <select id="bc-src"></select></label>
-    <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="bc-ref">—</b></div>
-    <div class="row2">
-      <label class="f" for="bc-margin">Ajuste para igualar tu precio de compra (%)
-        <span class="amount"><input id="bc-margin" inputmode="decimal" autocomplete="off"></span></label>
-      <label class="f" for="bc-profit">Tu ganancia (%)
-        <span class="amount"><input id="bc-profit" inputmode="decimal" autocomplete="off"></span></label>
-    </div>
-    <div class="row2">
-      <label class="f" for="bc-min">Mínimo (BRL)
-        <span class="amount"><input id="bc-min" inputmode="numeric" autocomplete="off"></span></label>
-    </div>
-    <div class="usdt-price" id="bc-rate">—</div>
-    <div class="msg" id="bc-msg" hidden></div>
-    <label class="switch"><input type="checkbox" id="bc-pub"> <b>Ruta Brasil → Colombia activa en el cotizador</b></label>
-    <span class="muted">Marcado: en "Envíos", Brasil deja de decir "Próximamente" y muestra Colombia. Sin marcar: no aparece.</span>
-    <button class="btn ghost" id="bc-save">Guardar</button>
-  </section>
+  <div class="grupo" id="g-tools" data-c="tools" hidden>
+    <div class="g-head"><span class="g-icon" aria-hidden="true">★</span><div><b>Flyers, enlaces y visitas</b><small>Para compartir y revisar</small></div></div>
+    <section class="card" id="flyers" hidden aria-labelledby="h-fly">
+      <div>
+        <h2 id="h-fly">Flyers del día</h2>
+        <span class="muted">Se llenan con las tasas guardadas. Desde el celular, Compartir te deja enviarlos directo a WhatsApp. Debajo de cada flyer está el texto con banderas para copiar y pegar en tu estado (puedes editarlo; se recuerda en este equipo).</span>
+      </div>
+      <div class="flyer"><h3>Desde Chile</h3><img id="fly-CL" alt="Flyer de tasas desde Chile"></div>
+      <div class="row2"><button class="btn ghost" data-dl="CL">Descargar</button><button class="btn" data-share="CL">Compartir</button></div>
+      <label class="f" for="estado-CL">Texto para el estado (Chile)<textarea id="estado-CL" class="estado" rows="4"></textarea></label>
+      <div class="row2"><button class="btn ghost" data-reset="CL">Texto automático</button><button class="btn" data-copy="CL">Copiar texto</button></div>
+      <div class="flyer"><h3>Desde Colombia</h3><img id="fly-CO" alt="Flyer de tasas desde Colombia (Venezuela y Chile)"></div>
+      <div class="row2"><button class="btn ghost" data-dl="CO">Descargar</button><button class="btn" data-share="CO">Compartir</button></div>
+      <label class="f" for="estado-CO">Texto para el estado (Colombia)<textarea id="estado-CO" class="estado" rows="4"></textarea></label>
+      <div class="row2"><button class="btn ghost" data-reset="CO">Texto automático</button><button class="btn" data-copy="CO">Copiar texto</button></div>
+      <div class="flyer"><h3>Calculadora Colombia → Venezuela</h3><img id="fly-TCOVE" alt="Tabla de montos de pesos colombianos a bolívares con la tasa del día"></div>
+      <div class="row2"><button class="btn ghost" data-dl="TCOVE">Descargar</button><button class="btn" data-share="TCOVE">Compartir</button></div>
+      <span class="muted">Se arma sola con tu tasa Colombia → Venezuela publicada: pesos ÷ tasa = bolívares.</span>
+      <div class="flyer"><h3>Desde Europa</h3><img id="fly-EU" alt="Flyer de tasas desde Europa"></div>
+      <div class="row2"><button class="btn ghost" data-dl="EU">Descargar</button><button class="btn" data-share="EU">Compartir</button></div>
+      <label class="f" for="estado-EU">Texto para el estado (Europa)<textarea id="estado-EU" class="estado" rows="4"></textarea></label>
+      <div class="row2"><button class="btn ghost" data-reset="EU">Texto automático</button><button class="btn" data-copy="EU">Copiar texto</button></div>
+    </section>
+    <section class="card" id="links" hidden>
+      <h3>Enlaces para tus clientes</h3>
+      <div id="advisors"></div>
+      <span class="muted">Cada enlace lleva el WhatsApp de esa persona. El enlace general muestra un solo botón sin nombre, a tu número.</span>
+    </section>
+    <section class="card" id="rewards" hidden aria-labelledby="h-rewards">
+      <div>
+        <h2 id="h-rewards">JM Rewards en el cotizador</h2>
+        <span class="muted">Muestra el botón "Cada vez que envías, ganas algo" bajo el botón de WhatsApp, que lleva al registro de JM Rewards.</span>
+      </div>
+      <label class="switch"><input type="checkbox" id="jr-pub"> <b>Botón de JM Rewards visible en el cotizador</b></label>
+      <span class="muted">Sin marcar: los clientes no lo ven. Se guarda al instante.</span>
+      <div class="msg" id="jr-msg" hidden></div>
+    </section>
+    <section class="card" id="stats" hidden aria-labelledby="h-stats">
+      <div class="row-between">
+        <div><h2 id="h-stats">Visitas del cotizador</h2>
+          <span class="muted">Conteo por día (hora de Chile). Cada persona cuenta una vez por visita; los números son aproximados.</span></div>
+        <button class="btn ghost" id="stats-reload">Actualizar</button>
+      </div>
+      <div id="stats-body" class="muted">Cargando…</div>
+      <div class="row-between"><span class="muted" id="self-txt"></span><button class="btn ghost" id="self-btn">—</button></div>
+    </section>
+  </div>
 
-  <section class="card" id="vecl" hidden aria-labelledby="h-vecl">
-    <div>
-      <h2 id="h-vecl">Envíos Venezuela → Chile</h2>
-      <span class="muted">El cliente paga bolívares y recibe pesos chilenos. Tasa = (lo que paga Vita por USDT en CLP) ÷ (USDT en bolívares del P2P elegido + tu ganancia). Bolívares × tasa = pesos.</span>
-    </div>
-    <label class="f" for="vc-src">P2P de referencia (USDT en bolívares, vía CriptoYa)
-      <select id="vc-src"></select></label>
-    <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="vc-ref">—</b></div>
-    <div class="row2">
-      <label class="f" for="vc-margin">Tu ganancia (%)
-        <span class="amount"><input id="vc-margin" inputmode="decimal" autocomplete="off"></span></label>
-      <label class="f" for="vc-min">Mínimo (Bs)
-        <span class="amount"><input id="vc-min" inputmode="numeric" autocomplete="off"></span></label>
-    </div>
-    <div class="usdt-price" id="vc-rate">—</div>
-    <div class="msg" id="vc-msg" hidden></div>
-    <label class="switch"><input type="checkbox" id="vc-pub"> <b>Ruta Venezuela → Chile activa en el cotizador</b></label>
-    <span class="muted">Marcado: en "Envíos" aparece Venezuela como país de origen. Sin marcar: no aparece.</span>
-    <button class="btn ghost" id="vc-save">Guardar</button>
-  </section>
-
-  <section class="card" id="usdtbr" hidden aria-labelledby="h-usdtbr">
-    <div>
-      <h2 id="h-usdtbr">USDT Brasil (comprar y vender)</h2>
-      <span class="muted">El cliente paga o recibe reales. Precio = USDT en Binance P2P Brasil (si no viene, Bybit P2P) vía CriptoYa ± tu ganancia. Mínimo: el equivalente a 10 USDT.</span>
-    </div>
-    <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="ub-ref">—</b><span class="muted" id="ub-src"></span></div>
-    <div class="row2">
-      <label class="f" for="ub-margin">Ganancia al vender (%)
-        <span class="amount"><input id="ub-margin" inputmode="decimal" autocomplete="off"></span></label>
-      <label class="f" for="ub-buy">Ganancia al comprar (%)
-        <span class="amount"><input id="ub-buy" inputmode="decimal" autocomplete="off"></span></label>
-    </div>
-    <div class="usdt-price">Vendes a <b class="num" id="ub-sell">—</b> BRL · compras a <b class="num" id="ub-bid">—</b> BRL por USDT</div>
-    <div class="msg" id="ub-msg" hidden></div>
-    <label class="switch"><input type="checkbox" id="ub-pub"> <b>USDT activo en el cotizador (desde Brasil)</b></label>
-    <span class="muted">Marcado: Brasil deja de decir "Próximamente" y los clientes ven USDT. Sin marcar: no aparece.</span>
-    <button class="btn ghost" id="ub-save">Guardar</button>
-  </section>
-
-  <section class="card" id="oro" hidden aria-labelledby="h-oro">
-    <div>
-      <h2 id="h-oro">Oro tokenizado (PAXG y XAUt)</h2>
-      <span class="muted">Comprar y vender desde Chile (mínimo 30.000 CLP) y Colombia (mínimo 100.000 COP). Precio = PAXG/USDT (1 onza, sirve para XAUt y PAXG) × USDT en pesos (Binance P2P vía CriptoYa, Chile y Colombia) ± tu ganancia. PAXG se envía solo por Ethereum (ERC-20) y XAUt solo por Solana.</span>
-    </div>
-    <div class="usdt-ref"><span class="muted">Referencia (1 onza)</span><b class="num" id="go-ref">—</b></div>
-    <div class="row2">
-      <label class="f" for="go-margin">Ganancia al vender (%)
-        <span class="amount"><input id="go-margin" inputmode="decimal" autocomplete="off"></span></label>
-      <label class="f" for="go-buy">Ganancia al comprar (%)
-        <span class="amount"><input id="go-buy" inputmode="decimal" autocomplete="off"></span></label>
-    </div>
-    <div class="usdt-price" id="go-prices">—</div>
-    <div class="msg" id="go-msg" hidden></div>
-    <label class="switch"><input type="checkbox" id="go-fee"> <b>Descontar la comisión de red de lo que recibe el cliente (al comprar)</b></label>
-    <div class="row2">
-      <label class="f" for="go-fee-x">Comisión XAUt · Solana (US$)
-        <span class="amount"><input id="go-fee-x" inputmode="decimal" autocomplete="off"></span></label>
-      <label class="f" for="go-fee-p">Comisión PAXG · Ethereum (US$)
-        <span class="amount"><input id="go-fee-p" inputmode="decimal" autocomplete="off"></span></label>
-    </div>
-    <span class="muted">Marcado: la cotización ya muestra los tokens que llegan después de pagar la red (ej. US$1). Sin marcar: la comisión la asumes tú.</span>
-    <label class="switch"><input type="checkbox" id="go-xaut"> <b>Ofrecer XAUt (Tether Gold · red Solana)</b></label>
-    <label class="switch"><input type="checkbox" id="go-paxg"> <b>Ofrecer PAXG (Pax Gold · red Ethereum)</b></label>
-    <span class="muted">Con un solo token encendido, el cliente no elige: ve directo ese token y su red.</span>
-    <label class="switch"><input type="checkbox" id="go-priv"> <b>Solo con enlace privado</b></label>
-    <span class="muted">Marcado: no aparece en jmcambios.cl para todos; solo lo ve quien entra con tu enlace <b>jmcambios.cl/?k=privado</b> (envíalo por WhatsApp a tus clientes de confianza).</span>
-    <label class="switch"><input type="checkbox" id="go-cl"> <b>Oro activo en el cotizador desde Chile</b></label>
-    <label class="switch"><input type="checkbox" id="go-co"> <b>Oro activo en el cotizador desde Colombia</b></label>
-    <span class="muted">Marcado: los clientes ven "PAXG · oro" y "XAUt · oro" al elegir ese país. Sin marcar: no aparece.</span>
-    <button class="btn ghost" id="go-save">Guardar</button>
-  </section>
-
-  <section class="card" id="btcsec" hidden aria-labelledby="h-btc">
-    <div>
-      <h2 id="h-btc">Bitcoin (BTC)</h2>
-      <span class="muted">Comprar y vender desde Chile (mínimo 10.000 CLP) y Colombia (mínimo 30.000 COP). Precio = BTC/USDT de Binance × USDT en pesos (Binance P2P vía CriptoYa, Chile y Colombia) ± tu ganancia. Se envía por Lightning Network; si el cliente quiere on-chain, asume la comisión de red.</span>
-    </div>
-    <div class="usdt-ref"><span class="muted">Referencia (1 BTC)</span><b class="num" id="bt-ref">—</b></div>
-    <div class="row2">
-      <label class="f" for="bt-margin">Ganancia al vender (%)
-        <span class="amount"><input id="bt-margin" inputmode="decimal" autocomplete="off"></span></label>
-      <label class="f" for="bt-buy">Ganancia al comprar (%)
-        <span class="amount"><input id="bt-buy" inputmode="decimal" autocomplete="off"></span></label>
-    </div>
-    <div class="usdt-price" id="bt-prices">—</div>
-    <div class="msg" id="bt-msg" hidden></div>
-    <label class="switch"><input type="checkbox" id="bt-priv"> <b>Solo con enlace privado</b></label>
-    <span class="muted">Marcado: no aparece en jmcambios.cl para todos; solo lo ve quien entra con tu enlace <b>jmcambios.cl/?k=privado</b> (envíalo por WhatsApp a tus clientes de confianza).</span>
-    <label class="switch"><input type="checkbox" id="bt-cl"> <b>Bitcoin activo en el cotizador desde Chile</b></label>
-    <label class="switch"><input type="checkbox" id="bt-co"> <b>Bitcoin activo en el cotizador desde Colombia</b></label>
-    <span class="muted">Marcado: los clientes ven "Bitcoin" en la pestaña "USDT, oro y Bitcoin". Sin marcar: no aparece.</span>
-    <button class="btn ghost" id="bt-save">Guardar</button>
-  </section>
-
-  <section class="card" id="rewards" hidden aria-labelledby="h-rewards">
-    <div>
-      <h2 id="h-rewards">JM Rewards en el cotizador</h2>
-      <span class="muted">Muestra el botón "Cada vez que envías, ganas algo" bajo el botón de WhatsApp, que lleva al registro de JM Rewards.</span>
-    </div>
-    <label class="switch"><input type="checkbox" id="jr-pub"> <b>Botón de JM Rewards visible en el cotizador</b></label>
-    <span class="muted">Sin marcar: los clientes no lo ven. Se guarda al instante.</span>
-    <div class="msg" id="jr-msg" hidden></div>
-  </section>
-
-  <section class="card" id="flyers" hidden aria-labelledby="h-fly">
-    <div>
-      <h2 id="h-fly">Flyers del día</h2>
-      <span class="muted">Se llenan con las tasas guardadas. Desde el celular, Compartir te deja enviarlos directo a WhatsApp. Debajo de cada flyer está el texto con banderas para copiar y pegar en tu estado (puedes editarlo; se recuerda en este equipo).</span>
-    </div>
-    <div class="flyer"><h3>Desde Chile</h3><img id="fly-CL" alt="Flyer de tasas desde Chile"></div>
-    <div class="row2"><button class="btn ghost" data-dl="CL">Descargar</button><button class="btn" data-share="CL">Compartir</button></div>
-    <label class="f" for="estado-CL">Texto para el estado (Chile)<textarea id="estado-CL" class="estado" rows="4"></textarea></label>
-    <div class="row2"><button class="btn ghost" data-reset="CL">Texto automático</button><button class="btn" data-copy="CL">Copiar texto</button></div>
-    <div class="flyer"><h3>Desde Colombia</h3><img id="fly-CO" alt="Flyer de tasas desde Colombia (Venezuela y Chile)"></div>
-    <div class="row2"><button class="btn ghost" data-dl="CO">Descargar</button><button class="btn" data-share="CO">Compartir</button></div>
-    <label class="f" for="estado-CO">Texto para el estado (Colombia)<textarea id="estado-CO" class="estado" rows="4"></textarea></label>
-    <div class="row2"><button class="btn ghost" data-reset="CO">Texto automático</button><button class="btn" data-copy="CO">Copiar texto</button></div>
-    <div class="flyer"><h3>Calculadora Colombia → Venezuela</h3><img id="fly-TCOVE" alt="Tabla de montos de pesos colombianos a bolívares con la tasa del día"></div>
-    <div class="row2"><button class="btn ghost" data-dl="TCOVE">Descargar</button><button class="btn" data-share="TCOVE">Compartir</button></div>
-    <span class="muted">Se arma sola con tu tasa Colombia → Venezuela publicada: pesos ÷ tasa = bolívares.</span>
-    <div class="flyer"><h3>Desde Europa</h3><img id="fly-EU" alt="Flyer de tasas desde Europa"></div>
-    <div class="row2"><button class="btn ghost" data-dl="EU">Descargar</button><button class="btn" data-share="EU">Compartir</button></div>
-    <label class="f" for="estado-EU">Texto para el estado (Europa)<textarea id="estado-EU" class="estado" rows="4"></textarea></label>
-    <div class="row2"><button class="btn ghost" data-reset="EU">Texto automático</button><button class="btn" data-copy="EU">Copiar texto</button></div>
-  </section>
-
-  <section class="card" id="stats" hidden aria-labelledby="h-stats">
-    <div class="row-between">
-      <div><h2 id="h-stats">Visitas del cotizador</h2>
-        <span class="muted">Conteo por día (hora de Chile). Cada persona cuenta una vez por visita; los números son aproximados.</span></div>
-      <button class="btn ghost" id="stats-reload">Actualizar</button>
-    </div>
-    <div id="stats-body" class="muted">Cargando…</div>
-    <div class="row-between"><span class="muted" id="self-txt"></span><button class="btn ghost" id="self-btn">—</button></div>
-  </section>
-
-  <section class="card" id="links" hidden>
-    <h3>Enlaces para tus clientes</h3>
-    <div id="advisors"></div>
-    <span class="muted">Cada enlace lleva el WhatsApp de esa persona. El enlace general muestra un solo botón sin nombre, a tu número.</span>
-  </section>
 </main>
-<script type="module" src="/js/panel.js?v=57"></script>
+<script type="module" src="/js/panel.js?v=58"></script>
 </body>
 </html>

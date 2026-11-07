@@ -626,3 +626,31 @@ body.tema-fintech .tabs.kind button[aria-pressed="true"] { background: var(--bra
 .wallet-help a { color: var(--brand); font-weight: 700 }
 .u-line .valid { font-size: 12.5px; font-weight: 600; color: var(--accent) }
 body.tema-fintech.panel select { width: 100%; font: inherit; font-size: 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink) }
+
+/* Panel ordenado por país: franja con bandera y color del país en cada grupo */
+body.panel .gnav { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 4px }
+body.panel .gnav a { padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 600 }
+body.panel .gnav a:hover { border-color: var(--brand) }
+body.panel .grupo { display: flex; flex-direction: column; gap: 14px; margin-top: 22px; scroll-margin-top: 12px }
+body.panel .grupo[hidden] { display: none }
+body.panel .g-head { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 14px; color: #fff; background: #531463; position: relative; overflow: hidden }
+body.panel .g-head::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: var(--g-stripe, rgba(255,255,255,.3)) }
+body.panel .g-head b { display: block; font-size: 20px; font-weight: 800; letter-spacing: .01em }
+body.panel .g-head small { display: block; font-size: 13px; opacity: .85 }
+body.panel .g-flags { display: flex; gap: 4px; flex: none }
+body.panel .g-flags .flag { width: 34px; height: 34px; border-radius: 50%; border: 2px solid #fff; flex: none }
+body.panel .g-icon { width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.18); display: grid; place-items: center; font-size: 16px; flex: none }
+body.panel .grupo .card { border-left: 5px solid var(--g-color, var(--line)) }
+body.panel .grupo[data-c="CL"] { --g-color: #D52B1E; --g-stripe: linear-gradient(90deg, #0039A6 0 33%, #fff 33% 66%, #D52B1E 66%) }
+body.panel .grupo[data-c="CL"] .g-head { background: linear-gradient(120deg, #0039A6, #2A3F8F) }
+body.panel .grupo[data-c="CO"] { --g-color: #FCD116; --g-stripe: linear-gradient(90deg, #FCD116 0 50%, #003893 50% 75%, #CE1126 75%) }
+body.panel .grupo[data-c="CO"] .g-head { background: linear-gradient(120deg, #003893, #1E4FA8) }
+body.panel .grupo[data-c="BR"] { --g-color: #009C3B; --g-stripe: linear-gradient(90deg, #009C3B 0 40%, #FFDF00 40% 70%, #002776 70%) }
+body.panel .grupo[data-c="BR"] .g-head { background: linear-gradient(120deg, #00843D, #00A651) }
+body.panel .grupo[data-c="VE"] { --g-color: #FCE300; --g-stripe: linear-gradient(90deg, #FCE300 0 33%, #0033A0 33% 66%, #EF3340 66%) }
+body.panel .grupo[data-c="VE"] .g-head { background: linear-gradient(120deg, #0033A0, #CF142B) }
+body.panel .grupo[data-c="cripto"] { --g-color: #E2A93B; --g-stripe: linear-gradient(90deg, #F2C14E, #F7931A) }
+body.panel .grupo[data-c="cripto"] .g-head { background: linear-gradient(120deg, #6B4A12, #B07A1E) }
+body.panel .grupo[data-c="gen"] { --g-color: #531463 }
+body.panel .grupo[data-c="tools"] { --g-color: #8E6BB0 }
+body.panel .grupo[data-c="tools"] .g-head { background: linear-gradient(120deg, #5A3A7A, #8E6BB0) }

@@ -29,7 +29,7 @@ export function parseCriptoYa(text) {
 
 // Brasil automático: precio del USDT en reales (mediana de los exchanges que lista CriptoYa).
 export const USDT_BRL_URL = 'https://criptoya.com/api/usdt/brl/1';
-const BRL_RANGE = [2, 20];  // reales por USDT fuera de este rango = dato absurdo
+export const BRL_RANGE = [2, 20];  // reales por USDT fuera de este rango = dato absurdo
 
 export function parseBrl(text) {
   let d;
@@ -120,6 +120,19 @@ export function brlExchanges(text) {
   try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return []; }
   if (!d || typeof d !== 'object') return [];
   return Object.entries(d).filter(([, x]) => Number(x?.ask) >= BRL_RANGE[0] && Number(x?.ask) <= BRL_RANGE[1]).map(([k, x]) => ({ key: k, ask: Number(x.ask), bid: Number(x.bid) >= BRL_RANGE[0] && Number(x.bid) <= BRL_RANGE[1] ? Number(x.bid) : null }));
+}
+// Todos los exchanges de una respuesta de CriptoYa con precio razonable: [{ key, ask, bid }].
+export function exchangesIn(text, range) {
+  let d;
+  try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return []; }
+  if (!d || typeof d !== 'object') return [];
+  const ok = (v) => Number.isFinite(v) && v >= range[0] && v <= range[1];
+  return Object.entries(d).filter(([, x]) => ok(Number(x?.ask))).map(([k, x]) => ({ key: k, ask: Number(x.ask), bid: ok(Number(x.bid)) ? Number(x.bid) : null }));
+}
+// Referencia de un exchange elegido en el panel: { value (precio de venta), bid, source }.
+export function refFrom(text, range, source) {
+  const x = pickExchange(exchangesIn(text, range), source);
+  return x ? { value: x.ask, bid: x.bid, source: x.key } : null;
 }
 // Busca el exchange elegido aunque CriptoYa lo nombre distinto ("bitget" = "bitgetp2p").
 const exBase = (k) => String(k || '').toLowerCase().replace(/p2p$/, '');

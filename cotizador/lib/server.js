@@ -327,7 +327,9 @@ export async function saveUsdtCfg(request, env, now = Date.now()) {
   if (buy === null) return json({ error: 'La ganancia al comprar debe estar entre 0 y 50 %.' }, 400);
   const manual = body?.manual == null || String(body.manual).trim() === '' ? null : String(body.manual).trim();
   if (manual !== null && !rateNum(manual)) return json({ error: 'El valor manual no es válido.' }, 400);
-  const cfg = { margin_pct: margin, buy_margin_pct: buy, manual, published: body?.published === true };
+  const source = body?.source == null ? ((await loadUsdtCfg(env)).source ?? '') : srcOk(body.source);
+  if (source === null) return json({ error: 'Elige una referencia válida.' }, 400);
+  const cfg = { margin_pct: margin, buy_margin_pct: buy, manual, source, published: body?.published === true };
   await env.TASAS.put('usdt_cfg', JSON.stringify(cfg));
   return json({ ...cfg, ref: await usdtRef(env, manual, now) });
 }
@@ -356,13 +358,17 @@ export async function saveUsdtCoCfg(request, env, now = Date.now()) {
   if (!(bm !== '' && Number(bm) >= 0 && Number(bm) <= 50)) return json({ error: 'La ganancia al comprar debe estar entre 0 y 50 %.' }, 400);
   const bmin = String(body?.buy_min ?? min).replace(/\D/g, '');
   if (!(Number(bmin) >= 1000 && Number(bmin) <= 100000000)) return json({ error: 'El mínimo al comprar no es válido.' }, 400);
-  const cfg = { margin_pct: m, min, published: body?.published === true, buy_margin_pct: bm, buy_min: bmin };
+  const source = srcOk(body?.source ?? '');
+  if (source === null) return json({ error: 'Elige una referencia válida.' }, 400);
+  const cfg = { margin_pct: m, min, published: body?.published === true, buy_margin_pct: bm, buy_min: bmin, source };
   await env.TASAS.put('usdt_co_cfg', JSON.stringify(cfg));
   return json(cfg);
 }
 
 // ------------------------------------------------------------------ USDT Brasil y oro tokenizado (Chile y Colombia)
 // El precio lo calcula el navegador del cliente (CriptoYa / CoinGecko) con estas ganancias; aquí solo se guardan.
+// Exchange de referencia elegido en el panel ('' = automático, como antes).
+const srcOk = (v) => { const s = String(v ?? '').trim(); return s === '' || /^[a-z0-9_]{2,30}$/i.test(s) ? s : null; };
 const pctOk = (v) => { const t = String(v ?? '').trim().replace(',', '.'); return t !== '' && Number(t) >= 0 && Number(t) <= 50 ? t : null; };
 async function loadCfg(env, key, defaults) {
   try { return { ...defaults, ...JSON.parse((await env.TASAS.get(key)) || '{}') }; } catch { return { ...defaults }; }
@@ -384,7 +390,9 @@ export async function saveUsdtBrCfg(request, env, now = Date.now()) {
   if (error) return error;
   const m = pctOk(body?.margin_pct), b = pctOk(body?.buy_margin_pct);
   if (m === null || b === null) return json({ error: 'Las ganancias deben estar entre 0 y 50 %.' }, 400);
-  const cfg = { margin_pct: m, buy_margin_pct: b, published: body?.published === true };
+  const source = srcOk(body?.source ?? '');
+  if (source === null) return json({ error: 'Elige una referencia válida.' }, 400);
+  const cfg = { margin_pct: m, buy_margin_pct: b, published: body?.published === true, source };
   await env.TASAS.put('usdt_br_cfg', JSON.stringify(cfg));
   return json(cfg);
 }

@@ -517,3 +517,21 @@ test('Brasil → Chile: tasa = Vita CLP (bid) ÷ (USDT BRL de Bitget × (1 + gan
   assert.equal(r.brl, 5.6); assert.equal(r.clp, 980);
   assert.ok(Math.abs(r.rate - 980 / (5.6 * 1.03)) < 1e-9);
 });
+
+test('USDT Chile, Colombia y Brasil: se puede elegir el exchange de referencia (vacío = automático)', async () => {
+  noBcv();
+  const { onRequestPut: putBr } = await import('../functions/api/usdt-br.js');
+  const { onRequestPut: putCo } = await import('../functions/api/usdt-co.js');
+  const { refFrom, BRL_RANGE } = await import('../public/js/criptoya.js');
+  const e = await env();
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await putBr({ request: req('/api/usdt-br', { method: 'PUT', cookie, body: { margin_pct: '3', buy_margin_pct: '3', published: true, source: 'bitgetp2p' } }), env: e })).status, 200);
+  assert.equal((await putCo({ request: req('/api/usdt-co', { method: 'PUT', cookie, body: { margin_pct: '2', min: '50000', published: true, buy_margin_pct: '3', buy_min: '50000', source: '' } }), env: e })).status, 200);
+  assert.equal((await putBr({ request: req('/api/usdt-br', { method: 'PUT', cookie, body: { margin_pct: '3', buy_margin_pct: '3', published: true, source: '<x>' } }), env: e })).status, 400);
+  const v = await (await getRates({ env: e })).json();
+  assert.equal(v.usdt_br.source, 'bitgetp2p');
+  assert.equal(v.usdt_co.source, undefined);
+  const r = refFrom('{"bitgetp2p":{"ask":5.6,"bid":5.45},"binancep2p":{"ask":5.65}}', BRL_RANGE, 'bitget');
+  assert.deepEqual(r, { value: 5.6, bid: 5.45, source: 'bitgetp2p' });
+});

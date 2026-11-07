@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, VE_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=57';
-import { setRewardsNav } from './rewards-nav.js?v=57';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl } from './criptoya.js?v=57';
-import { esc, flag, flags } from './ui.js?v=57';
+import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, VE_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=58';
+import { setRewardsNav } from './rewards-nav.js?v=58';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, refFrom, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=58';
+import { esc, flag, flags } from './ui.js?v=58';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -623,7 +623,8 @@ async function loadUsdt() {
   let ref = null;
   try {
     const res = await fetch(USDT_URL, { cache: 'no-store' });
-    ref = res.ok ? parseCriptoYa(await res.text()) : null;
+    const t = res.ok ? await res.text() : null;
+    ref = !t ? null : data.usdt.source ? refFrom(t, CLP_RANGE, data.usdt.source) : parseCriptoYa(t);  // referencia elegida en el panel
   } catch { ref = null; }
   const price = ref ? ref.value * (1 + Number(data.usdt.margin_pct) / 100) : NaN;
   // Precio al que se le compran USDT al cliente: bid de Vita menos la ganancia al comprar.
@@ -651,7 +652,9 @@ async function loadUsdtCo() {
   USDT_CO_ROUTE.min = Number(data.usdt_co.min) || 50000;
   USDT_CO_ROUTE.buyMin = Number(data.usdt_co.buy_min) || USDT_CO_ROUTE.min;  // también le compramos USDT al cliente
   let ref = null, bid = null;
-  try { const res = await fetch(USDT_COP_URL, { cache: 'no-store' }); const t = res.ok ? await res.text() : null; ref = t && usdtCopRef(t); bid = t && usdtCopBid(t); } catch { ref = null; }
+  try { const res = await fetch(USDT_COP_URL, { cache: 'no-store' }); const t = res.ok ? await res.text() : null;
+    if (t && data.usdt_co.source) { ref = refFrom(t, COP_RANGE, data.usdt_co.source); bid = ref?.bid ?? null; } else { ref = t && usdtCopRef(t); bid = t && usdtCopBid(t); }
+  } catch { ref = null; }
   const price = ref ? ref.value * (1 + Number(data.usdt_co.margin_pct) / 100) : NaN;
   const buy = bid ? bid * (1 - Number(data.usdt_co.buy_margin_pct ?? 3) / 100) : NaN;
   data.routes.push({ id: USDT_CO_ROUTE.id, status: Number.isFinite(price) ? 'on' : 'ask', rate: Number.isFinite(price) ? price.toFixed(2) : '',
@@ -662,7 +665,7 @@ async function loadUsdtBr() {
   data.routes = data.routes.filter((x) => x.id !== USDT_BR_ROUTE.id);
   if (!data?.usdt_br) return;
   let ref = null;
-  try { const res = await fetch(USDT_BRL_URL, { cache: 'no-store' }); ref = res.ok ? usdtBrlRef(await res.text()) : null; } catch { ref = null; }
+  try { const res = await fetch(USDT_BRL_URL, { cache: 'no-store' }); const t = res.ok ? await res.text() : null; ref = !t ? null : data.usdt_br.source ? refFrom(t, BRL_RANGE, data.usdt_br.source) : usdtBrlRef(t); } catch { ref = null; }
   const price = ref ? ref.value * (1 + Number(data.usdt_br.margin_pct) / 100) : NaN;
   const buy = ref?.bid ? ref.bid * (1 - Number(data.usdt_br.buy_margin_pct) / 100) : NaN;
   // Mínimo: el equivalente a 10 USDT al precio del momento.

@@ -1,8 +1,19 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=57';
-import { esc, flag, flags } from './ui.js?v=57';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange } from './criptoya.js?v=57';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=58';
+import { esc, flag, flags } from './ui.js?v=58';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=58';
 
 const $ = (id) => document.getElementById(id);
+// Nombres bonitos de los exchanges de CriptoYa.
+const EXN = (k) => ({ vita: 'Vita Wallet', vitawallet: 'Vita Wallet', mediana: 'mediana de exchanges', bitget: 'Bitget', bitgetp2p: 'Bitget P2P', foxbit: 'Foxbit', binance: 'Binance', binancep2p: 'Binance P2P', bybit: 'Bybit', bybitp2p: 'Bybit P2P', okexp2p: 'OKX P2P', kucoinp2p: 'KuCoin P2P', huobip2p: 'HTX P2P', mexcp2p: 'MEXC P2P', mercadobitcoin: 'Mercado Bitcoin', novadax: 'NovaDAX', bitso: 'Bitso', ripio: 'Ripio', buenbit: 'Buenbit', lemoncash: 'Lemon Cash', cryptomkt: 'CryptoMKT', orionx: 'OrionX', buda: 'Buda', airtm: 'Airtm', eldoradop2p: 'El Dorado P2P', paydecep2p: 'Paydece P2P' }[k] || k);
+// Selector de referencia: "Automático" + cada exchange con su precio de venta en este momento.
+function fillSrc(id, list, saved, autoTxt, dec) {
+  const keys = [...new Set([...(saved && !list.some((x) => x.key === saved) ? [saved] : []), ...list.map((x) => x.key)])];
+  $(id).innerHTML = `<option value="">${esc(autoTxt)}</option>` + keys.map((k) => {
+    const x = list.find((e) => e.key === k);
+    return `<option value="${esc(k)}"${k === saved ? ' selected' : ''}>${esc(EXN(k))}${x ? ` · ${fmt(x.ask, dec)}` : ' (sin precio ahora)'}</option>`;
+  }).join('');
+  if (!saved) $(id).value = '';
+}
 const SOURCES = { bcv: 'leído del BCV', dolarapi: 'copia del BCV vía DolarApi, fuente no oficial', 'bcv-anterior': 'último valor leído', manual: 'valor manual' };
 let saved = null;
 const flyerBlobs = {};
@@ -19,7 +30,10 @@ async function api(path, opts = {}) {
 function showEditor(on) {
   $('login').hidden = on;
   ['power', 'mkt', 'editor', 'usdt', 'usdtco', 'brco', 'cobr', 'brcl', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  document.querySelectorAll('.grupo, #gnav').forEach((el) => { el.hidden = !on; });
 }
+
+document.querySelectorAll('.grupo [data-flags]').forEach((el) => { el.innerHTML = el.dataset.flags.split(',').map(flag).join(''); });
 
 async function start() {
   const { status, body } = await api('/api/sesion');
@@ -561,14 +575,28 @@ async function loadUsdt(fillInputs) {
       usdt.ref = { ...usdt.ref, error: `${usdt.ref.error || ''} · navegador: ${e.message || 'sin conexión'}` };
     }
   }
+  usdt.autoRef = usdt.ref;
+  try { const res = await fetch(USDT_URL, { cache: 'no-store' }); uList = res.ok ? exchangesIn(await res.text(), CLP_RANGE) : []; } catch { uList = []; }
+  if (fillInputs) fillSrc('u-srcsel', uList, body.source || '', 'Automático (Vita Wallet)', 2);
+  uApplySrc();
   renderUsdt();
 }
+let uList = [];
+// Referencia elegida en el panel (vacío = automático: Vita Wallet).
+function uApplySrc() {
+  if (!usdt) return;
+  const k = $('u-srcsel').value;
+  if (!k) { usdt.ref = usdt.autoRef || usdt.ref; return; }
+  const x = uList.find((e) => e.key === k);
+  usdt.ref = x ? { value: x.ask, bid: x.bid, source: k, via: 'navegador', age_s: 0 } : { value: null, error: `${EXN(k)} no tiene precio ahora` };
+}
+$('u-srcsel').onchange = () => { uApplySrc(); renderUsdt(); };
 
 function renderUsdt() {
   const r = usdt?.ref || {};
   $('u-ref').textContent = r.value ? `${fmt(r.value, 2)} CLP` : 'sin dato';
   const age = r.age_s == null ? '' : r.age_s < 90 ? ' · recién actualizado' : ` · hace ${Math.round(r.age_s / 60)} min`;
-  $('u-src').textContent = r.value ? `${USDT_SOURCES[r.source] || r.source}${r.via ? ' (leído desde este equipo)' : ''}${age}${r.error && !r.via ? ` · la fuente falló (${r.error})` : ''}`
+  $('u-src').textContent = r.value ? `${USDT_SOURCES[r.source] || `${EXN(r.source)} vía CriptoYa`}${r.via ? ' (leído desde este equipo)' : ''}${age}${r.error && !r.via ? ` · la fuente falló (${r.error})` : ''}`
     : `No se pudo leer la referencia${r.error ? ` (${r.error})` : ''}. Escribe un valor manual.`;
   const price = usdtPrice();
   $('u-price').textContent = Number.isFinite(price) ? fmt(price, 2) : '—';
@@ -590,12 +618,13 @@ function renderUsdt() {
 ['u-margin', 'u-buy', 'u-qty', 'u-clp', 'u-sell'].forEach((id) => { $(id).oninput = renderUsdt; });
 
 async function saveUsdtCfg() {
-  const { status, body } = await api('/api/usdt', { method: 'PUT', body: JSON.stringify({ margin_pct: $('u-margin').value, buy_margin_pct: $('u-buy').value, manual: $('u-manual').value, published: $('u-pub').checked }) });
+  const { status, body } = await api('/api/usdt', { method: 'PUT', body: JSON.stringify({ margin_pct: $('u-margin').value, buy_margin_pct: $('u-buy').value, manual: $('u-manual').value, source: $('u-srcsel').value, published: $('u-pub').checked }) });
   const msg = $('u-msg');
   msg.hidden = false;
   if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
   // Si la referencia se leyó desde este equipo, se conserva (el servidor no puede leer CriptoYa).
-  usdt = { ...body, ref: usdt?.ref?.via && !body.ref?.bid ? usdt.ref : body.ref };
+  usdt = { ...body, ref: usdt?.autoRef?.via && !body.ref?.bid ? usdt.autoRef : body.ref };
+  usdt.autoRef = usdt.ref; uApplySrc();
   msg.className = 'msg';
   msg.textContent = body.published ? 'Guardado. USDT activo: los clientes lo ven en el cotizador.' : 'Guardado. USDT desactivado: no aparece en el cotizador.';
   renderUsdt();
@@ -645,15 +674,23 @@ async function loadUsdtCo() {
   if (status !== 200) return;
   $('uc-margin').value = body.margin_pct; $('uc-min').value = fmt(Number(body.min), 0); $('uc-pub').checked = !!body.published;
   $('uc-buy').value = body.buy_margin_pct ?? '3'; $('uc-buymin').value = fmt(Number(body.buy_min ?? body.min), 0);
-  try { const res = await fetch(USDT_COP_URL, { cache: 'no-store' }); const t = res.ok ? await res.text() : null; ucRef = t && usdtCopRef(t); ucBid = t && usdtCopBid(t); } catch { ucRef = null; }
+  try { const res = await fetch(USDT_COP_URL, { cache: 'no-store' }); const t = res.ok ? await res.text() : null; ucAuto = { ref: t && usdtCopRef(t), bid: t && usdtCopBid(t) }; ucList = t ? exchangesIn(t, COP_RANGE) : []; } catch { ucAuto = { ref: null, bid: null }; ucList = []; }
+  fillSrc('uc-srcsel', ucList, body.source || '', 'Automático (Binance P2P)', 2);
   try { const r = await fetch('/api/indicadores', { cache: 'no-store' }); ucTrm = r.ok ? (await r.json())?.co?.trm?.value ?? null : null; } catch { ucTrm = null; }
+  ucApply();
+}
+let ucList = [], ucAuto = { ref: null, bid: null };
+function ucApply() {
+  const k = $('uc-srcsel').value, x = k && ucList.find((e) => e.key === k);
+  if (!k) { ucRef = ucAuto.ref; ucBid = ucAuto.bid; } else { ucRef = x ? { value: x.ask, source: k } : null; ucBid = x?.bid ?? null; }
   $('uc-ref').textContent = ucRef ? `${fmt(ucRef.value, 2)} COP` : '—';
-  $('uc-src').textContent = ucRef ? `(${{ binancep2p: 'Binance P2P', vita: 'Vita Wallet', mediana: 'mediana de exchanges' }[ucRef.source]} vía CriptoYa)` : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".';
+  $('uc-src').textContent = ucRef ? `(${EXN(ucRef.source)} vía CriptoYa)` : k ? `${EXN(k)} no tiene precio ahora.` : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".';
   ucCalc();
 }
+$('uc-srcsel').onchange = ucApply;
 async function saveUsdtCo() {
   const msg = $('uc-msg');
-  const { status, body } = await api('/api/usdt-co', { method: 'PUT', body: JSON.stringify({ margin_pct: $('uc-margin').value, min: $('uc-min').value, published: $('uc-pub').checked, buy_margin_pct: $('uc-buy').value, buy_min: $('uc-buymin').value }) });
+  const { status, body } = await api('/api/usdt-co', { method: 'PUT', body: JSON.stringify({ margin_pct: $('uc-margin').value, min: $('uc-min').value, published: $('uc-pub').checked, buy_margin_pct: $('uc-buy').value, buy_min: $('uc-buymin').value, source: $('uc-srcsel').value }) });
   msg.hidden = false;
   if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
   msg.className = 'msg'; msg.textContent = body.published ? 'Guardado: los clientes ya ven USDT desde Colombia.' : 'Guardado (USDT Colombia apagado en el cotizador).';
@@ -803,14 +840,22 @@ async function loadUsdtBr() {
   const { status, body } = await api('/api/usdt-br');
   if (status !== 200) return;
   $('ub-margin').value = body.margin_pct; $('ub-buy').value = body.buy_margin_pct; $('ub-pub').checked = !!body.published;
-  try { const res = await fetch(USDT_BRL_URL, { cache: 'no-store' }); ubRef = res.ok ? usdtBrlRef(await res.text()) : null; } catch { ubRef = null; }
+  try { const res = await fetch(USDT_BRL_URL, { cache: 'no-store' }); const t = res.ok ? await res.text() : null; ubAuto = t && usdtBrlRef(t); ubList = t ? exchangesIn(t, BRL_RANGE) : []; } catch { ubAuto = null; ubList = []; }
+  fillSrc('ub-srcsel', ubList, body.source || '', 'Automático (Binance P2P o Bybit P2P)', 4);
+  ubApply();
+}
+let ubList = [], ubAuto = null;
+function ubApply() {
+  const k = $('ub-srcsel').value, x = k && ubList.find((e) => e.key === k);
+  ubRef = !k ? ubAuto : x ? { value: x.ask, bid: x.bid, source: k } : null;
   $('ub-ref').textContent = ubRef ? `${fmt(ubRef.value, 4)} BRL` : '—';
-  $('ub-src').textContent = ubRef ? `(${{ binancep2p: 'Binance P2P', bybitp2p: 'Bybit P2P', mediana: 'mediana de exchanges' }[ubRef.source]} vía CriptoYa)` : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".';
+  $('ub-src').textContent = ubRef ? `(${EXN(ubRef.source)} vía CriptoYa)` : k ? `${EXN(k)} no tiene precio ahora.` : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".';
   ubCalc();
 }
+$('ub-srcsel').onchange = ubApply;
 async function saveUsdtBr() {
   const msg = $('ub-msg');
-  const { status, body } = await api('/api/usdt-br', { method: 'PUT', body: JSON.stringify({ margin_pct: $('ub-margin').value, buy_margin_pct: $('ub-buy').value, published: $('ub-pub').checked }) });
+  const { status, body } = await api('/api/usdt-br', { method: 'PUT', body: JSON.stringify({ margin_pct: $('ub-margin').value, buy_margin_pct: $('ub-buy').value, published: $('ub-pub').checked, source: $('ub-srcsel').value }) });
   msg.hidden = false;
   if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
   msg.className = 'msg'; msg.textContent = body.published ? 'Guardado: los clientes ya ven USDT desde Brasil.' : 'Guardado (USDT Brasil apagado en el cotizador).';
