@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, VE_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum } from './rutas.js?v=61';
-import { setRewardsNav } from './rewards-nav.js?v=61';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, clpPerUsd, refFrom, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=61';
-import { esc, flag, flags } from './ui.js?v=61';
+import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, VE_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum, rateNum } from './rutas.js?v=62';
+import { setRewardsNav } from './rewards-nav.js?v=62';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, clpPerUsd, refFrom, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=62';
+import { esc, flag, flags } from './ui.js?v=62';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -202,20 +202,22 @@ function calc() {
   // Cuando el cliente parte de lo que debe llegar, lo que paga se redondea HACIA ARRIBA a un número redondo
   // (CLP a la centena, COP al mil, EUR al euro): la familia recibe exactamente lo pedido y nunca se cobra de menos.
   const send = mode === 'send' ? Math.round(x) : roundUpPay(invert(r, rate, target), o.cur);
-  const get = Math.round(mode === 'send' ? convert(r, rate, send) : target);
+  // Cargo fijo (Estados Unidos → Chile): no se muestra aparte, va dentro de la tasa de ese monto: tasa × (monto − cargo) ÷ monto.
+  const fee = Number(r.fee) || 0;
+  const tasa = fee && send > fee ? (rateNum(rate) * (send - fee) / send).toFixed(2) : rate;
+  const get = Math.round(mode === 'send' ? (fee ? send * rateNum(tasa) : convert(r, rate, send)) : target);
   if (belowMin(r, send)) { minimum(r, o, send); return; }
   $('r-big').classList.remove('ask');
   $('r-free').hidden = false;
-  const fee = Number(r.fee) || 0, feeTxt = `${fmt(fee, fee % 1 ? 2 : 0)} ${o.cur}`;
-  $('r-free-t').textContent = fee ? `Comisión 0 % · Cargo fijo ${feeTxt}` : 'Comisión 0 % · Sin cargos extras';
+  $('r-free-t').textContent = 'Comisión 0 % · Sin cargos extras';
   $('r-break').hidden = false;
   $('r-break').innerHTML = [
     ['Monto a enviar', `${fmt(send, 0)} ${o.cur}`],
     ['Comisión', `0 ${o.cur}`],
-    ['Cargos extras', fee ? `${feeTxt} (cargo fijo de la plataforma)` : `0 ${o.cur}`],
-    ['Tasa del día', rate],
+    ['Cargos extras', `0 ${o.cur}`],
+    ['Tasa del día', tasa],
     ...(r.pay ? [['Forma de pago', r.pay]] : []),
-    ['Cálculo', `${fee ? `(${fmt(send, 0)} − ${fmt(fee, fee % 1 ? 2 : 0)})` : fmt(send, 0)} ${o.cur} ${r.op === 'mul' ? '×' : '÷'} ${rate} ${mode === 'send' ? '=' : '≈'} ${fmt(get, r.dec)} ${r.cur}`],
+    ['Cálculo', `${fmt(send, 0)} ${o.cur} ${r.op === 'mul' ? '×' : '÷'} ${tasa} ${mode === 'send' ? '=' : '≈'} ${fmt(get, r.dec)} ${r.cur}`],
   ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')
     + `<dt class="total">Total a pagar</dt><dd class="total">${fmt(send, 0)} ${o.cur}</dd>`;
   $('r-label').textContent = mode === 'send' ? `Recibe en ${r.name}` : 'Debes enviar';
@@ -258,10 +260,10 @@ function calc() {
   const ok = Number.isFinite(send) && Number.isFinite(get) && send > 0;
   const text = !ok ? '' : ref
     ? `Hola, necesito que lleguen ${fmt(get, 0)} Bs a ${r.name} (equivalentes a ${fmt2(usd)} ${refName}), enviando desde ${o.name}. Según el cotizador debo pagar ${fmt(send, 0)} ${o.cur} (tasa ${rate}, sin comisión). ¿Me confirmas?`
-    : `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${dot(r.name)} Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${rate}, sin comisión${fee ? `, cargo fijo ${feeTxt}` : ''}).${r.pay ? ` ${r.pay}.` : ''} ¿Me confirmas?`;
+    : `Hola, quiero enviar ${fmt(send, 0)} ${o.cur} desde ${o.name} a ${dot(r.name)} Según el cotizador recibe ${fmt(get, r.dec)} ${r.cur} (tasa ${tasa}, sin comisión).${r.pay ? ` ${r.pay}.` : ''} ¿Me confirmas?`;
   $('wa').innerHTML = waButtons(text);
   lastQuote = ok ? { from: [r.from], fromLabel: `Envías desde ${o.name}`, fromAmt: `${fmt(send, 0)} ${o.cur}`,
-    to: r.to, toLabel: `Recibe en ${r.name}`, toAmt: `${fmt(get, r.dec)} ${r.cur}`, rate, chip: fee ? `✓  Comisión 0 % · Cargo fijo ${feeTxt}` : null,
+    to: r.to, toLabel: `Recibe en ${r.name}`, toAmt: `${fmt(get, r.dec)} ${r.cur}`, rate: tasa,
     text: shareText(r, o, send, get, mode === 'eur' && eurOk ? ['EUR', eur, 'euro BCV'] : bcvOk ? ['USD', bcv, 'dólar BCV'] : trmOk ? ['USD', trm, 'dólar TRM'] : null) } : null;
   $('share').hidden = !ok;
 }
@@ -453,8 +455,9 @@ function rateOnly(r, o, rate) {
   ['r-get', 'r-free', 'r-break', 'r-bcv', 'share'].forEach((id) => { $(id).hidden = true; });
   $('r-big').classList.add('ask');
   $('r-label').textContent = `Tasa del día · ${r.name}`;
-  $('r-big').textContent = rate;
-  $('r-send').textContent = 'Escribe el monto para ver cuánto recibe.';
+  const fee = Number(r.fee) || 0;  // con cargo fijo, la tasa depende del monto: se muestra la de 100
+  $('r-big').textContent = fee ? (rateNum(rate) * (100 - fee) / 100).toFixed(2) : rate;
+  $('r-send').textContent = fee ? `Tasa para un envío de 100 ${o.cur}; montos mayores tienen mejor tasa. Escribe el monto para ver cuánto recibe.` : 'Escribe el monto para ver cuánto recibe.';
   $('r-rate').textContent = '';
   $('r-min').textContent = r.min ? `Envío mínimo: ${fmt(r.min, 0)} ${o.cur}` : '';
   $('dest-note').textContent = r.note || '';
@@ -492,7 +495,6 @@ function shareText(r, o, send, get, bcvRef) {
     `Recibe: ${recv}`,
     ...(bcvRef ? [`Equivale a: ${fmt(get / bcvRef[1], 2)} ${bcvRef[0]} (${bcvRef[2]})`] : []),
     'Comisión 0 %',
-    ...(r.fee ? [`Cargo fijo: ${fmt(r.fee, r.fee % 1 ? 2 : 0)} ${o.cur}`] : []),
     ...(r.pay ? [r.pay] : []),
     'Cotiza tu envío 👉 https://jmcambios.cl'].join('\n');
 }

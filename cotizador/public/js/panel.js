@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=61';
-import { esc, flag, flags } from './ui.js?v=61';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=61';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=62';
+import { esc, flag, flags } from './ui.js?v=62';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=62';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -806,7 +806,8 @@ function ulCalc() {
   $('ul-ref').textContent = ulClp ? `Vita paga ${fmt(ulClp, 2)} CLP por USDT` : '—';
   if (!ulClp || !(p >= 0 && p <= 50) || !(fee >= 0 && fee <= 50)) { $('ul-rate').textContent = ulClp ? 'Revisa la comisión (0 a 50 %) y el cargo fijo.' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
   const rate = Number((ulClp * (1 - p / 100)).toFixed(2));
-  $('ul-rate').innerHTML = `Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100 USD = (100 − ${fmt(fee, fee % 1 ? 2 : 0)}) × ${fmt(rate, 2)} = <b class="num">${fmt(Math.max(0, 100 - fee) * rate, 0)} CLP</b>`;
+  const t100 = Number((rate * Math.max(0, 100 - fee) / 100).toFixed(2));
+  $('ul-rate').innerHTML = `Tasa base: <b class="num">${fmt(rate, 2)}</b> · el cliente ve con 100 USD la tasa <b class="num">${fmt(t100, 2)}</b> → <b class="num">${fmt(100 * t100, 0)} CLP</b> (el cargo fijo va dentro de la tasa)`;
 }
 async function loadUsCl() {
   const { status, body } = await api('/api/us-cl');
