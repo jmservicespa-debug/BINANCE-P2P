@@ -665,7 +665,7 @@ function bcCalc() {
   const c = n('bc-margin'), p = n('bc-profit'), m = c + p;
   const brl = bcList.find((x) => x.key === $('bc-src').value)?.ask;
   $('bc-ref').textContent = brl && bcCop ? `1 USDT = ${fmt(brl, 4)} BRL (${EX_NAME($('bc-src').value)}) · Binance P2P Colombia paga ${fmt(bcCop, 2)} COP` : '—';
-  if (!brl || !bcCop || !(c >= 0 && c <= 50 && p >= 0 && p <= 50)) { $('bc-rate').textContent = bcList.length ? 'Revisa el costo y la ganancia (0 a 50 % cada uno).' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
+  if (!brl || !bcCop || !(c >= 0 && c <= 50 && p >= 0 && p <= 50)) { $('bc-rate').textContent = bcList.length ? 'Revisa el ajuste y la ganancia (0 a 50 % cada uno).' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
   const rate = bcCop / (brl * (1 + m / 100));
   $('bc-rate').innerHTML = `Ajuste total ${fmt(m, 2)} % · Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100 BRL = <b class="num">${fmt(100 * rate, 0)} COP</b>`;
 }

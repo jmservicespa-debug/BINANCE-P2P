@@ -484,7 +484,7 @@ export async function saveBrCoCfg(request, env, now = Date.now()) {
   const { body, error } = await adminBody(request, env, now);
   if (error) return error;
   const m = pctOk(body?.margin_pct);
-  if (m === null) return json({ error: 'El costo de compra debe estar entre 0 y 50 %.' }, 400);
+  if (m === null) return json({ error: 'El ajuste de precio debe estar entre 0 y 50 %.' }, 400);
   const p = pctOk(body?.profit_pct ?? '0');
   if (p === null) return json({ error: 'Tu ganancia debe estar entre 0 y 50 %.' }, 400);
   const min = String(body?.min ?? '').replace(/\D/g, '');

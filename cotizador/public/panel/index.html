@@ -142,13 +142,13 @@
   <section class="card" id="brco" hidden aria-labelledby="h-brco">
     <div>
       <h2 id="h-brco">Envíos Brasil → Colombia</h2>
-      <span class="muted">El cliente paga reales y recibe pesos colombianos. Tasa = (lo que paga Binance P2P Colombia por USDT) ÷ (USDT en reales del exchange elegido + costo de compra + tu ganancia). Reales × tasa = pesos.</span>
+      <span class="muted">El cliente paga reales y recibe pesos colombianos. Tasa = (lo que paga Binance P2P Colombia por USDT) ÷ (USDT en reales del exchange elegido + ajuste para igualar el precio al que tú compras + tu ganancia aparte). Reales × tasa = pesos.</span>
     </div>
     <label class="f" for="bc-src">Exchange de referencia (USDT en reales, vía CriptoYa)
       <select id="bc-src"></select></label>
     <div class="usdt-ref"><span class="muted">Referencia</span><b class="num" id="bc-ref">—</b></div>
     <div class="row2">
-      <label class="f" for="bc-margin">Costo de compra (%)
+      <label class="f" for="bc-margin">Ajuste para igualar tu precio de compra (%)
         <span class="amount"><input id="bc-margin" inputmode="decimal" autocomplete="off"></span></label>
       <label class="f" for="bc-profit">Tu ganancia (%)
         <span class="amount"><input id="bc-profit" inputmode="decimal" autocomplete="off"></span></label>
