@@ -570,7 +570,7 @@ test('USDC Brasil: se activa con la casilla del panel y se publica junto al USDT
   assert.equal((await (await getRates({ env: e })).json()).usdt_br.usdc, undefined);
 });
 
-test('Venezuela → Colombia: tasa = precio de venta USDT en Colombia ÷ (USDT Bs × (1 + ganancia))', async () => {
+test('Venezuela → Colombia: tasa = lo que pagan al vender USDT en Colombia (bid) ÷ (USDT Bs × (1 + ganancia))', async () => {
   noBcv();
   const { onRequestPut: putVeCo } = await import('../functions/api/ve-co.js');
   const { copPerVes } = await import('../public/js/criptoya.js');
@@ -584,7 +584,7 @@ test('Venezuela → Colombia: tasa = precio de venta USDT en Colombia ÷ (USDT B
   assert.deepEqual((await (await getRates({ env: e })).json()).ve_co, { profit_pct: '4', min: 2000, source: 'bybitp2p', cop_source: 'vitawallet' });
   const fake = async (u) => ({ ok: true, text: async () => (String(u).includes('/ves/') ? '{"bybitp2p":{"ask":400,"bid":395}}' : '{"binancep2p":{"ask":3900,"bid":3850},"vitawallet":{"ask":3950,"bid":3800}}') });
   const v = await copPerVes('bybitp2p', 'vitawallet', '4', fake);
-  assert.equal(v.cop, 3950); assert.ok(Math.abs(v.rate - 3950 / (400 * 1.04)) < 1e-9);
+  assert.equal(v.cop, 3800); assert.ok(Math.abs(v.rate - 3800 / (400 * 1.04)) < 1e-9);
   const b = await copPerVes('bybitp2p', 'binancep2p', '4', fake);
-  assert.equal(b.cop, 3900);
+  assert.equal(b.cop, 3850);
 });

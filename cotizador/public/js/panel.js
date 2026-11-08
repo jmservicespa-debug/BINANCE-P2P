@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=69';
-import { esc, flag, flags } from './ui.js?v=69';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=69';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=70';
+import { esc, flag, flags } from './ui.js?v=70';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=70';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -864,8 +864,8 @@ $('vc-save').onclick = saveVeCl; $('vc-pub').onchange = saveVeCl;
 let voVes = [], voCop = [];
 function voCalc() {
   const p = Number(String($('vo-profit').value || '0').replace(',', '.'));
-  const ves = voVes.find((x) => x.key === $('vo-src').value)?.ask, cop = voCop.find((x) => x.key === $('vo-cop').value)?.ask;
-  $('vo-ref').textContent = ves && cop ? `1 USDT = ${fmt(ves, 2)} Bs (${EXN($('vo-src').value)}) · ${EXN($('vo-cop').value)} vende a ${fmt(cop, 2)} COP` : '—';
+  const ves = voVes.find((x) => x.key === $('vo-src').value)?.ask, cop = voCop.find((x) => x.key === $('vo-cop').value)?.bid;
+  $('vo-ref').textContent = ves && cop ? `1 USDT = ${fmt(ves, 2)} Bs (${EXN($('vo-src').value)}) · al vender en ${EXN($('vo-cop').value)} te pagan ${fmt(cop, 2)} COP` : '—';
   if (!ves || !cop || !(p >= 0 && p <= 50)) { $('vo-rate').textContent = voVes.length && voCop.length ? 'Revisa la ganancia (0 a 50 %) o elige otra referencia.' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
   const rate = cop / (ves * (1 + p / 100));
   $('vo-rate').innerHTML = `USDT con tu ganancia: <b class="num">${fmt(ves * (1 + p / 100), 2)} Bs</b> · Tasa publicada: <b class="num">${rate.toFixed(4)}</b> · 1.000 Bs = <b class="num">${fmt(1000 * rate, 0)} COP</b>`;
@@ -880,7 +880,7 @@ async function loadVeCo() {
   const opts = (list, saved, dec) => { const src = pickExchange(list, saved)?.key || saved; const keys = [...new Set([src, ...list.map((x) => x.key)])];
     return keys.map((k) => { const x = list.find((e) => e.key === k); return `<option value="${esc(k)}"${k === src ? ' selected' : ''}>${esc(EXN(k))}${x ? ` · ${fmt(x.ask, dec)}` : ' (sin precio ahora)'}</option>`; }).join(''); };
   $('vo-src').innerHTML = opts(voVes, body.source, 2);
-  $('vo-cop').innerHTML = opts(voCop, body.cop_source, 2);
+  $('vo-cop').innerHTML = opts(voCop.filter((x) => x.bid).map((x) => ({ ...x, ask: x.bid })), body.cop_source, 2);
   voCalc();
 }
 async function saveVeCo() {

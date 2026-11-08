@@ -85,10 +85,10 @@ export function vesExchanges(text) {
   return Object.entries(d).filter(([, x]) => Number(x?.ask) >= VES_RANGE[0] && Number(x?.ask) <= VES_RANGE[1]).map(([k, x]) => ({ key: k, ask: Number(x.ask) }));
 }
 // Venezuela → Colombia: USDT en bolívares del P2P elegido (+ tu ganancia) y precio de venta del USDT en Colombia
-// del exchange elegido (Binance P2P, Vita Wallet…). Tasa = pesos colombianos por bolívar; Bs × tasa = COP.
+// del exchange elegido (Binance P2P, Vita Wallet…): lo que te pagan al VENDER el USDT (bid). Tasa = pesos colombianos por bolívar; Bs × tasa = COP.
 export async function copPerVes(source, copSource, profitPct, fetchFn = fetch) {
   const [v, c] = await Promise.all([USDT_VES_URL, USDT_COP_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
-  const ves = pickExchange(v ? vesExchanges(v) : [], source)?.ask, cop = c && pickExchange(exchangesIn(c, COP_RANGE), copSource || 'binancep2p')?.ask;
+  const ves = pickExchange(v ? vesExchanges(v) : [], source)?.ask, cop = c && pickExchange(exchangesIn(c, COP_RANGE), copSource || 'binancep2p')?.bid;
   if (!ves || !cop) return null;
   const rate = cop / (ves * (1 + Number(profitPct || 0) / 100));
   return rate > 0 ? { rate, ves, cop } : null;
