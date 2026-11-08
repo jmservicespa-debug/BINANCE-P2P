@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, VE_CL_ROUTE, VE_CO_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDC_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum, rateNum } from './rutas.js?v=68';
-import { setRewardsNav } from './rewards-nav.js?v=68';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, clpPerUsd, copPerVes, refFrom, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=68';
-import { esc, flag, flags } from './ui.js?v=68';
+import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, VE_CL_ROUTE, VE_CO_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDC_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum, rateNum } from './rutas.js?v=69';
+import { setRewardsNav } from './rewards-nav.js?v=69';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, clpPerUsd, copPerVes, refFrom, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=69';
+import { esc, flag, flags } from './ui.js?v=69';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -773,7 +773,7 @@ async function loadUsCl() {
 async function loadVeCo() {
   data.routes = data.routes.filter((x) => x.id !== VE_CO_ROUTE.id);
   if (!data?.ve_co) return;
-  VE_CO_ROUTE.min = Number(data.ve_co.min) || 2000;
+  VE_CO_ROUTE.min = Number(data.ve_co.min) || 40000;
   const got = await copPerVes(data.ve_co.source, data.ve_co.cop_source, data.ve_co.profit_pct);
   data.routes.push({ id: VE_CO_ROUTE.id, status: got ? 'on' : 'ask', rate: got ? got.rate.toFixed(4) : '', active: true });
 }

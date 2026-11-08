@@ -569,7 +569,7 @@ export async function saveUsClCfg(request, env, now = Date.now()) {
 }
 
 // ------------------------------------------------------------------ Venezuela → Chile (automática)
-export const VECO_CFG = { profit_pct: '0', min: '2000', source: 'bybitp2p', cop_source: 'binancep2p', published: false };
+export const VECO_CFG = { profit_pct: '0', min: '40000', source: 'bybitp2p', cop_source: 'binancep2p', published: false };
 export const loadVeCoCfg = (env) => loadCfg(env, 'veco_cfg', VECO_CFG);
 export async function veCoView(request, env, now = Date.now()) {
   if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
