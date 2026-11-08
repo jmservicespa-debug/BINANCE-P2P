@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=67';
-import { esc, flag, flags } from './ui.js?v=67';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=67';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=68';
+import { esc, flag, flags } from './ui.js?v=68';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=68';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -29,7 +29,7 @@ async function api(path, opts = {}) {
 
 function showEditor(on) {
   $('login').hidden = on;
-  ['power', 'mkt', 'tasas-CL', 'tasas-CO', 'tasas-EU', 'bcvsec', 'usdt', 'usdtco', 'brco', 'cobr', 'brcl', 'uscl', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  ['power', 'mkt', 'tasas-CL', 'tasas-CO', 'tasas-EU', 'bcvsec', 'usdt', 'usdtco', 'brco', 'cobr', 'brcl', 'uscl', 'veco', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
   document.querySelectorAll('.grupo, #gnav').forEach((el) => { el.hidden = !on; });
 }
 
@@ -49,6 +49,7 @@ async function start() {
   loadUsdtCo();
   loadUsdtBr();
   loadVeCl();
+  loadVeCo();
   loadBrCo();
   loadCoBr();
   loadBrCl();
@@ -858,6 +859,39 @@ async function saveVeCl() {
 }
 $('vc-margin').oninput = vcCalc; $('vc-src').onchange = vcCalc;
 $('vc-save').onclick = saveVeCl; $('vc-pub').onchange = saveVeCl;
+
+// ------------------------------------------------------------------ Venezuela → Colombia
+let voVes = [], voCop = [];
+function voCalc() {
+  const p = Number(String($('vo-profit').value || '0').replace(',', '.'));
+  const ves = voVes.find((x) => x.key === $('vo-src').value)?.ask, cop = voCop.find((x) => x.key === $('vo-cop').value)?.ask;
+  $('vo-ref').textContent = ves && cop ? `1 USDT = ${fmt(ves, 2)} Bs (${EXN($('vo-src').value)}) · ${EXN($('vo-cop').value)} vende a ${fmt(cop, 2)} COP` : '—';
+  if (!ves || !cop || !(p >= 0 && p <= 50)) { $('vo-rate').textContent = voVes.length && voCop.length ? 'Revisa la ganancia (0 a 50 %) o elige otra referencia.' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
+  const rate = cop / (ves * (1 + p / 100));
+  $('vo-rate').innerHTML = `USDT con tu ganancia: <b class="num">${fmt(ves * (1 + p / 100), 2)} Bs</b> · Tasa publicada: <b class="num">${rate.toFixed(4)}</b> · 1.000 Bs = <b class="num">${fmt(1000 * rate, 0)} COP</b>`;
+}
+async function loadVeCo() {
+  const { status, body } = await api('/api/ve-co');
+  if (status !== 200) return;
+  $('vo-profit').value = body.profit_pct ?? '0'; $('vo-min').value = fmt(Number(body.min), 0); $('vo-pub').checked = !!body.published;
+  const get = (u) => fetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  const [v, c] = await Promise.all([get(USDT_VES_URL), get(USDT_COP_URL)]);
+  voVes = v ? vesExchanges(v) : []; voCop = c ? exchangesIn(c, COP_RANGE) : [];
+  const opts = (list, saved, dec) => { const src = pickExchange(list, saved)?.key || saved; const keys = [...new Set([src, ...list.map((x) => x.key)])];
+    return keys.map((k) => { const x = list.find((e) => e.key === k); return `<option value="${esc(k)}"${k === src ? ' selected' : ''}>${esc(EXN(k))}${x ? ` · ${fmt(x.ask, dec)}` : ' (sin precio ahora)'}</option>`; }).join(''); };
+  $('vo-src').innerHTML = opts(voVes, body.source, 2);
+  $('vo-cop').innerHTML = opts(voCop, body.cop_source, 2);
+  voCalc();
+}
+async function saveVeCo() {
+  const msg = $('vo-msg');
+  const { status, body } = await api('/api/ve-co', { method: 'PUT', body: JSON.stringify({ profit_pct: $('vo-profit').value || '0', min: $('vo-min').value, source: $('vo-src').value, cop_source: $('vo-cop').value, published: $('vo-pub').checked }) });
+  msg.hidden = false;
+  if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
+  msg.className = 'msg'; msg.textContent = body.published ? 'Guardado: los clientes ya ven envíos desde Venezuela a Colombia.' : 'Guardado (ruta Venezuela → Colombia apagada).';
+}
+$('vo-profit').oninput = voCalc; $('vo-src').onchange = voCalc; $('vo-cop').onchange = voCalc;
+$('vo-save').onclick = saveVeCo; $('vo-pub').onchange = saveVeCo;
 
 // ------------------------------------------------------------------ USDT Brasil (comprar y vender)
 

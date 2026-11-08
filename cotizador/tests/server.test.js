@@ -569,3 +569,22 @@ test('USDC Brasil: se activa con la casilla del panel y se publica junto al USDT
   assert.equal((await putBr({ request: req('/api/usdt-br', { method: 'PUT', cookie, body: { margin_pct: '3', buy_margin_pct: '3', published: true, source: '' } }), env: e })).status, 200);
   assert.equal((await (await getRates({ env: e })).json()).usdt_br.usdc, undefined);
 });
+
+test('Venezuela → Colombia: tasa = precio de venta USDT en Colombia ÷ (USDT Bs × (1 + ganancia))', async () => {
+  noBcv();
+  const { onRequestPut: putVeCo } = await import('../functions/api/ve-co.js');
+  const { copPerVes } = await import('../public/js/criptoya.js');
+  const e = await env();
+  const body = { profit_pct: '4', min: '2.000', source: 'bybitp2p', cop_source: 'vitawallet', published: true };
+  assert.equal((await putVeCo({ request: req('/api/ve-co', { method: 'PUT', body }), env: e })).status, 401);
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await (await getRates({ env: e })).json()).ve_co, undefined);
+  assert.equal((await putVeCo({ request: req('/api/ve-co', { method: 'PUT', cookie, body }), env: e })).status, 200);
+  assert.deepEqual((await (await getRates({ env: e })).json()).ve_co, { profit_pct: '4', min: 2000, source: 'bybitp2p', cop_source: 'vitawallet' });
+  const fake = async (u) => ({ ok: true, text: async () => (String(u).includes('/ves/') ? '{"bybitp2p":{"ask":400,"bid":395}}' : '{"binancep2p":{"ask":3900,"bid":3850},"vitawallet":{"ask":3950,"bid":3800}}') });
+  const v = await copPerVes('bybitp2p', 'vitawallet', '4', fake);
+  assert.equal(v.cop, 3950); assert.ok(Math.abs(v.rate - 3950 / (400 * 1.04)) < 1e-9);
+  const b = await copPerVes('bybitp2p', 'binancep2p', '4', fake);
+  assert.equal(b.cop, 3900);
+});

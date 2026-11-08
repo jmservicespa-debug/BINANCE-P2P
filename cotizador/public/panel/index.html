@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=67">
+<link rel="stylesheet" href="/css/estilo.css?v=68">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -248,6 +248,27 @@
       <span class="muted">Marcado: aparece Venezuela como país de origen. Sin marcar: no aparece.</span>
       <button class="btn ghost" id="vc-save">Guardar</button>
     </section>
+    <section class="card" id="veco" hidden aria-labelledby="h-veco">
+      <div class="c-head"><span class="c-flags" data-flags="VE,CO"></span><h2 id="h-veco">Envío Venezuela → Colombia (automático)</h2></div>
+      <p class="c-txt"><b>Qué es:</b> el cliente paga bolívares y recibe pesos colombianos.</p>
+      <p class="c-txt"><b>Cómo se calcula:</b> (precio de venta del USDT en Colombia) ÷ (USDT en bolívares del P2P + tu ganancia). Bolívares × tasa = pesos colombianos.</p>
+      <label class="f" for="vo-src">Referencia en Venezuela (P2P de USDT en bolívares, vía CriptoYa)
+        <select id="vo-src"></select></label>
+      <label class="f" for="vo-cop">Referencia en Colombia (precio de venta del USDT, vía CriptoYa)
+        <select id="vo-cop"></select></label>
+      <div class="usdt-ref"><span class="muted">Precio de referencia</span><b class="num" id="vo-ref">—</b></div>
+      <div class="row2">
+        <label class="f" for="vo-profit">Tu ganancia (%)
+          <span class="amount"><input id="vo-profit" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f" for="vo-min">Mínimo (Bs)
+          <span class="amount"><input id="vo-min" inputmode="numeric" autocomplete="off"></span></label>
+      </div>
+      <div class="usdt-price" id="vo-rate">—</div>
+      <div class="msg" id="vo-msg" hidden></div>
+      <label class="switch"><input type="checkbox" id="vo-pub"> <b>Activo en el cotizador</b></label>
+      <span class="muted">Marcado: desde Venezuela aparece Colombia como destino. Sin marcar: no aparece.</span>
+      <button class="btn ghost" id="vo-save">Guardar</button>
+    </section>
     <section class="card tasas" id="bcvsec" hidden aria-labelledby="h-bcv">
       <div class="c-head"><span class="c-flags" data-flags="VE"></span><h2 id="h-bcv">Dólar y euro BCV</h2></div>
       <p class="c-txt"><b>Qué es:</b> el valor oficial del BCV, para mostrar el equivalente en dólares y euros.</p>
@@ -414,6 +435,6 @@
     </section>
   </div>
 </main>
-<script type="module" src="/js/panel.js?v=67"></script>
+<script type="module" src="/js/panel.js?v=68"></script>
 </body>
 </html>

@@ -569,6 +569,26 @@ export async function saveUsClCfg(request, env, now = Date.now()) {
 }
 
 // ------------------------------------------------------------------ Venezuela → Chile (automática)
+export const VECO_CFG = { profit_pct: '0', min: '2000', source: 'bybitp2p', cop_source: 'binancep2p', published: false };
+export const loadVeCoCfg = (env) => loadCfg(env, 'veco_cfg', VECO_CFG);
+export async function veCoView(request, env, now = Date.now()) {
+  if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
+  return json(await loadVeCoCfg(env));
+}
+export async function saveVeCoCfg(request, env, now = Date.now()) {
+  const { body, error } = await adminBody(request, env, now);
+  if (error) return error;
+  const p = pctOk(body?.profit_pct ?? '0');
+  if (p === null) return json({ error: 'Tu ganancia debe estar entre 0 y 50 %.' }, 400);
+  const min = String(body?.min ?? '').replace(/\D/g, '');
+  if (!(Number(min) >= 1 && Number(min) <= 100000000)) return json({ error: 'El mínimo no es válido.' }, 400);
+  const ok = (v) => /^[a-z0-9_]{2,30}$/i.test(String(v ?? '').trim());
+  if (!ok(body?.source)) return json({ error: 'Elige el P2P de bolívares.' }, 400);
+  if (!ok(body?.cop_source)) return json({ error: 'Elige la referencia en Colombia.' }, 400);
+  const cfg = { profit_pct: p, min, source: String(body.source).trim(), cop_source: String(body.cop_source).trim(), published: body?.published === true };
+  await env.TASAS.put('veco_cfg', JSON.stringify(cfg));
+  return json(cfg);
+}
 export const VECL_CFG = { margin_pct: '3', min: '2000', source: 'bybitp2p', published: false };
 export const loadVeClCfg = (env) => loadCfg(env, 'vecl_cfg', VECL_CFG);
 export async function veClView(request, env, now = Date.now()) {

@@ -1,4 +1,4 @@
-import { isPaused, json, loadBtcCfg, loadBrCoCfg, brCoTotalPct, loadCoBrCfg, loadBrClCfg, loadUsClCfg, loadGoldCfg, loadVeClCfg, loadRewardsCfg, loadUsdtBrCfg, loadUsdtCfg, loadUsdtCoCfg, publicView, REWARDS_URL, saveRates } from '../../lib/server.js';
+import { isPaused, json, loadBtcCfg, loadBrCoCfg, brCoTotalPct, loadCoBrCfg, loadBrClCfg, loadUsClCfg, loadGoldCfg, loadVeClCfg, loadVeCoCfg, loadRewardsCfg, loadUsdtBrCfg, loadUsdtCfg, loadUsdtCoCfg, publicView, REWARDS_URL, saveRates } from '../../lib/server.js';
 
 // Público: tasas activas y dólar y euro BCV para el cotizador.
 // USDT desde Chile: aparece solo si está activado en el panel (para todos por igual).
@@ -28,6 +28,8 @@ export const onRequestGet = async ({ env }) => {
   if (cobr.published) view.co_br = { profit_pct: cobr.profit_pct, min: Number(cobr.min), source: cobr.source };
   const brco = await loadBrCoCfg(env);
   if (brco.published) view.br_co = { margin_pct: brCoTotalPct(brco), min: Number(brco.min), source: brco.source };
+  const veco = await loadVeCoCfg(env);
+  if (veco.published) view.ve_co = { profit_pct: veco.profit_pct, min: Number(veco.min), source: veco.source, cop_source: veco.cop_source };
   const vecl = await loadVeClCfg(env);
   if (vecl.published) view.ve_cl = { margin_pct: vecl.margin_pct, min: Number(vecl.min), source: vecl.source };
   if ((await loadRewardsCfg(env)).published) view.rewards = { url: REWARDS_URL };
