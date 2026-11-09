@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=71';
-import { esc, flag, flags } from './ui.js?v=71';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=71';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=72';
+import { esc, flag, flags } from './ui.js?v=72';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=72';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -895,7 +895,6 @@ $('vo-profit').oninput = voCalc; $('vo-src').onchange = voCalc; $('vo-cop').onch
 $('vo-save').onclick = saveVeCo; $('vo-pub').onchange = saveVeCo;
 
 // ------------------------------------------------------------------ Brasil → Venezuela (tasa manual + flyer)
-const BRVE_AMOUNTS = [50, 100, 200, 300, 500, 1000];
 function bvEx() {
   const r = rateNum($('bv-rate').value);
   $('bv-ex').innerHTML = r ? `100 BRL × ${esc($('bv-rate').value.trim())} = <b class="num">${fmt(100 * r, 0)} Bs</b>` : 'Escribe la tasa de hoy (ej. 68.50).';
@@ -917,80 +916,25 @@ async function saveBrVe() {
 }
 $('bv-rate').oninput = bvEx;
 $('bv-save').onclick = saveBrVe; $('bv-pub').onchange = saveBrVe;
+$('bv-reset').onclick = () => { const r = rateNum($('bv-rate').value); if (r) $('estado-BRVE').value = brVeText(r); };
 
-// Flyer en el estilo blanco y lila: tasa grande y tabla de montos (reales × tasa = bolívares).
+// Flyer Brasil → Venezuela: tu diseño de Canva (assets/flyer-brasil-venezuela.png) con la tasa escrita en el recuadro.
+const brVeText = (rate) => `🇧🇷➡️🇻🇪 Envío de Brasil a Venezuela\nTasa de hoy: 1 real = ${fmt(rate, rate < 100 ? 2 : 0)} Bs\nPagas en reales por Pix · Llega en bolívares a cuenta bancaria o pago móvil\nCotiza aquí 👉 ${location.origin}/`;
 async function drawBrVe(rateTxt) {
   const rate = rateNum(rateTxt);
   if (!rate) return;
-  try { await Promise.all(['900 120px Inter', '700 40px Inter', '400 40px Michroma'].map((f) => document.fonts.load(f))); } catch { /* letra de respaldo */ }
-  const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H;
+  $('estado-BRVE').value = brVeText(rate);
+  try { await document.fonts.load('900 60px Inter'); } catch { /* letra de respaldo */ }
+  const W = 1080, c = document.createElement('canvas'); c.width = W; c.height = W;
   const g = c.getContext('2d');
-  const F = (w, px) => `${w} ${px}px Inter, Montserrat, sans-serif`;
-  const INK = '#1A0722', MUTED = '#5B4F6B', PUR = '#531463', LINE = '#E2D6F0';
-  const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#FFFFFF'); bg.addColorStop(.55, '#F4EEFB'); bg.addColorStop(1, '#E9DDF7');
-  g.fillStyle = bg; g.fillRect(0, 0, W, H);
-  try {  // ondas suaves arriba, desvanecidas hacia abajo (sin cortes)
-    const o = await loadImg('/assets/ondas-arriba.jpg'), oh = Math.round(W * 420 / 640);
-    const t = document.createElement('canvas'); t.width = W; t.height = oh; const tg = t.getContext('2d');
-    tg.drawImage(o, 0, 0, W, oh); tg.globalCompositeOperation = 'destination-in';
-    const m = tg.createLinearGradient(0, 0, 0, oh); m.addColorStop(0, '#000'); m.addColorStop(.45, 'rgba(0,0,0,.6)'); m.addColorStop(1, 'rgba(0,0,0,0)'); tg.fillStyle = m; tg.fillRect(0, 0, W, oh);
-    g.save(); g.globalAlpha = .35; g.globalCompositeOperation = 'multiply'; g.drawImage(t, 0, 0); g.restore();
-  } catch { /* sin ondas */ }
-  const rr = (x, y, w, h, r, fill, stroke) => { g.beginPath(); g.roundRect(x, y, w, h, r); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = 2; g.stroke(); } };
-  const drawF = async (code, cx, cy, r) => {
-    const svg = flag(code).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" ');
-    const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
-    try { const im = await loadImg(url); g.save(); g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.clip(); g.drawImage(im, cx - r, cy - r, r * 2, r * 2); g.restore();
-      g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.lineWidth = 4; g.strokeStyle = '#fff'; g.stroke(); } catch { /* sin bandera */ } finally { URL.revokeObjectURL(url); }
-  };
-  // Logo y marca
-  g.save(); g.translate(64, 56); g.scale(60 / 450, 60 / 450); g.translate(-20, -14);
-  g.beginPath(); [[245, 22], [462, 148], [462, 402], [245, 528], [28, 402], [28, 148]].forEach(([x, y]) => g.lineTo(x, y)); g.closePath(); g.clip();
-  g.fillStyle = PUR; [[0, 0, 250, 365], [283, 0, 77, 550], [0, 395, 360, 155], [385, 0, 165, 550]].forEach(([x, y, w, h]) => g.fillRect(x, y, w, h));
-  g.restore();
-  g.fillStyle = INK; g.textAlign = 'left'; g.font = '400 30px Michroma, Inter, sans-serif'; g.fillText('JMCAMBIOS', 146, 100);
-  // Píldora con banderas
-  g.font = F(700, 24); const pw = g.measureText('Brasil → Venezuela').width + 120;
-  rr(W - 64 - pw, 58, pw, 64, 32, '#FFFFFF', LINE); await drawF('BR', W - 64 - pw + 38, 90, 22); await drawF('VE', W - 64 - pw + 72, 90, 22);
-  g.fillStyle = INK; g.font = F(700, 24); g.textAlign = 'left'; g.fillText('Brasil → Venezuela', W - 64 - pw + 104, 99);
-  // Título
-  g.fillStyle = PUR; g.font = F(800, 26); g.fillText('T A S A   D E L   D Í A', 64, 230);
-  g.fillStyle = INK; g.font = F(900, 92); g.fillText('Envía desde Brasil', 60, 340);
-  const tg = g.createLinearGradient(60, 0, 760, 0); tg.addColorStop(0, '#7A2E99'); tg.addColorStop(1, '#B04AD8');
-  g.fillStyle = tg; g.fillText('a Venezuela', 60, 440);
-  g.fillStyle = MUTED; g.font = F(500, 32); g.fillText('Pagas en reales por Pix y tu familia recibe en bolívares.', 64, 510);
-  // Tarjeta de la tasa
-  const card = g.createLinearGradient(64, 560, 1016, 820); card.addColorStop(0, '#6B2384'); card.addColorStop(1, '#4A1259');
-  rr(64, 560, W - 128, 250, 34, card);
-  g.fillStyle = 'rgba(255,255,255,.75)'; g.font = F(700, 28); g.fillText('1 real brasileño =', 110, 640);
-  g.fillStyle = '#FFFFFF'; g.font = F(900, 128); const rTxt = fmt(rate, rate < 100 ? 2 : 0);
-  g.fillText(rTxt, 104, 770); const rw = g.measureText(rTxt).width;
-  g.font = F(800, 60); g.fillText('Bs', 104 + rw + 20, 770);
-  g.textAlign = 'right'; g.font = F(600, 24); g.fillStyle = 'rgba(255,255,255,.75)';
-  g.fillText(new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' }), W - 110, 640);
-  // Tabla
-  const top = 860, rowH = 92, x0 = 64, x1 = W - 64, mid = W / 2;
-  rr(x0, top, x1 - x0, 76 + BRVE_AMOUNTS.length * rowH, 30, '#FFFFFF', LINE);
-  g.textAlign = 'center'; g.fillStyle = MUTED; g.font = F(800, 24);
-  g.fillText('ENVÍAS (R$)', (x0 + mid) / 2, top + 50); g.fillText('RECIBE (Bs)', (mid + x1) / 2, top + 50);
-  BRVE_AMOUNTS.forEach((brl, i) => {
-    const y = top + 76 + i * rowH;
-    if (i % 2 === 0) { g.fillStyle = '#F7F2FC'; g.fillRect(x0 + 2, y, x1 - x0 - 4, rowH); }
-    g.textAlign = 'center'; g.fillStyle = INK; g.font = F(700, 40); g.fillText(`R$ ${fmt(brl, 0)}`, (x0 + mid) / 2, y + 60);
-    g.fillStyle = PUR; g.font = F(900, 42); g.fillText(`${fmt(brl * rate, 0)} Bs`, (mid + x1) / 2, y + 60);
-  });
-  const end = top + 76 + BRVE_AMOUNTS.length * rowH;
-  g.strokeStyle = LINE; g.lineWidth = 2; g.beginPath(); g.moveTo(mid, top + 70); g.lineTo(mid, end - 10); g.stroke();
-  // Puntos clave
-  g.textAlign = 'center'; g.fillStyle = MUTED; g.font = F(600, 26);
-  g.fillText('Comisión 0 %  ·  Llega a cualquier banco de Venezuela  ·  Tasa referencial', W / 2, end + 60, W - 128);
-  // Botón
-  rr(64, H - 300, W - 128, 110, 30, PUR);
-  g.textAlign = 'left'; g.fillStyle = '#FFFFFF'; g.font = F(800, 38); g.fillText('Escríbenos por WhatsApp', 104, H - 232);
-  g.textAlign = 'right'; g.font = F(700, 32); g.fillText('+56 9 3352 9706 →', W - 104, H - 232);
-  g.textAlign = 'center'; g.fillStyle = MUTED; g.font = F(700, 30); g.fillText('o cotiza tú mismo en jmcambios.cl', W / 2, H - 130);
-  g.fillStyle = PUR; g.fillRect(0, H - 76, W, 76);
-  g.fillStyle = '#FFFFFF'; g.font = F(700, 24); g.fillText('+56 9 3352 9706   ·   +56 9 3363 8659   ·   jmcambios.cl', W / 2, H - 28);
+  let img;
+  try { img = await loadImg('/assets/flyer-brasil-venezuela.png'); } catch { return; }
+  g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, W, W);
+  const k = W / 600;  // el diseño original mide 600 × 600; el recuadro va de (167, 346) a (433, 416)
+  const cx = 300 * k, cy = 381 * k, maxW = 250 * k;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = '#6B5A80'; g.font = '700 22px Inter, Montserrat, sans-serif'; g.fillText('1 REAL BRASILEÑO =', cx, cy - 34);
+  g.fillStyle = '#531463'; g.font = '900 64px Inter, Montserrat, sans-serif'; g.fillText(`${fmt(rate, rate < 100 ? 2 : 0)} Bs`, cx, cy + 16, maxW);
   const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
   flyerBlobs.BRVE = blob;
   $('fly-BRVE').src = URL.createObjectURL(blob);
