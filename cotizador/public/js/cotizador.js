@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, VE_CL_ROUTE, VE_CO_ROUTE, BR_VE_ROUTE, EU_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDC_BR_ROUTE, USDC_CL_ROUTE, USDC_CO_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum, rateNum } from './rutas.js?v=81';
-import { setRewardsNav } from './rewards-nav.js?v=81';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, clpPerUsd, clpPerEur, eurForRoute, copPerVes, refFrom, cyFetch, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=81';
-import { esc, flag, flags } from './ui.js?v=81';
+import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, VE_CL_ROUTE, VE_CO_ROUTE, BR_VE_ROUTE, EU_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDC_BR_ROUTE, USDC_CL_ROUTE, USDC_CO_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum, rateNum } from './rutas.js?v=82';
+import { setRewardsNav } from './rewards-nav.js?v=82';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, clpPerUsd, clpPerEur, eurForRoute, copPerVes, refFrom, cyFetch, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=82';
+import { esc, flag, flags } from './ui.js?v=82';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -64,7 +64,7 @@ function renderOrigins() {
   $('from-q').innerHTML = `<b>1</b> ${asset ? '¿Con qué moneda pagas o recibes?' : '¿Desde dónde envías?'}`;
   $('lead').innerHTML = asset
     ? `Compra o vende ${listEs(assetKinds().map((n) => `<b>${n === 'oro' ? 'oro tokenizado' : n}</b>`))} con ${listEs(assetOrigins().map((o) => ({ CL: 'pesos chilenos', CO: 'pesos colombianos', BR: 'reales' }[o])))}. Lo recibes directo en tu wallet.`
-    : 'Envía dinero desde Chile, Colombia, Europa, Reino Unido, México y muchos países más. ¿No encuentras tu país? Elige <b>Otro país</b> y te damos la tasa por WhatsApp.';
+    : 'Envía dinero desde Chile, Colombia, Brasil, Europa, Estados Unidos y muchos países más. ¿No encuentras tu país? Elige <b>Otro país</b> y te damos la tasa por WhatsApp.';
   if (asset) {
     $('origins').innerHTML = assetOrigins().map((k) => `<button data-o="${k}" aria-pressed="${k === origin}">${flag(k)} ${esc(ORIG[k].name)}</button>`).join('');
   } else $('origins').innerHTML = Object.entries(ORIGINS).map(([k, o]) =>
