@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=79';
-import { esc, flag, flags } from './ui.js?v=79';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, cyFetch, eurWise, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=79';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=80';
+import { esc, flag, flags } from './ui.js?v=80';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, cyFetch, eurMarket, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=80';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -897,36 +897,43 @@ $('vo-profit').oninput = voCalc; $('vo-src').onchange = voCalc; $('vo-cop').onch
 $('vo-save').onclick = saveVeCo; $('vo-pub').onchange = saveVeCo;
 
 // ------------------------------------------------------------------ Europa → Chile
-let ecClp = null, ecWise = null;
-function ecCalc() {
+let ecClp = null, ecMkt = null;
+function ecEur() {
   const n = (id) => Number(String($(id).value || '0').replace(',', '.'));
-  const manual = n('ec-eur'), p = n('ec-profit');
-  const eur = ecWise?.value || (manual >= 0.5 && manual <= 2 ? manual : 0);
-  const src = ecWise?.value ? `Binance P2P · Wise${ecWise.stale ? ' (último dato)' : ''}` : eur ? 'respaldo manual' : '';
-  $('ec-ref').textContent = ecClp ? `Vita Wallet vende el USDT a ${fmt(ecClp, 2)} CLP${eur ? ` · 1 USDT = ${fmt(eur, 4)} EUR (${src})` : ''}` : '—';
-  if (!ecClp || !eur || !(p >= 0 && p <= 50)) { $('ec-rate').textContent = !ecClp ? 'No se pudo leer Vita ahora: el cotizador mostrará "Mercado inestable".' : !eur ? 'No se pudo leer el precio de Binance P2P con Wise ahora. Si quieres, escribe un respaldo manual.' : 'Revisa tu ganancia (0 a 50 %).'; return; }
-  const rate = ecClp * (1 - p / 100) / eur;
-  $('ec-rate').innerHTML = `100 EUR − ${fmt(p, 2)} % = ${fmt(100 * (1 - p / 100), 2)} EUR = ${fmt(100 * (1 - p / 100) / eur, 2)} USDT · Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100 EUR = <b class="num">${fmt(100 * rate, 0)} CLP</b>`;
+  const fixed = n('ec-eur'), okF = fixed >= 0.5 && fixed <= 2;
+  if ($('ec-mode').value === 'fijo') return okF ? { value: fixed, src: 'precio fijo' } : null;
+  if (ecMkt) return { value: ecMkt.value * (1 + n('ec-prem') / 100), src: `mercado ${fmt(ecMkt.value, 4)} (${ecMkt.source}) + ${fmt(n('ec-prem'), 2)} % Wise` };
+  return okF ? { value: fixed, src: 'precio fijo (respaldo: no se pudo leer el mercado)' } : null;
+}
+function ecCalc() {
+  const p = Number(String($('ec-profit').value || '0').replace(',', '.'));
+  $('ec-prem').closest('label').style.opacity = $('ec-mode').value === 'fijo' ? .45 : 1;
+  const e = ecEur();
+  $('ec-ref').textContent = ecClp ? `Vita Wallet vende el USDT a ${fmt(ecClp, 2)} CLP${e ? ` · 1 USDT = ${fmt(e.value, 4)} EUR (${e.src})` : ''}` : '—';
+  if (!ecClp || !e || !(p >= 0 && p <= 50)) { $('ec-rate').textContent = !ecClp ? 'No se pudo leer Vita ahora: el cotizador mostrará "Mercado inestable".' : !e ? ($('ec-mode').value === 'fijo' ? 'Escribe el precio fijo del USDT en euros (ej. 0.93).' : 'No se pudo leer el precio de mercado ahora: escribe un precio fijo como respaldo.') : 'Revisa tu ganancia (0 a 50 %).'; return; }
+  const rate = ecClp * (1 - p / 100) / e.value;
+  $('ec-rate').innerHTML = `100 EUR − ${fmt(p, 2)} % = ${fmt(100 * (1 - p / 100), 2)} EUR = ${fmt(100 * (1 - p / 100) / e.value, 2)} USDT · Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100 EUR = <b class="num">${fmt(100 * rate, 0)} CLP</b>`;
 }
 async function loadEuCl() {
   const { status, body } = await api('/api/eu-cl');
   if (status !== 200) return;
   $('ec-eur').value = body.eur_usdt || ''; $('ec-profit').value = body.profit_pct ?? '0'; $('ec-min').value = fmt(Number(body.min), 0); $('ec-pub').checked = !!body.published;
-  const [r, w] = await Promise.all([cyFetch(USDT_URL, { cache: 'no-store' }).catch(() => null), eurWise()]);
+  $('ec-mode').value = body.mode === 'fijo' ? 'fijo' : 'auto'; $('ec-prem').value = body.premium_pct ?? '1.5';
+  const [r, m] = await Promise.all([cyFetch(USDT_URL, { cache: 'no-store' }).catch(() => null), eurMarket()]);
   try { ecClp = r?.ok ? parseCriptoYa(await r.text())?.value ?? null : null; } catch { ecClp = null; }
-  ecWise = w;
-  $('ec-upd').textContent = w ? `Precio con Wise leído de Binance P2P ${w.stale ? 'hace un rato (Binance no respondió ahora)' : 'recién'}: 1 USDT = ${fmt(w.value, 4)} EUR (anuncios para comprar USDT con euros y Wise, 100 €).` : 'No se pudo leer Binance P2P con Wise ahora. Mientras tanto se usa el respaldo manual, si lo escribiste.';
+  ecMkt = m;
   ecCalc();
 }
 async function saveEuCl() {
   const msg = $('ec-msg');
-  const { status, body } = await api('/api/eu-cl', { method: 'PUT', body: JSON.stringify({ eur_usdt: $('ec-eur').value, profit_pct: $('ec-profit').value || '0', min: $('ec-min').value, published: $('ec-pub').checked }) });
+  const { status, body } = await api('/api/eu-cl', { method: 'PUT', body: JSON.stringify({ mode: $('ec-mode').value, premium_pct: $('ec-prem').value || '0', eur_usdt: $('ec-eur').value, profit_pct: $('ec-profit').value || '0', min: $('ec-min').value, published: $('ec-pub').checked }) });
   msg.hidden = false;
   if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
-  msg.className = 'msg'; msg.textContent = body.published ? 'Guardado: los clientes ya ven envíos desde Europa a Chile.' : 'Guardado (ruta Europa → Chile apagada).';
+  msg.className = 'msg'; msg.textContent = body.published ? `Guardado (${body.mode === 'fijo' ? 'precio fijo' : 'automático'}): los clientes ya ven envíos desde Europa a Chile.` : 'Guardado (ruta Europa → Chile apagada).';
   loadEuCl();
 }
-['ec-eur', 'ec-profit'].forEach((id) => { $(id).oninput = ecCalc; });
+$('ec-mode').onchange = ecCalc;
+['ec-eur', 'ec-profit', 'ec-prem'].forEach((id) => { $(id).oninput = ecCalc; });
 $('ec-save').onclick = saveEuCl; $('ec-pub').onchange = saveEuCl;
 
 // ------------------------------------------------------------------ Brasil → Venezuela (tasa manual + flyer)
@@ -960,7 +967,7 @@ async function drawBrVe(rateTxt) {
   if (!$('estado-BRVE').value.trim()) $('estado-BRVE').value = brVeText();
   try { await document.fonts.load('800 60px Montserrat'); } catch { /* letra de respaldo */ }
   let img;
-  try { img = await loadImg('/assets/flyer-brasil.png?v=79'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
+  try { img = await loadImg('/assets/flyer-brasil.png?v=80'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
   const c = document.createElement('canvas'); c.width = 1080; c.height = 1080;
   const g = c.getContext('2d');
   g.drawImage(img, 0, 0, 1080, 1080);

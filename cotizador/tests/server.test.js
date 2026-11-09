@@ -641,9 +641,9 @@ test('Europa → Chile: (1 − ganancia) ÷ euros por USDT (Wise) × Vita CLP', 
   const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
   const cookie = ok.headers.get('set-cookie').split(';')[0];
   assert.equal((await putEuCl({ request: req('/api/eu-cl', { method: 'PUT', cookie, body: { ...body, eur_usdt: '93' } }), env: e })).status, 400);
-  assert.equal((await putEuCl({ request: req('/api/eu-cl', { method: 'PUT', cookie, body: { ...body, eur_usdt: '' } }), env: e })).status, 200);
   assert.equal((await putEuCl({ request: req('/api/eu-cl', { method: 'PUT', cookie, body }), env: e })).status, 200);
-  assert.deepEqual((await (await getRates({ env: e })).json()).eu_cl, { profit_pct: '3', eur_usdt: '0.93', min: 20 });
+  assert.deepEqual((await (await getRates({ env: e })).json()).eu_cl, { profit_pct: '3', eur_usdt: '0.93', min: 20, mode: 'auto', premium_pct: '0' });
+  assert.equal((await putEuCl({ request: req('/api/eu-cl', { method: 'PUT', cookie, body: { ...body, mode: 'fijo', eur_usdt: '' } }), env: e })).status, 400);
   const fake = async () => ({ ok: true, text: async () => '{"vitawallet":{"ask":990,"bid":980}}' });
   const r = await clpPerEur('0.93', '3', fake);
   assert.ok(Math.abs(r.rate - 990 * 0.97 / 0.93) < 1e-9);
@@ -664,4 +664,22 @@ test('Precio USDT en euros con Wise: mediana de los primeros anuncios, guarda 2 
   const bad = async () => { throw new Error('caído'); };
   const s = await eurUsdtWise(e, t0 + 10 * 60_000, bad); assert.equal(s.value, 0.94); assert.equal(s.stale, true);
   assert.equal(await eurUsdtWise(e, t0 + 60 * 60_000, bad), null);
+});
+
+test('Europa → Chile: precio de mercado en euros (Kraken, respaldo Binance/Frankfurter) y modos fijo/automático', async () => {
+  const { eurUsdtMarket } = await import('../lib/server.js');
+  const { eurForRoute } = await import('../public/js/criptoya.js');
+  const e = await env();
+  const kraken = async (u) => ({ ok: String(u).includes('kraken'), json: async () => ({ result: { USDTEUR: { c: ['0.9200', '1'] } } }) });
+  assert.equal((await eurUsdtMarket(e, 3_000_000, kraken)).value, 0.92);
+  const e2 = await env();
+  const onlyBinance = async (u) => (String(u).includes('binance') ? { ok: true, json: async () => ({ price: '1.0870' }) } : { ok: false, json: async () => ({}) });
+  const b = await eurUsdtMarket(e2, 3_000_000, onlyBinance);
+  assert.equal(b.source, 'binance'); assert.ok(Math.abs(b.value - 1 / 1.087) < 1e-9);
+  const mkt = async () => ({ ok: true, json: async () => ({ value: 0.92, source: 'kraken' }) });
+  const down = async () => ({ ok: false, json: async () => ({}) });
+  assert.ok(Math.abs((await eurForRoute({ mode: 'auto', premium_pct: '2', eur_usdt: '0.95' }, mkt)).value - 0.92 * 1.02) < 1e-9);
+  assert.equal((await eurForRoute({ mode: 'fijo', eur_usdt: '0,95' }, mkt)).value, 0.95);
+  assert.equal((await eurForRoute({ mode: 'auto', premium_pct: '2', eur_usdt: '0.95' }, down)).value, 0.95);
+  assert.equal(await eurForRoute({ mode: 'auto', premium_pct: '2', eur_usdt: '' }, down), null);
 });

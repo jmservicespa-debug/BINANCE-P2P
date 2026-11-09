@@ -618,7 +618,31 @@ export async function wiseView(env, now = Date.now()) {
   return got ? json(got) : json({ error: 'sin datos' }, 502);
 }
 
-export const EUCL_CFG = { profit_pct: '0', eur_usdt: '', min: '20', published: false };
+// Euros por USDT en el mercado (Kraken USDT/EUR; respaldo Binance EUR/USDT y el dólar de Frankfurter). Guardado 5 min.
+const EUR_SOURCES = [
+  ['kraken', 'https://api.kraken.com/0/public/Ticker?pair=USDTEUR', (d) => Number(Object.values(d?.result || {})[0]?.c?.[0])],
+  ['binance', 'https://data-api.binance.vision/api/v3/ticker/price?symbol=EURUSDT', (d) => 1 / Number(d?.price)],
+  ['frankfurter', 'https://api.frankfurter.app/latest?from=USD&to=EUR', (d) => Number(d?.rates?.EUR)],
+];
+export async function eurUsdtMarket(env, now = Date.now(), fetchFn = fetch) {
+  let cached = null;
+  try { cached = JSON.parse((await env.TASAS.get('eur_usdt_mkt')) || 'null'); } catch { cached = null; }
+  if (cached && now - cached.ts < 5 * 60 * 1000) return cached;
+  for (const [source, url, pick] of EUR_SOURCES) {
+    try {
+      const r = await fetchFn(url, { signal: AbortSignal.timeout(6000), headers: { accept: 'application/json' } });
+      const v = r.ok ? pick(await r.json()) : NaN;
+      if (v >= 0.5 && v <= 2) { const out = { value: v, source, ts: now }; await env.TASAS.put('eur_usdt_mkt', JSON.stringify(out)); return out; }
+    } catch { /* se prueba la siguiente fuente */ }
+  }
+  return cached && now - cached.ts < 60 * 60 * 1000 ? { ...cached, stale: true } : null;
+}
+export async function eurMarketView(env, now = Date.now()) {
+  const got = await eurUsdtMarket(env, now);
+  return got ? json(got) : json({ error: 'sin datos' }, 502);
+}
+// mode: 'auto' = precio de mercado × (1 + sobreprecio Wise) · 'fijo' = el precio en euros que escribes.
+export const EUCL_CFG = { profit_pct: '0', eur_usdt: '', min: '20', mode: 'auto', premium_pct: '1.5', published: false };
 export const loadEuClCfg = (env) => loadCfg(env, 'eucl_cfg', EUCL_CFG);
 export async function euClView(request, env, now = Date.now()) {
   if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
@@ -629,12 +653,16 @@ export async function saveEuClCfg(request, env, now = Date.now()) {
   if (error) return error;
   const p = pctOk(body?.profit_pct ?? '0');
   if (p === null) return json({ error: 'Tu ganancia debe estar entre 0 y 50 %.' }, 400);
-  const eur = String(body?.eur_usdt ?? '').trim().replace(',', '.');  // respaldo manual (opcional): solo se usa si Binance no responde
-  if (eur !== '' && !(Number(eur) >= 0.5 && Number(eur) <= 2)) return json({ error: 'El respaldo manual debe ser el precio del USDT en euros (ej. 0.93) o quedar vacío.' }, 400);
+  const mode = body?.mode === 'fijo' ? 'fijo' : 'auto';
+  const prem = pctOk(body?.premium_pct ?? '0');
+  if (prem === null) return json({ error: 'El sobreprecio Wise debe estar entre 0 y 50 %.' }, 400);
+  const eur = String(body?.eur_usdt ?? '').trim().replace(',', '.');  // precio fijo (y respaldo del automático)
+  if (eur !== '' && !(Number(eur) >= 0.5 && Number(eur) <= 2)) return json({ error: 'El precio fijo debe ser el USDT en euros (ej. 0.93).' }, 400);
+  if (mode === 'fijo' && eur === '') return json({ error: 'En modo fijo escribe el precio del USDT en euros (ej. 0.93).' }, 400);
   const min = String(body?.min ?? '').replace(/\D/g, '');
   if (!(Number(min) >= 1 && Number(min) <= 100000)) return json({ error: 'El mínimo no es válido.' }, 400);
   const prev = await loadEuClCfg(env);
-  const cfg = { profit_pct: p, eur_usdt: eur, min, published: body?.published === true, eur_updated: eur === prev.eur_usdt ? (prev.eur_updated || now) : now };
+  const cfg = { profit_pct: p, eur_usdt: eur, min, mode, premium_pct: prem, published: body?.published === true, eur_updated: eur === prev.eur_usdt ? (prev.eur_updated || now) : now };
   await env.TASAS.put('eucl_cfg', JSON.stringify(cfg));
   return json(cfg);
 }

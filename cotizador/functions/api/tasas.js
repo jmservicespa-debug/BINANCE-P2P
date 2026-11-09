@@ -29,7 +29,7 @@ export const onRequestGet = async ({ env }) => {
   const brco = await loadBrCoCfg(env);
   if (brco.published) view.br_co = { margin_pct: brCoTotalPct(brco), min: Number(brco.min), source: brco.source };
   const eucl = await loadEuClCfg(env);
-  if (eucl.published) view.eu_cl = { profit_pct: eucl.profit_pct, eur_usdt: eucl.eur_usdt || '', min: Number(eucl.min) };
+  if (eucl.published) view.eu_cl = { profit_pct: eucl.profit_pct, eur_usdt: eucl.eur_usdt || '', min: Number(eucl.min), mode: eucl.mode || 'auto', premium_pct: eucl.premium_pct ?? '0' };
   const brve = await loadBrVeCfg(env);
   if (brve.published && brve.rate) view.br_ve = { rate: brve.rate, min: Number(brve.min) };
   const veco = await loadVeCoCfg(env);
