@@ -588,3 +588,17 @@ test('Venezuela → Colombia: tasa = lo que pagan al vender USDT en Colombia (bi
   const b = await copPerVes('bybitp2p', 'binancep2p', '4', fake);
   assert.equal(b.cop, 3850);
 });
+
+test('Brasil → Venezuela: tasa manual del panel, se publica solo si está activa y con tasa', async () => {
+  noBcv();
+  const { onRequestPut: putBrVe } = await import('../functions/api/br-ve.js');
+  const e = await env();
+  assert.equal((await putBrVe({ request: req('/api/br-ve', { method: 'PUT', body: { rate: '68.50', min: '50', published: true } }), env: e })).status, 401);
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await putBrVe({ request: req('/api/br-ve', { method: 'PUT', cookie, body: { rate: 'abc', min: '50', published: true } }), env: e })).status, 400);
+  assert.equal((await putBrVe({ request: req('/api/br-ve', { method: 'PUT', cookie, body: { rate: '68,50', min: '50', published: false } }), env: e })).status, 200);
+  assert.equal((await (await getRates({ env: e })).json()).br_ve, undefined);
+  assert.equal((await putBrVe({ request: req('/api/br-ve', { method: 'PUT', cookie, body: { rate: '68.50', min: '50', published: true } }), env: e })).status, 200);
+  assert.deepEqual((await (await getRates({ env: e })).json()).br_ve, { rate: '68.50', min: 50 });
+});

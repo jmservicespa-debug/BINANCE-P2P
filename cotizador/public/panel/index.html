@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=70">
+<link rel="stylesheet" href="/css/estilo.css?v=71">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -161,6 +161,25 @@
 
   <div class="grupo" id="g-BR" data-c="BR" hidden>
     <div class="g-head"><span class="g-flags" data-flags="BR"></span><div><b>Brasil</b><small>Envíos desde Brasil y USDT en reales</small></div></div>
+    <section class="card" id="brve" hidden aria-labelledby="h-brve">
+      <div class="c-head"><span class="c-flags" data-flags="BR,VE"></span><h2 id="h-brve">Envío Brasil → Venezuela (tasa manual)</h2></div>
+      <p class="c-txt"><b>Qué es:</b> el cliente paga reales por Pix y recibe bolívares.</p>
+      <p class="c-txt"><b>Cómo se usa:</b> escribe la tasa de hoy (reales × tasa = bolívares) y guarda. El cotizador y el flyer se actualizan con esa tasa.</p>
+      <div class="row2">
+        <label class="f" for="bv-rate">Tasa de hoy (Bs por real)
+          <span class="amount"><input id="bv-rate" inputmode="decimal" autocomplete="off" placeholder="Ej. 68.50"></span></label>
+        <label class="f" for="bv-min">Mínimo (BRL)
+          <span class="amount"><input id="bv-min" inputmode="numeric" autocomplete="off"></span></label>
+      </div>
+      <div class="usdt-price" id="bv-ex">—</div>
+      <div class="msg" id="bv-msg" hidden></div>
+      <label class="switch"><input type="checkbox" id="bv-pub"> <b>Activo en el cotizador</b></label>
+      <span class="muted">Marcado: desde Brasil aparece Venezuela como destino. Sin marcar: no aparece (el flyer igual se arma).</span>
+      <button class="btn" id="bv-save">Guardar</button>
+      <div class="flyer"><h3>Flyer Brasil → Venezuela</h3><img id="fly-BRVE" alt="Flyer con la tasa del día de Brasil a Venezuela"></div>
+      <div class="row2"><button class="btn ghost" data-dl="BRVE">Descargar</button><button class="btn" data-share="BRVE">Compartir</button></div>
+      <span class="muted">Se arma solo con la tasa guardada: escríbela, toca Guardar y luego Compartir.</span>
+    </section>
     <section class="card" id="brco" hidden aria-labelledby="h-brco">
       <div class="c-head"><span class="c-flags" data-flags="BR,CO"></span><h2 id="h-brco">Envío Brasil → Colombia (automático)</h2></div>
       <p class="c-txt"><b>Qué es:</b> el cliente paga reales y recibe pesos colombianos.</p>
@@ -435,6 +454,6 @@
     </section>
   </div>
 </main>
-<script type="module" src="/js/panel.js?v=70"></script>
+<script type="module" src="/js/panel.js?v=71"></script>
 </body>
 </html>

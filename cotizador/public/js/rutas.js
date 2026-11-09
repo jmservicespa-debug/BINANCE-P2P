@@ -118,6 +118,9 @@ export const BR_CL_ROUTE = { id: 'br-cl', from: 'BR', to: ['CL'], name: 'Chile',
 export const US_CL_ROUTE = { id: 'us-cl', from: 'US', to: ['CL'], name: 'Chile', cur: 'CLP', unit: 'Pesos chilenos', op: 'mul', dec: 0, min: 20, fee: 1,
   pay: 'Pago con link de Cash App',
   note: 'Pagas en dólares con un link de pago de Cash App (te lo enviamos por WhatsApp). Recibe por transferencia en cualquier banco de Chile' };
+// Brasil → Venezuela: tasa manual que escribes cada día en el panel (reales × tasa = bolívares).
+export const BR_VE_ROUTE = { id: 'br-ve', from: 'BR', to: ['VE'], name: 'Venezuela', cur: 'VES', unit: 'Bolívares', op: 'mul', dec: 0, min: 50,
+  note: 'Pagas en reales por Pix. Recibe en bolívares en cualquier banco de Venezuela' };
 export const VE_CO_ROUTE = { id: 've-co', from: 'VE', to: ['CO'], name: 'Colombia', cur: 'COP', unit: 'Pesos colombianos', op: 'mul', dec: 0, min: 40000,
   note: 'Recibe en pesos colombianos por Nequi, Bancolombia u otro banco' };
 export const VE_CL_ROUTE = { id: 've-cl', from: 'VE', to: ['CL'], name: 'Chile', cur: 'CLP', unit: 'Pesos chilenos', op: 'mul', dec: 0, min: 2000,
