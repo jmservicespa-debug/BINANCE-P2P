@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=73';
-import { esc, flag, flags } from './ui.js?v=73';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=73';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=74';
+import { esc, flag, flags } from './ui.js?v=74';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=74';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -916,25 +916,24 @@ async function saveBrVe() {
 }
 $('bv-rate').oninput = bvEx;
 $('bv-save').onclick = saveBrVe; $('bv-pub').onchange = saveBrVe;
-$('bv-reset').onclick = () => { const r = rateNum($('bv-rate').value); if (r) $('estado-BRVE').value = brVeText(r); };
+$('bv-reset').onclick = () => { $('estado-BRVE').value = brVeText(); };
 
-// Flyer Brasil → Venezuela: tu diseño de Canva (assets/flyer-brasil-venezuela.png) con la tasa escrita en el recuadro.
-const brVeText = (rate) => `🇧🇷➡️🇻🇪 Envío de Brasil a Venezuela\nTasa de hoy: 1 real = ${fmt(rate, rate < 100 ? 2 : 0)} Bs\nPagas en reales por Pix · Llega en bolívares a cuenta bancaria o pago móvil\nCotiza aquí 👉 ${location.origin}/`;
+// Flyer Brasil → Venezuela: misma plantilla y misma forma que los de Chile, Colombia y Europa (solo la tasa en el recuadro).
+const brVeText = () => `🇧🇷➡️🇻🇪💱\nEnvío de Brasil a Venezuela\nPago Rápido y Seguro\nCotiza tu envío aquí 👉 ${location.origin}/`;
 async function drawBrVe(rateTxt) {
-  const rate = rateNum(rateTxt);
-  if (!rate) return;
-  $('estado-BRVE').value = brVeText(rate);
-  try { await document.fonts.load('900 60px Inter'); } catch { /* letra de respaldo */ }
-  const W = 1080, c = document.createElement('canvas'); c.width = W; c.height = W;
-  const g = c.getContext('2d');
+  if (!rateNum(rateTxt)) return;
+  if (!$('estado-BRVE').value.trim()) $('estado-BRVE').value = brVeText();
+  try { await document.fonts.load('800 60px Montserrat'); } catch { /* letra de respaldo */ }
   let img;
-  try { img = await loadImg('/assets/flyer-brasil-venezuela.png'); } catch { return; }
-  g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, W, W);
-  const k = W / 600;  // el diseño original mide 600 × 600; el recuadro va de (167, 346) a (433, 416)
-  const cx = 300 * k, cy = 381 * k, maxW = 250 * k;
-  g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillStyle = '#6B5A80'; g.font = '700 22px Inter, Montserrat, sans-serif'; g.fillText('1 REAL BRASILEÑO =', cx, cy - 34);
-  g.fillStyle = '#531463'; g.font = '900 64px Inter, Montserrat, sans-serif'; g.fillText(`${fmt(rate, rate < 100 ? 2 : 0)} Bs`, cx, cy + 16, maxW);
+  try { img = await loadImg('/assets/flyer-brasil-venezuela.png'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
+  const c = document.createElement('canvas'); c.width = 1080; c.height = 1080;
+  const g = c.getContext('2d');
+  g.drawImage(img, 0, 0, 1080, 1080);
+  g.fillStyle = '#3D1A5E'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const text = String(rateTxt).trim();
+  let size = 96;
+  do { g.font = `800 ${size}px Montserrat, sans-serif`; size -= 2; } while (g.measureText(text).width > 440 && size > 20);
+  g.fillText(text, 540, 703);
   const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
   flyerBlobs.BRVE = blob;
   $('fly-BRVE').src = URL.createObjectURL(blob);
