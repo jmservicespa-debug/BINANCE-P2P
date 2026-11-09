@@ -630,3 +630,21 @@ test('CriptoYa por el servidor: solo rutas permitidas, guarda 60 s y usa el últ
   assert.equal((await cyProxy(r('usdt/brl/1'), e, t0 + 5 * 60_000, bad)).status, 200);
   assert.equal((await cyProxy(r('usdt/brl/1'), e, t0 + 40 * 60_000, bad)).status, 502);
 });
+
+test('Europa → Chile: (1 − ganancia) ÷ euros por USDT (Wise) × Vita CLP', async () => {
+  noBcv();
+  const { onRequestPut: putEuCl } = await import('../functions/api/eu-cl.js');
+  const { clpPerEur } = await import('../public/js/criptoya.js');
+  const e = await env();
+  const body = { eur_usdt: '0,93', profit_pct: '3', min: '20', published: true };
+  assert.equal((await putEuCl({ request: req('/api/eu-cl', { method: 'PUT', body }), env: e })).status, 401);
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await putEuCl({ request: req('/api/eu-cl', { method: 'PUT', cookie, body: { ...body, eur_usdt: '93' } }), env: e })).status, 400);
+  assert.equal((await putEuCl({ request: req('/api/eu-cl', { method: 'PUT', cookie, body }), env: e })).status, 200);
+  assert.deepEqual((await (await getRates({ env: e })).json()).eu_cl, { profit_pct: '3', eur_usdt: '0.93', min: 20 });
+  const fake = async () => ({ ok: true, text: async () => '{"vitawallet":{"ask":990,"bid":980}}' });
+  const r = await clpPerEur('0.93', '3', fake);
+  assert.ok(Math.abs(r.rate - 990 * 0.97 / 0.93) < 1e-9);
+  assert.equal(await clpPerEur('', '3', fake), null);
+});

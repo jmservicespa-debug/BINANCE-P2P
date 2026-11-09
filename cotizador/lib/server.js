@@ -589,6 +589,26 @@ export async function saveUsClCfg(request, env, now = Date.now()) {
 }
 
 // ------------------------------------------------------------------ Venezuela → Chile (automática)
+export const EUCL_CFG = { profit_pct: '0', eur_usdt: '', min: '20', published: false };
+export const loadEuClCfg = (env) => loadCfg(env, 'eucl_cfg', EUCL_CFG);
+export async function euClView(request, env, now = Date.now()) {
+  if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
+  return json(await loadEuClCfg(env));
+}
+export async function saveEuClCfg(request, env, now = Date.now()) {
+  const { body, error } = await adminBody(request, env, now);
+  if (error) return error;
+  const p = pctOk(body?.profit_pct ?? '0');
+  if (p === null) return json({ error: 'Tu ganancia debe estar entre 0 y 50 %.' }, 400);
+  const eur = String(body?.eur_usdt ?? '').trim().replace(',', '.');
+  if (!(Number(eur) >= 0.5 && Number(eur) <= 2)) return json({ error: 'Escribe el precio del USDT en euros (ej. 0.93).' }, 400);
+  const min = String(body?.min ?? '').replace(/\D/g, '');
+  if (!(Number(min) >= 1 && Number(min) <= 100000)) return json({ error: 'El mínimo no es válido.' }, 400);
+  const prev = await loadEuClCfg(env);
+  const cfg = { profit_pct: p, eur_usdt: eur, min, published: body?.published === true, eur_updated: eur === prev.eur_usdt ? (prev.eur_updated || now) : now };
+  await env.TASAS.put('eucl_cfg', JSON.stringify(cfg));
+  return json(cfg);
+}
 export const BRVE_CFG = { rate: '', min: '50', published: false };
 export const loadBrVeCfg = (env) => loadCfg(env, 'brve_cfg', BRVE_CFG);
 export async function brVeView(request, env, now = Date.now()) {
