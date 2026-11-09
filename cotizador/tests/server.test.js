@@ -683,3 +683,18 @@ test('Europa → Chile: precio de mercado en euros (Kraken, respaldo Binance/Fra
   assert.equal((await eurForRoute({ mode: 'auto', premium_pct: '2', eur_usdt: '0.95' }, down)).value, 0.95);
   assert.equal(await eurForRoute({ mode: 'auto', premium_pct: '2', eur_usdt: '' }, down), null);
 });
+
+test('USDC en Chile y Colombia: se activa con la casilla del panel y se publica junto al USDT', async () => {
+  noBcv();
+  const { onRequestPut: putCo } = await import('../functions/api/usdt-co.js');
+  const { onRequestPut: putCl } = await import('../functions/api/usdt.js');
+  const e = await env();
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await putCo({ request: req('/api/usdt-co', { method: 'PUT', cookie, body: { margin_pct: '2', min: '50000', published: true, buy_margin_pct: '3', buy_min: '50000', usdc: true } }), env: e })).status, 200);
+  assert.equal((await putCl({ request: req('/api/usdt', { method: 'PUT', cookie, body: { margin_pct: '3', buy_margin_pct: '3', published: true, usdc: true } }), env: e })).status, 200);
+  const v = await (await getRates({ env: e })).json();
+  assert.equal(v.usdt_co.usdc, true); assert.equal(v.usdt.usdc, true);
+  assert.equal((await putCl({ request: req('/api/usdt', { method: 'PUT', cookie, body: { margin_pct: '3', buy_margin_pct: '3', published: true } }), env: e })).status, 200);
+  assert.equal((await (await getRates({ env: e })).json()).usdt.usdc, true);  // sin el campo, se mantiene lo guardado
+});

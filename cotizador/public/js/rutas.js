@@ -69,7 +69,13 @@ export const USDT_ROUTE = { id: 'cl-usdt', from: 'CL', to: ['USDT'], name: 'USDT
   min: 10000, buyMin: 15000,  // mínimos en CLP: cliente compra (nosotros vendemos) 10.000 · cliente vende (nosotros compramos) 15.000
   note: 'Recibes los USDT en tu wallet o cuenta de Binance (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente, no es Binance.' };
 // USDT desde Colombia: solo venta al cliente. Precio = USDT en Binance P2P Colombia (CriptoYa) + ganancia; mínimo editable en el panel.
-export const USDT_CO_ROUTE = { ...USDT_ROUTE, id: 'co-usdt', from: 'CO', min: 50000, buyMin: null };
+// En Colombia se presenta como "dólar digital" (sin mencionar Binance), igual que en Brasil.
+export const USDT_CO_ROUTE = { ...USDT_ROUTE, id: 'co-usdt', from: 'CO', min: 50000, buyMin: null, digital: true, unit: 'Dólar digital',
+  note: 'Recibes los USDT en tu wallet (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente.' };
+// USDC en Chile y Colombia: mismo precio que el USDT de ese país (solo cambia la moneda); se ofrece si está marcado en el panel.
+const usdcNote = 'Recibes los USDC en tu wallet (la red se confirma por WhatsApp). JM Cambios es un comerciante independiente.';
+export const USDC_CL_ROUTE = { ...USDT_ROUTE, id: 'cl-usdc', to: ['USDC'], name: 'USDC', cur: 'USDC', sym: 'USDC', digital: true, unit: 'Dólar digital', note: usdcNote };
+export const USDC_CO_ROUTE = { ...USDT_CO_ROUTE, id: 'co-usdc', to: ['USDC'], name: 'USDC', cur: 'USDC', sym: 'USDC', note: usdcNote };
 // USDT desde Brasil: comprar y vender. Precio = USDT en reales (Binance P2P o Bybit P2P vía CriptoYa) ± la ganancia del panel.
 // Mínimo: el equivalente a 10 USDT al precio del momento (se calcula al cargar).
 // En Brasil se presenta como "dólar digital" (sin mencionar Binance).

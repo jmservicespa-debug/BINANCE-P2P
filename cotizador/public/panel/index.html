@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=80">
+<link rel="stylesheet" href="/css/estilo.css?v=81">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -66,7 +66,7 @@
       <button class="btn save-rates">Guardar y publicar</button>
     </section>
     <section class="card" id="usdt" hidden aria-labelledby="h-usdt">
-      <div class="c-head"><span class="c-flags" data-flags="CL"></span><h2 id="h-usdt">USDT en Chile (comprar y vender)</h2></div>
+      <div class="c-head"><span class="c-flags" data-flags="CL"></span><h2 id="h-usdt">USDT y USDC en Chile (comprar y vender)</h2></div>
       <p class="c-txt"><b>Qué es:</b> el cliente te compra o te vende USDT con pesos chilenos.</p>
       <p class="c-txt"><b>Cómo se calcula:</b> precio de la referencia + tu ganancia al vender, o − tu ganancia al comprar.</p>
       <label class="f" for="u-srcsel">Referencia (USDT en pesos chilenos, vía CriptoYa)
@@ -96,6 +96,8 @@
         <span class="amount"><input id="u-sell" inputmode="decimal" autocomplete="off" value="100"></span></label>
       <div class="usdt-out num"><div><span class="muted">Pagarle</span><b id="u-bpay">—</b><span class="muted" id="u-bpay-d"></span></div></div>
       <div class="msg" id="u-msg" hidden></div>
+      <label class="switch"><input type="checkbox" id="u-usdc"> <b>Ofrecer también USDC</b></label>
+      <span class="muted">Marcado: junto al USDT aparece el USDC (con su logo y como "dólar digital"), al mismo precio que el USDT.</span>
       <label class="switch"><input type="checkbox" id="u-pub"> <b>Activo en el cotizador</b></label>
       <span class="muted">Marcado: los clientes ven USDT al elegir Chile. Sin marcar: no aparece.</span>
       <button class="btn ghost" id="u-save">Guardar</button>
@@ -132,7 +134,7 @@
       <button class="btn ghost" id="cb-save">Guardar</button>
     </section>
     <section class="card" id="usdtco" hidden aria-labelledby="h-usdtco">
-      <div class="c-head"><span class="c-flags" data-flags="CO"></span><h2 id="h-usdtco">USDT en Colombia (comprar y vender)</h2></div>
+      <div class="c-head"><span class="c-flags" data-flags="CO"></span><h2 id="h-usdtco">USDT y USDC en Colombia (comprar y vender)</h2></div>
       <p class="c-txt"><b>Qué es:</b> el cliente te compra o te vende USDT con pesos colombianos.</p>
       <p class="c-txt"><b>Cómo se calcula:</b> precio de la referencia + tu ganancia al vender, o − tu ganancia al comprar.</p>
       <label class="f" for="uc-srcsel">Referencia (USDT en pesos colombianos, vía CriptoYa)
@@ -153,6 +155,8 @@
       <div class="usdt-price">Vendes a <b class="num" id="uc-price">—</b> COP por USDT <span class="muted" id="uc-trm"></span></div>
       <div class="usdt-price">Compras a <b class="num" id="uc-bid">—</b> COP por USDT</div>
       <div class="msg" id="uc-msg" hidden></div>
+      <label class="switch"><input type="checkbox" id="uc-usdc"> <b>Ofrecer también USDC</b></label>
+      <span class="muted">Marcado: junto al USDT aparece el USDC (con su logo), al mismo precio que el USDT. En Colombia se muestra como "dólar digital", sin mencionar Binance.</span>
       <label class="switch"><input type="checkbox" id="uc-pub"> <b>Activo en el cotizador</b></label>
       <span class="muted">Marcado: los clientes ven USDT al elegir Colombia. Sin marcar: no aparece.</span>
       <button class="btn ghost" id="uc-save">Guardar</button>
@@ -482,6 +486,6 @@
     </section>
   </div>
 </main>
-<script type="module" src="/js/panel.js?v=80"></script>
+<script type="module" src="/js/panel.js?v=81"></script>
 </body>
 </html>

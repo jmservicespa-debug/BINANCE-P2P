@@ -329,7 +329,8 @@ export async function saveUsdtCfg(request, env, now = Date.now()) {
   if (manual !== null && !rateNum(manual)) return json({ error: 'El valor manual no es válido.' }, 400);
   const source = body?.source == null ? ((await loadUsdtCfg(env)).source ?? '') : srcOk(body.source);
   if (source === null) return json({ error: 'Elige una referencia válida.' }, 400);
-  const cfg = { margin_pct: margin, buy_margin_pct: buy, manual, source, published: body?.published === true };
+  const usdc = body?.usdc == null ? !!(await loadUsdtCfg(env)).usdc : body.usdc === true;
+  const cfg = { margin_pct: margin, buy_margin_pct: buy, manual, source, usdc, published: body?.published === true };
   await env.TASAS.put('usdt_cfg', JSON.stringify(cfg));
   return json({ ...cfg, ref: await usdtRef(env, manual, now) });
 }
@@ -360,7 +361,7 @@ export async function saveUsdtCoCfg(request, env, now = Date.now()) {
   if (!(Number(bmin) >= 1000 && Number(bmin) <= 100000000)) return json({ error: 'El mínimo al comprar no es válido.' }, 400);
   const source = srcOk(body?.source ?? '');
   if (source === null) return json({ error: 'Elige una referencia válida.' }, 400);
-  const cfg = { margin_pct: m, min, published: body?.published === true, buy_margin_pct: bm, buy_min: bmin, source };
+  const cfg = { margin_pct: m, min, published: body?.published === true, buy_margin_pct: bm, buy_min: bmin, source, usdc: body?.usdc === true };
   await env.TASAS.put('usdt_co_cfg', JSON.stringify(cfg));
   return json(cfg);
 }

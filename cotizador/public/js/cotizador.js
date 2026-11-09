@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, VE_CL_ROUTE, VE_CO_ROUTE, BR_VE_ROUTE, EU_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDC_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum, rateNum } from './rutas.js?v=80';
-import { setRewardsNav } from './rewards-nav.js?v=80';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, clpPerUsd, clpPerEur, eurForRoute, copPerVes, refFrom, cyFetch, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=80';
-import { esc, flag, flags } from './ui.js?v=80';
+import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, VE_CL_ROUTE, VE_CO_ROUTE, BR_VE_ROUTE, EU_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDC_BR_ROUTE, USDC_CL_ROUTE, USDC_CO_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum, rateNum } from './rutas.js?v=81';
+import { setRewardsNav } from './rewards-nav.js?v=81';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, clpPerUsd, clpPerEur, eurForRoute, copPerVes, refFrom, cyFetch, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=81';
+import { esc, flag, flags } from './ui.js?v=81';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -32,7 +32,7 @@ const GLOBE = '<svg class="flag" viewBox="0 0 24 24" aria-hidden="true"><circle 
 const rateOf = (id) => data?.routes.find((r) => r.id === id);
 const statusOf = (id) => rateOf(id)?.status ?? (rateOf(id)?.active ? 'on' : 'off');
 // Se muestran las rutas activas y las de mercado inestable (estas sin tasa: se pide por WhatsApp).
-const ALL = [...ROUTES, VE_CL_ROUTE, VE_CO_ROUTE, BR_VE_ROUTE, EU_CL_ROUTE, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, USDT_ROUTE, USDT_CO_ROUTE, USDT_BR_ROUTE, USDC_BR_ROUTE, ...GOLD_ROUTES, ...BTC_ROUTES];
+const ALL = [...ROUTES, VE_CL_ROUTE, VE_CO_ROUTE, BR_VE_ROUTE, EU_CL_ROUTE, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, USDT_ROUTE, USDT_CO_ROUTE, USDT_BR_ROUTE, USDC_BR_ROUTE, USDC_CL_ROUTE, USDC_CO_ROUTE, ...GOLD_ROUTES, ...BTC_ROUTES];
 // Brasil aparece como "Próximamente" hasta que se activa alguna de sus rutas (USDT desde Brasil) en el panel.
 const ORIG = { ...ORIGINS, BR: { name: 'Brasil', cur: 'BRL' }, VE: { name: 'Venezuela', cur: 'VES' }, US: { name: 'Estados Unidos', cur: 'USD' } };
 // Marca de Binance junto a "dólar Binance" (la gente conoce el USDT así). JM Cambios es comerciante independiente.
@@ -634,7 +634,8 @@ $('amount').oninput = calc;
 
 // USDT: el precio de Vita (CriptoYa) se lee desde el navegador del cliente y se le suma la ganancia.
 async function loadUsdt() {
-  if (!data?.usdt) { data.routes = data.routes.filter((x) => x.id !== USDT_ROUTE.id); return; }
+  data.routes = data.routes.filter((x) => x.id !== USDT_ROUTE.id && x.id !== USDC_CL_ROUTE.id);
+  if (!data?.usdt) return;
   let ref = null;
   try {
     const res = await cyFetch(USDT_URL, { cache: 'no-store' });
@@ -644,10 +645,10 @@ async function loadUsdt() {
   const price = ref ? ref.value * (1 + Number(data.usdt.margin_pct) / 100) : NaN;
   // Precio al que se le compran USDT al cliente: bid de Vita menos la ganancia al comprar.
   const buy = ref?.bid ? ref.bid * (1 - Number(data.usdt.buy_margin_pct ?? 8) / 100) : NaN;
-  data.routes = data.routes.filter((x) => x.id !== USDT_ROUTE.id);
   // Sin precio de referencia: la opción queda como "Mercado inestable" (tasa por WhatsApp).
-  data.routes.push({ id: USDT_ROUTE.id, status: Number.isFinite(price) ? 'on' : 'ask', rate: Number.isFinite(price) ? price.toFixed(2) : '',
-    buyRate: Number.isFinite(buy) && buy > 0 ? buy.toFixed(2) : '' });
+  const q = { status: Number.isFinite(price) ? 'on' : 'ask', rate: Number.isFinite(price) ? price.toFixed(2) : '', buyRate: Number.isFinite(buy) && buy > 0 ? buy.toFixed(2) : '' };
+  data.routes.push({ id: USDT_ROUTE.id, ...q });
+  if (data.usdt.usdc) data.routes.push({ id: USDC_CL_ROUTE.id, ...q });  // USDC: mismo precio que el USDT
 }
 
 // Brasil automático: la tasa sigue al mercado (CriptoYa, leído desde este navegador).
@@ -662,7 +663,7 @@ async function loadCoCl() {
 }
 // USDT desde Colombia: precio de Binance P2P Colombia (CriptoYa, leído en el navegador) + la ganancia del panel.
 async function loadUsdtCo() {
-  data.routes = data.routes.filter((x) => x.id !== USDT_CO_ROUTE.id);
+  data.routes = data.routes.filter((x) => x.id !== USDT_CO_ROUTE.id && x.id !== USDC_CO_ROUTE.id);
   if (!data?.usdt_co) return;
   USDT_CO_ROUTE.min = Number(data.usdt_co.min) || 50000;
   USDT_CO_ROUTE.buyMin = Number(data.usdt_co.buy_min) || USDT_CO_ROUTE.min;  // también le compramos USDT al cliente
@@ -672,8 +673,9 @@ async function loadUsdtCo() {
   } catch { ref = null; }
   const price = ref ? ref.value * (1 + Number(data.usdt_co.margin_pct) / 100) : NaN;
   const buy = bid ? bid * (1 - Number(data.usdt_co.buy_margin_pct ?? 3) / 100) : NaN;
-  data.routes.push({ id: USDT_CO_ROUTE.id, status: Number.isFinite(price) ? 'on' : 'ask', rate: Number.isFinite(price) ? price.toFixed(2) : '',
-    buyRate: Number.isFinite(buy) && buy > 0 ? buy.toFixed(2) : '' });
+  const q = { status: Number.isFinite(price) ? 'on' : 'ask', rate: Number.isFinite(price) ? price.toFixed(2) : '', buyRate: Number.isFinite(buy) && buy > 0 ? buy.toFixed(2) : '' };
+  data.routes.push({ id: USDT_CO_ROUTE.id, ...q });
+  if (data.usdt_co.usdc) { USDC_CO_ROUTE.min = USDT_CO_ROUTE.min; USDC_CO_ROUTE.buyMin = USDT_CO_ROUTE.buyMin; data.routes.push({ id: USDC_CO_ROUTE.id, ...q }); }
 }
 // USDT desde Brasil: precio de Binance P2P (o Bybit P2P) en reales vía CriptoYa ± las ganancias del panel.
 async function loadUsdtBr() {

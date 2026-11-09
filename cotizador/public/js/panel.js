@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=80';
-import { esc, flag, flags } from './ui.js?v=80';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, cyFetch, eurMarket, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=80';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=81';
+import { esc, flag, flags } from './ui.js?v=81';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, cyFetch, eurMarket, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=81';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -570,7 +570,7 @@ async function loadUsdt(fillInputs) {
   const { status, body } = await api('/api/usdt');
   if (status !== 200) return;
   usdt = body;
-  if (fillInputs) { $('u-margin').value = body.margin_pct; $('u-buy').value = body.buy_margin_pct ?? '8'; $('u-manual').value = body.manual || ''; $('u-pub').checked = !!body.published; }
+  if (fillInputs) { $('u-margin').value = body.margin_pct; $('u-buy').value = body.buy_margin_pct ?? '8'; $('u-manual').value = body.manual || ''; $('u-pub').checked = !!body.published; $('u-usdc').checked = !!body.usdc; }
   // Si el servidor no pudo leer CriptoYa, este navegador la consulta directamente (como al abrir su página).
   if (!usdt.ref?.value || !usdt.ref.bid || usdt.ref.source === 'manual') {
     try {
@@ -625,7 +625,7 @@ function renderUsdt() {
 ['u-margin', 'u-buy', 'u-qty', 'u-clp', 'u-sell'].forEach((id) => { $(id).oninput = renderUsdt; });
 
 async function saveUsdtCfg() {
-  const { status, body } = await api('/api/usdt', { method: 'PUT', body: JSON.stringify({ margin_pct: $('u-margin').value, buy_margin_pct: $('u-buy').value, manual: $('u-manual').value, source: $('u-srcsel').value, published: $('u-pub').checked }) });
+  const { status, body } = await api('/api/usdt', { method: 'PUT', body: JSON.stringify({ margin_pct: $('u-margin').value, buy_margin_pct: $('u-buy').value, manual: $('u-manual').value, source: $('u-srcsel').value, usdc: $('u-usdc').checked, published: $('u-pub').checked }) });
   const msg = $('u-msg');
   msg.hidden = false;
   if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
@@ -637,7 +637,8 @@ async function saveUsdtCfg() {
   renderUsdt();
 }
 $('u-save').onclick = saveUsdtCfg;
-$('u-pub').onchange = saveUsdtCfg;  // activar o desactivar se guarda al instante
+$('u-pub').onchange = saveUsdtCfg;
+$('u-usdc').onchange = saveUsdtCfg;  // activar o desactivar se guarda al instante
 setInterval(() => { if (!$('usdt').hidden) loadUsdt(false); }, 60 * 1000);
 
 // ------------------------------------------------------------------ Brasil automático
@@ -680,7 +681,7 @@ async function loadUsdtCo() {
   const { status, body } = await api('/api/usdt-co');
   if (status !== 200) return;
   $('uc-margin').value = body.margin_pct; $('uc-min').value = fmt(Number(body.min), 0); $('uc-pub').checked = !!body.published;
-  $('uc-buy').value = body.buy_margin_pct ?? '3'; $('uc-buymin').value = fmt(Number(body.buy_min ?? body.min), 0);
+  $('uc-buy').value = body.buy_margin_pct ?? '3'; $('uc-usdc').checked = !!body.usdc; $('uc-buymin').value = fmt(Number(body.buy_min ?? body.min), 0);
   try { const res = await cyFetch(USDT_COP_URL, { cache: 'no-store' }); const t = res.ok ? await res.text() : null; ucAuto = { ref: t && usdtCopRef(t), bid: t && usdtCopBid(t) }; ucList = t ? exchangesIn(t, COP_RANGE) : []; } catch { ucAuto = { ref: null, bid: null }; ucList = []; }
   fillSrc('uc-srcsel', ucList, body.source || '', 'Automático (Binance P2P)', 2);
   try { const r = await fetch('/api/indicadores', { cache: 'no-store' }); ucTrm = r.ok ? (await r.json())?.co?.trm?.value ?? null : null; } catch { ucTrm = null; }
@@ -697,7 +698,7 @@ function ucApply() {
 $('uc-srcsel').onchange = ucApply;
 async function saveUsdtCo() {
   const msg = $('uc-msg');
-  const { status, body } = await api('/api/usdt-co', { method: 'PUT', body: JSON.stringify({ margin_pct: $('uc-margin').value, min: $('uc-min').value, published: $('uc-pub').checked, buy_margin_pct: $('uc-buy').value, buy_min: $('uc-buymin').value, source: $('uc-srcsel').value }) });
+  const { status, body } = await api('/api/usdt-co', { method: 'PUT', body: JSON.stringify({ margin_pct: $('uc-margin').value, min: $('uc-min').value, published: $('uc-pub').checked, buy_margin_pct: $('uc-buy').value, buy_min: $('uc-buymin').value, source: $('uc-srcsel').value, usdc: $('uc-usdc').checked }) });
   msg.hidden = false;
   if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
   msg.className = 'msg'; msg.textContent = body.published ? 'Guardado: los clientes ya ven USDT desde Colombia.' : 'Guardado (USDT Colombia apagado en el cotizador).';
@@ -967,7 +968,7 @@ async function drawBrVe(rateTxt) {
   if (!$('estado-BRVE').value.trim()) $('estado-BRVE').value = brVeText();
   try { await document.fonts.load('800 60px Montserrat'); } catch { /* letra de respaldo */ }
   let img;
-  try { img = await loadImg('/assets/flyer-brasil.png?v=80'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
+  try { img = await loadImg('/assets/flyer-brasil.png?v=81'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
   const c = document.createElement('canvas'); c.width = 1080; c.height = 1080;
   const g = c.getContext('2d');
   g.drawImage(img, 0, 0, 1080, 1080);
@@ -1095,4 +1096,4 @@ $('jr-pub').onchange = async () => {
 
 $('uc-margin').oninput = ucCalc; $('uc-buy').oninput = ucCalc;
 $('uc-save').onclick = saveUsdtCo;
-$('uc-pub').onchange = saveUsdtCo;
+$('uc-pub').onchange = saveUsdtCo; $('uc-usdc').onchange = saveUsdtCo;

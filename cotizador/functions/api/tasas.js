@@ -9,9 +9,9 @@ export const onRequestGet = async ({ env }) => {
   delete view.bcv.errors;  // los motivos de falla solo se ven en el panel
   delete view.bcv_eur.errors;
   const cfg = await loadUsdtCfg(env);
-  if (cfg.published) view.usdt = { margin_pct: cfg.margin_pct, buy_margin_pct: cfg.buy_margin_pct, ...(cfg.source ? { source: cfg.source } : {}) };
+  if (cfg.published) view.usdt = { margin_pct: cfg.margin_pct, buy_margin_pct: cfg.buy_margin_pct, ...(cfg.source ? { source: cfg.source } : {}), ...(cfg.usdc ? { usdc: true } : {}) };
   const co = await loadUsdtCoCfg(env);
-  if (co.published) view.usdt_co = { margin_pct: co.margin_pct, min: Number(co.min), buy_margin_pct: co.buy_margin_pct ?? '3', buy_min: Number(co.buy_min ?? co.min), ...(co.source ? { source: co.source } : {}) };
+  if (co.published) view.usdt_co = { margin_pct: co.margin_pct, min: Number(co.min), buy_margin_pct: co.buy_margin_pct ?? '3', buy_min: Number(co.buy_min ?? co.min), ...(co.source ? { source: co.source } : {}), ...(co.usdc ? { usdc: true } : {}) };
   const br = await loadUsdtBrCfg(env);
   if (br.published) view.usdt_br = { margin_pct: br.margin_pct, buy_margin_pct: br.buy_margin_pct, ...(br.source ? { source: br.source } : {}), ...(br.usdc ? { usdc: true } : {}) };
   const gold = await loadGoldCfg(env);
