@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=82';
-import { esc, flag, flags } from './ui.js?v=82';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, cyFetch, eurMarket, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=82';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=83';
+import { esc, flag, flags } from './ui.js?v=83';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, cyFetch, eurMarket, clpEur, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=83';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -29,7 +29,7 @@ async function api(path, opts = {}) {
 
 function showEditor(on) {
   $('login').hidden = on;
-  ['power', 'mkt', 'tasas-CL', 'tasas-CO', 'tasas-EU', 'bcvsec', 'usdt', 'usdtco', 'brco', 'cobr', 'brcl', 'uscl', 'veco', 'brve', 'eucl', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  ['power', 'mkt', 'tasas-CL', 'tasas-CO', 'tasas-EU', 'bcvsec', 'usdt', 'usdtco', 'brco', 'cobr', 'brcl', 'uscl', 'veco', 'brve', 'eucl', 'cleu', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
   document.querySelectorAll('.grupo, #gnav').forEach((el) => { el.hidden = !on; });
 }
 
@@ -52,6 +52,7 @@ async function start() {
   loadVeCo();
   loadBrVe();
   loadEuCl();
+  loadClEu();
   loadBrCo();
   loadCoBr();
   loadBrCl();
@@ -934,6 +935,38 @@ async function saveEuCl() {
   loadEuCl();
 }
 $('ec-mode').onchange = ecCalc;
+
+// ------------------------------------------------------------------ Chile → Europa
+let ceWise = null;
+function ceCalc() {
+  const n = (id) => Number(String($(id).value || '0').replace(/\./g, '').replace(',', '.'));
+  const fixed = n('ce-fixed'), okF = fixed >= 300 && fixed <= 3000, p = Number(String($('ce-profit').value || '0').replace(',', '.'));
+  const fijo = $('ce-mode').value === 'fijo';
+  const base = fijo ? (okF ? fixed : 0) : ceWise?.value || (okF ? fixed : 0);
+  const src = fijo ? 'cambio fijo' : ceWise ? `${ceWise.source === 'wise' ? 'Wise' : 'otra fuente pública'}${ceWise.stale ? ', último dato' : ''}` : 'cambio fijo (respaldo)';
+  $('ce-ref').textContent = base ? `1 EUR = ${fmt(base, 2)} CLP (${src})` : '—';
+  if (!base || !(p >= 0 && p < 50)) { $('ce-rate').textContent = !base ? (fijo ? 'Escribe el cambio fijo (pesos por 1 euro, ej. 1050).' : 'No se pudo leer el cambio de Wise ahora: escribe un cambio fijo como respaldo.') : 'Revisa tu comisión (0 a 50 %).'; return; }
+  const rate = base / (1 - p / 100);
+  $('ce-rate').innerHTML = `100.000 CLP − ${fmt(p, 2)} % = ${fmt(100000 * (1 - p / 100), 0)} CLP · Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100.000 CLP = <b class="num">${fmt(100000 / rate, 2)} EUR</b>`;
+}
+async function loadClEu() {
+  const { status, body } = await api('/api/cl-eu');
+  if (status !== 200) return;
+  $('ce-mode').value = body.mode === 'fijo' ? 'fijo' : 'auto'; $('ce-fixed').value = body.fixed || ''; $('ce-profit').value = body.profit_pct ?? '0'; $('ce-min').value = fmt(Number(body.min), 0); $('ce-pub').checked = !!body.published;
+  ceWise = await clpEur();
+  ceCalc();
+}
+async function saveClEu() {
+  const msg = $('ce-msg');
+  const { status, body } = await api('/api/cl-eu', { method: 'PUT', body: JSON.stringify({ mode: $('ce-mode').value, fixed: $('ce-fixed').value, profit_pct: $('ce-profit').value || '0', min: $('ce-min').value, published: $('ce-pub').checked }) });
+  msg.hidden = false;
+  if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
+  msg.className = 'msg'; msg.textContent = body.published ? `Guardado (${body.mode === 'fijo' ? 'cambio fijo' : 'automático'}): los clientes ya ven envíos desde Chile a Europa.` : 'Guardado (ruta Chile → Europa apagada).';
+  loadClEu();
+}
+['ce-fixed', 'ce-profit'].forEach((id) => { $(id).oninput = ceCalc; });
+$('ce-mode').onchange = ceCalc;
+$('ce-save').onclick = saveClEu; $('ce-pub').onchange = saveClEu;
 ['ec-eur', 'ec-profit', 'ec-prem'].forEach((id) => { $(id).oninput = ecCalc; });
 $('ec-save').onclick = saveEuCl; $('ec-pub').onchange = saveEuCl;
 
@@ -968,7 +1001,7 @@ async function drawBrVe(rateTxt) {
   if (!$('estado-BRVE').value.trim()) $('estado-BRVE').value = brVeText();
   try { await document.fonts.load('800 60px Montserrat'); } catch { /* letra de respaldo */ }
   let img;
-  try { img = await loadImg('/assets/flyer-brasil.png?v=82'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
+  try { img = await loadImg('/assets/flyer-brasil.png?v=83'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
   const c = document.createElement('canvas'); c.width = 1080; c.height = 1080;
   const g = c.getContext('2d');
   g.drawImage(img, 0, 0, 1080, 1080);

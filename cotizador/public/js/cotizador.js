@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, VE_CL_ROUTE, VE_CO_ROUTE, BR_VE_ROUTE, EU_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDC_BR_ROUTE, USDC_CL_ROUTE, USDC_CO_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum, rateNum } from './rutas.js?v=82';
-import { setRewardsNav } from './rewards-nav.js?v=82';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, clpPerUsd, clpPerEur, eurForRoute, copPerVes, refFrom, cyFetch, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=82';
-import { esc, flag, flags } from './ui.js?v=82';
+import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, VE_CL_ROUTE, VE_CO_ROUTE, BR_VE_ROUTE, EU_CL_ROUTE, CL_EU_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDC_BR_ROUTE, USDC_CL_ROUTE, USDC_CO_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum, rateNum } from './rutas.js?v=83';
+import { setRewardsNav } from './rewards-nav.js?v=83';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, clpPerUsd, clpPerEur, eurForRoute, clEuRate, copPerVes, refFrom, cyFetch, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=83';
+import { esc, flag, flags } from './ui.js?v=83';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -32,7 +32,7 @@ const GLOBE = '<svg class="flag" viewBox="0 0 24 24" aria-hidden="true"><circle 
 const rateOf = (id) => data?.routes.find((r) => r.id === id);
 const statusOf = (id) => rateOf(id)?.status ?? (rateOf(id)?.active ? 'on' : 'off');
 // Se muestran las rutas activas y las de mercado inestable (estas sin tasa: se pide por WhatsApp).
-const ALL = [...ROUTES, VE_CL_ROUTE, VE_CO_ROUTE, BR_VE_ROUTE, EU_CL_ROUTE, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, USDT_ROUTE, USDT_CO_ROUTE, USDT_BR_ROUTE, USDC_BR_ROUTE, USDC_CL_ROUTE, USDC_CO_ROUTE, ...GOLD_ROUTES, ...BTC_ROUTES];
+const ALL = [...ROUTES, VE_CL_ROUTE, VE_CO_ROUTE, BR_VE_ROUTE, EU_CL_ROUTE, CL_EU_ROUTE, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, USDT_ROUTE, USDT_CO_ROUTE, USDT_BR_ROUTE, USDC_BR_ROUTE, USDC_CL_ROUTE, USDC_CO_ROUTE, ...GOLD_ROUTES, ...BTC_ROUTES];
 // Brasil aparece como "Próximamente" hasta que se activa alguna de sus rutas (USDT desde Brasil) en el panel.
 const ORIG = { ...ORIGINS, BR: { name: 'Brasil', cur: 'BRL' }, VE: { name: 'Venezuela', cur: 'VES' }, US: { name: 'Estados Unidos', cur: 'USD' } };
 // Marca de Binance junto a "dólar Binance" (la gente conoce el USDT así). JM Cambios es comerciante independiente.
@@ -205,7 +205,8 @@ function calc() {
   // Cargo fijo (Estados Unidos → Chile): no se muestra aparte, va dentro de la tasa de ese monto: tasa × (monto − cargo) ÷ monto.
   const fee = Number(r.fee) || 0;
   const tasa = fee && send > fee ? (rateNum(rate) * (send - fee) / send).toFixed(2) : rate;
-  const get = Math.round(mode === 'send' ? (fee ? send * rateNum(tasa) : convert(r, rate, send)) : target);
+  const k = 10 ** (r.dec || 0);  // euros y otras monedas con centavos: se redondea al centavo
+  const get = Math.round((mode === 'send' ? (fee ? send * rateNum(tasa) : convert(r, rate, send)) : target) * k) / k;
   if (belowMin(r, send)) { minimum(r, o, send); return; }
   $('r-big').classList.remove('ask');
   $('r-free').hidden = false;
@@ -764,6 +765,14 @@ async function loadBrCl() {
 }
 // Estados Unidos → Chile: dólares (menos el cargo fijo) vendidos a lo que paga Vita por USDT, menos la comisión.
 // Europa → Chile: euros − ganancia → USDT (Binance P2P · Wise, precio del panel) → pesos chilenos al precio de Vita.
+// Chile → Europa: pesos − comisión, a euros al cambio de Wise (o el fijo del panel).
+async function loadClEu() {
+  data.routes = data.routes.filter((x) => x.id !== CL_EU_ROUTE.id);
+  if (!data?.cl_eu) return;
+  CL_EU_ROUTE.min = Number(data.cl_eu.min) || 20000;
+  const got = await clEuRate(data.cl_eu);
+  data.routes.push({ id: CL_EU_ROUTE.id, status: got ? 'on' : 'ask', rate: got ? got.rate.toFixed(2) : '', active: true });
+}
 async function loadEuCl() {
   data.routes = data.routes.filter((x) => x.id !== EU_CL_ROUTE.id);
   if (!data?.eu_cl) return;
@@ -812,7 +821,7 @@ async function load() {
   } catch {
     if (!data) { $('error').hidden = false; $('error').textContent = 'No pudimos cargar las tasas. Revisa tu conexión o escríbenos por WhatsApp.'; data = { routes: [], bcv: null, bcv_eur: null }; }
   }
-  await Promise.all([loadUsdt(), loadUsdtCo(), loadUsdtBr(), loadGold(), loadBtc(), loadVeCl(), loadVeCo(), loadBrVe(), loadBrCo(), loadCoBr(), loadBrCl(), loadUsCl(), loadEuCl(), loadBrl(), loadCoCl()]);
+  await Promise.all([loadUsdt(), loadUsdtCo(), loadUsdtBr(), loadGold(), loadBtc(), loadVeCl(), loadVeCo(), loadBrVe(), loadBrCo(), loadCoBr(), loadBrCl(), loadUsCl(), loadEuCl(), loadClEu(), loadBrl(), loadCoCl()]);
   // Botón de JM Rewards: solo aparece si se activó en el panel.
   $('jmr').hidden = !data.rewards?.url;
   if (data.rewards?.url) $('jmr').href = data.rewards.url;

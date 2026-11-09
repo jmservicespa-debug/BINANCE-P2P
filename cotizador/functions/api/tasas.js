@@ -1,4 +1,4 @@
-import { isPaused, json, loadBtcCfg, loadBrCoCfg, brCoTotalPct, loadCoBrCfg, loadBrClCfg, loadUsClCfg, loadGoldCfg, loadVeClCfg, loadVeCoCfg, loadBrVeCfg, loadEuClCfg, loadRewardsCfg, loadUsdtBrCfg, loadUsdtCfg, loadUsdtCoCfg, publicView, REWARDS_URL, saveRates } from '../../lib/server.js';
+import { isPaused, json, loadBtcCfg, loadBrCoCfg, brCoTotalPct, loadCoBrCfg, loadBrClCfg, loadUsClCfg, loadGoldCfg, loadVeClCfg, loadVeCoCfg, loadBrVeCfg, loadEuClCfg, loadClEuCfg, loadRewardsCfg, loadUsdtBrCfg, loadUsdtCfg, loadUsdtCoCfg, publicView, REWARDS_URL, saveRates } from '../../lib/server.js';
 
 // Público: tasas activas y dólar y euro BCV para el cotizador.
 // USDT desde Chile: aparece solo si está activado en el panel (para todos por igual).
@@ -28,6 +28,8 @@ export const onRequestGet = async ({ env }) => {
   if (cobr.published) view.co_br = { profit_pct: cobr.profit_pct, min: Number(cobr.min), source: cobr.source };
   const brco = await loadBrCoCfg(env);
   if (brco.published) view.br_co = { margin_pct: brCoTotalPct(brco), min: Number(brco.min), source: brco.source };
+  const cleu = await loadClEuCfg(env);
+  if (cleu.published) view.cl_eu = { profit_pct: cleu.profit_pct, min: Number(cleu.min), mode: cleu.mode || 'auto', fixed: cleu.fixed || '' };
   const eucl = await loadEuClCfg(env);
   if (eucl.published) view.eu_cl = { profit_pct: eucl.profit_pct, eur_usdt: eucl.eur_usdt || '', min: Number(eucl.min), mode: eucl.mode || 'auto', premium_pct: eucl.premium_pct ?? '0' };
   const brve = await loadBrVeCfg(env);

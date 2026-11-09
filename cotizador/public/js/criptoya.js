@@ -194,6 +194,20 @@ export async function clpPerBrl(source, profitPct, fetchFn = cyFetch) {
 }
 // Estados Unidos → Chile: precio de venta del USDT en Vita Wallet (el mismo de USDT Chile; si Vita no viene, Binance P2P o la mediana), menos tu comisión.
 // Tasa = pesos chilenos por dólar (el cargo fijo se descuenta aparte, antes de convertir).
+// Chile → Europa: pesos chilenos por euro (cambio de Wise) leído por nuestro servidor, y la tasa con tu comisión.
+export async function clpEur(fetchFn = fetch) {
+  try { const r = await fetchFn('/api/clp-eur', { cache: 'no-store' }); const d = r.ok ? await r.json() : null; return d?.value ? d : null; } catch { return null; }
+}
+// Tasa publicada = pesos por euro ÷ (1 − comisión): pesos ÷ tasa = euros que llegan. Fijo o automático (Wise, con el fijo de respaldo).
+export async function clEuRate(cfg, fetchFn = fetch) {
+  const fixed = Number(String(cfg?.fixed ?? '').replace(',', '.')), okF = fixed >= 300 && fixed <= 3000;
+  const k = 1 - Number(cfg?.profit_pct || 0) / 100;
+  if (!(k > 0)) return null;
+  if (cfg?.mode === 'fijo') return okF ? { rate: fixed / k, base: fixed, source: 'fijo' } : null;
+  const w = await clpEur(fetchFn);
+  if (w) return { rate: w.value / k, base: w.value, source: w.source, stale: w.stale };
+  return okF ? { rate: fixed / k, base: fixed, source: 'fijo (respaldo)' } : null;
+}
 // Euros por USDT en el mercado (Kraken/Binance/Frankfurter), leído por nuestro servidor. null si no hay dato.
 export async function eurMarket(fetchFn = fetch) {
   try { const r = await fetchFn('/api/usdt-eur', { cache: 'no-store' }); const d = r.ok ? await r.json() : null; return d?.value ? d : null; } catch { return null; }

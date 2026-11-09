@@ -698,3 +698,26 @@ test('USDC en Chile y Colombia: se activa con la casilla del panel y se publica 
   assert.equal((await putCl({ request: req('/api/usdt', { method: 'PUT', cookie, body: { margin_pct: '3', buy_margin_pct: '3', published: true } }), env: e })).status, 200);
   assert.equal((await (await getRates({ env: e })).json()).usdt.usdc, true);  // sin el campo, se mantiene lo guardado
 });
+
+test('Chile → Europa: cambio de Wise (respaldo er-api), comisión y modo fijo', async () => {
+  noBcv();
+  const { clpPerEurRate } = await import('../lib/server.js');
+  const { onRequestPut: putClEu } = await import('../functions/api/cl-eu.js');
+  const { clEuRate } = await import('../public/js/criptoya.js');
+  const e = await env();
+  const wise = async (u) => ({ ok: String(u).includes('wise.com'), json: async () => ({ source: 'EUR', target: 'CLP', value: 1050.5 }) });
+  assert.deepEqual(await clpPerEurRate(e, 4_000_000, wise), { value: 1050.5, source: 'wise', ts: 4_000_000 });
+  const e2 = await env();
+  const er = async (u) => (String(u).includes('er-api') ? { ok: true, json: async () => ({ rates: { CLP: 1049 } }) } : { ok: false, json: async () => ({}) });
+  assert.equal((await clpPerEurRate(e2, 4_000_000, er)).source, 'er-api');
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await putClEu({ request: req('/api/cl-eu', { method: 'PUT', cookie, body: { mode: 'fijo', fixed: '', profit_pct: '3', min: '20.000', published: true } }), env: e })).status, 400);
+  assert.equal((await putClEu({ request: req('/api/cl-eu', { method: 'PUT', cookie, body: { mode: 'auto', fixed: '1.050', profit_pct: '3', min: '20.000', published: true } }), env: e })).status, 200);
+  assert.deepEqual((await (await getRates({ env: e })).json()).cl_eu, { profit_pct: '3', min: 20000, mode: 'auto', fixed: '1050' });
+  const api = async () => ({ ok: true, json: async () => ({ value: 1000, source: 'wise' }) });
+  const down = async () => ({ ok: false, json: async () => ({}) });
+  assert.ok(Math.abs((await clEuRate({ mode: 'auto', profit_pct: '3', fixed: '1050' }, api)).rate - 1000 / 0.97) < 1e-9);
+  assert.ok(Math.abs((await clEuRate({ mode: 'auto', profit_pct: '3', fixed: '1050' }, down)).rate - 1050 / 0.97) < 1e-9);
+  assert.ok(Math.abs((await clEuRate({ mode: 'fijo', profit_pct: '0', fixed: '1050' }, api)).rate - 1050) < 1e-9);
+});

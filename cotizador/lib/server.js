@@ -643,6 +643,52 @@ export async function eurMarketView(env, now = Date.now()) {
   return got ? json(got) : json({ error: 'sin datos' }, 502);
 }
 // mode: 'auto' = precio de mercado × (1 + sobreprecio Wise) · 'fijo' = el precio en euros que escribes.
+// ------------------------------------------------------------------ Chile → Europa (cambio peso chileno → euro)
+// Pesos chilenos por euro: tipo de cambio de Wise (el de su página pública); respaldo: open.er-api.com. Guardado 10 min.
+const CLPEUR_SOURCES = [
+  ['wise', 'https://wise.com/rates/live?source=EUR&target=CLP', (d) => Number(d?.value)],
+  ['er-api', 'https://open.er-api.com/v6/latest/EUR', (d) => Number(d?.rates?.CLP)],
+];
+export async function clpPerEurRate(env, now = Date.now(), fetchFn = fetch) {
+  let cached = null;
+  try { cached = JSON.parse((await env.TASAS.get('clp_eur')) || 'null'); } catch { cached = null; }
+  if (cached && now - cached.ts < 10 * 60 * 1000) return cached;
+  for (const [source, url, pick] of CLPEUR_SOURCES) {
+    try {
+      const r = await fetchFn(url, { signal: AbortSignal.timeout(6000), headers: { accept: 'application/json' } });
+      const v = r.ok ? pick(await r.json()) : NaN;
+      if (v >= 300 && v <= 3000) { const out = { value: v, source, ts: now }; await env.TASAS.put('clp_eur', JSON.stringify(out)); return out; }
+    } catch { /* se prueba la siguiente fuente */ }
+  }
+  return cached && now - cached.ts < 6 * 60 * 60 * 1000 ? { ...cached, stale: true } : null;
+}
+export async function clpEurView(env, now = Date.now()) {
+  const got = await clpPerEurRate(env, now);
+  return got ? json(got) : json({ error: 'sin datos' }, 502);
+}
+// mode: 'auto' = cambio de Wise · 'fijo' = pesos por euro que escribes.
+export const CLEU_CFG = { profit_pct: '0', min: '20000', mode: 'auto', fixed: '', published: false };
+export const loadClEuCfg = (env) => loadCfg(env, 'cleu_cfg', CLEU_CFG);
+export async function clEuView(request, env, now = Date.now()) {
+  if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
+  return json(await loadClEuCfg(env));
+}
+export async function saveClEuCfg(request, env, now = Date.now()) {
+  const { body, error } = await adminBody(request, env, now);
+  if (error) return error;
+  const p = pctOk(body?.profit_pct ?? '0');
+  if (p === null) return json({ error: 'Tu comisión debe estar entre 0 y 50 %.' }, 400);
+  const mode = body?.mode === 'fijo' ? 'fijo' : 'auto';
+  const fixed = String(body?.fixed ?? '').trim().replace(/\./g, '').replace(',', '.');
+  if (fixed !== '' && !(Number(fixed) >= 300 && Number(fixed) <= 3000)) return json({ error: 'El cambio fijo son los pesos por 1 euro (ej. 1050).' }, 400);
+  if (mode === 'fijo' && fixed === '') return json({ error: 'En modo fijo escribe cuántos pesos vale 1 euro (ej. 1050).' }, 400);
+  const min = String(body?.min ?? '').replace(/\D/g, '');
+  if (!(Number(min) >= 1000 && Number(min) <= 100000000)) return json({ error: 'El mínimo no es válido.' }, 400);
+  const cfg = { profit_pct: p, min, mode, fixed, published: body?.published === true };
+  await env.TASAS.put('cleu_cfg', JSON.stringify(cfg));
+  return json(cfg);
+}
+
 export const EUCL_CFG = { profit_pct: '0', eur_usdt: '', min: '20', mode: 'auto', premium_pct: '1.5', published: false };
 export const loadEuClCfg = (env) => loadCfg(env, 'eucl_cfg', EUCL_CFG);
 export async function euClView(request, env, now = Date.now()) {

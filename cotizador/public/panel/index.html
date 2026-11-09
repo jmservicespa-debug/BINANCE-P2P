@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=82">
+<link rel="stylesheet" href="/css/estilo.css?v=83">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -64,6 +64,30 @@
       <div class="routes" id="routes-CL"></div>
       <div class="msg save-msg" hidden></div>
       <button class="btn save-rates">Guardar y publicar</button>
+    </section>
+    <section class="card" id="cleu" hidden aria-labelledby="h-cleu">
+      <div class="c-head"><span class="c-flags" data-flags="CL,EU"></span><h2 id="h-cleu">Envío Chile → Europa (automático)</h2></div>
+      <p class="c-txt"><b>Qué es:</b> el cliente paga pesos chilenos y recibe euros.</p>
+      <p class="c-txt"><b>Cómo se calcula:</b> pesos − tu comisión, pasados a euros al cambio de Wise. Tasa = pesos por euro ÷ (1 − comisión). Pesos ÷ tasa = euros.</p>
+      <label class="f" for="ce-mode">Cambio peso chileno → euro
+        <select id="ce-mode"><option value="auto">Automático (cambio de Wise)</option><option value="fijo">Fijo (lo escribo yo)</option></select></label>
+      <div class="row2">
+        <label class="f" for="ce-fixed">Cambio fijo (pesos por 1 euro)
+          <span class="amount"><input id="ce-fixed" inputmode="decimal" autocomplete="off" placeholder="Ej. 1050"></span></label>
+        <label class="f" for="ce-profit">Tu comisión (%)
+          <span class="amount"><input id="ce-profit" inputmode="decimal" autocomplete="off"></span></label>
+      </div>
+      <div class="row2">
+        <label class="f" for="ce-min">Mínimo (CLP)
+          <span class="amount"><input id="ce-min" inputmode="numeric" autocomplete="off"></span></label>
+      </div>
+      <span class="muted">Automático: el cambio que publica Wise (si no responde, otra fuente pública). El cambio fijo también sirve de respaldo.</span>
+      <div class="usdt-ref"><span class="muted">Precio de referencia</span><b class="num" id="ce-ref">—</b></div>
+      <div class="usdt-price" id="ce-rate">—</div>
+      <div class="msg" id="ce-msg" hidden></div>
+      <label class="switch"><input type="checkbox" id="ce-pub"> <b>Activo en el cotizador</b></label>
+      <span class="muted">Marcado: desde Chile aparece Europa como destino. Sin marcar: no aparece.</span>
+      <button class="btn ghost" id="ce-save">Guardar</button>
     </section>
     <section class="card" id="usdt" hidden aria-labelledby="h-usdt">
       <div class="c-head"><span class="c-flags" data-flags="CL"></span><h2 id="h-usdt">USDT y USDC en Chile (comprar y vender)</h2></div>
@@ -486,6 +510,6 @@
     </section>
   </div>
 </main>
-<script type="module" src="/js/panel.js?v=82"></script>
+<script type="module" src="/js/panel.js?v=83"></script>
 </body>
 </html>
