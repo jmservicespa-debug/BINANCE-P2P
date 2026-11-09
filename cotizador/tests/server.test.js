@@ -641,10 +641,27 @@ test('Europa → Chile: (1 − ganancia) ÷ euros por USDT (Wise) × Vita CLP', 
   const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
   const cookie = ok.headers.get('set-cookie').split(';')[0];
   assert.equal((await putEuCl({ request: req('/api/eu-cl', { method: 'PUT', cookie, body: { ...body, eur_usdt: '93' } }), env: e })).status, 400);
+  assert.equal((await putEuCl({ request: req('/api/eu-cl', { method: 'PUT', cookie, body: { ...body, eur_usdt: '' } }), env: e })).status, 200);
   assert.equal((await putEuCl({ request: req('/api/eu-cl', { method: 'PUT', cookie, body }), env: e })).status, 200);
   assert.deepEqual((await (await getRates({ env: e })).json()).eu_cl, { profit_pct: '3', eur_usdt: '0.93', min: 20 });
   const fake = async () => ({ ok: true, text: async () => '{"vitawallet":{"ask":990,"bid":980}}' });
   const r = await clpPerEur('0.93', '3', fake);
   assert.ok(Math.abs(r.rate - 990 * 0.97 / 0.93) < 1e-9);
   assert.equal(await clpPerEur('', '3', fake), null);
+});
+
+test('Precio USDT en euros con Wise: mediana de los primeros anuncios, guarda 2 min y usa el último si Binance falla', async () => {
+  const { eurUsdtWise, wisePrice } = await import('../lib/server.js');
+  assert.equal(wisePrice({ data: [{ adv: { price: '0.95' } }, { adv: { price: '0.93' } }, { adv: { price: '0.94' } }, { adv: { price: '9' } }] }), 0.94);
+  assert.equal(wisePrice({ data: [] }), null);
+  const e = await env();
+  let sent = null, calls = 0;
+  const ok = async (u, o) => { calls += 1; sent = JSON.parse(o.body); return { ok: true, json: async () => ({ data: [{ adv: { price: '0.93' } }, { adv: { price: '0.94' } }] }) }; };
+  const t0 = 2_000_000;
+  const a = await eurUsdtWise(e, t0, ok);
+  assert.equal(a.value, 0.94); assert.deepEqual(sent.payTypes, ['Wise']); assert.equal(sent.tradeType, 'BUY'); assert.equal(sent.fiat, 'EUR');
+  await eurUsdtWise(e, t0 + 60_000, ok); assert.equal(calls, 1);
+  const bad = async () => { throw new Error('caído'); };
+  const s = await eurUsdtWise(e, t0 + 10 * 60_000, bad); assert.equal(s.value, 0.94); assert.equal(s.stale, true);
+  assert.equal(await eurUsdtWise(e, t0 + 60 * 60_000, bad), null);
 });

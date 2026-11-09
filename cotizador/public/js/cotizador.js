@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, VE_CL_ROUTE, VE_CO_ROUTE, BR_VE_ROUTE, EU_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDC_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum, rateNum } from './rutas.js?v=78';
-import { setRewardsNav } from './rewards-nav.js?v=78';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, clpPerUsd, clpPerEur, copPerVes, refFrom, cyFetch, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=78';
-import { esc, flag, flags } from './ui.js?v=78';
+import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, VE_CL_ROUTE, VE_CO_ROUTE, BR_VE_ROUTE, EU_CL_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDC_BR_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum, rateNum } from './rutas.js?v=79';
+import { setRewardsNav } from './rewards-nav.js?v=79';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, clpPerUsd, clpPerEur, eurWise, copPerVes, refFrom, cyFetch, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=79';
+import { esc, flag, flags } from './ui.js?v=79';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -766,7 +766,8 @@ async function loadEuCl() {
   data.routes = data.routes.filter((x) => x.id !== EU_CL_ROUTE.id);
   if (!data?.eu_cl) return;
   EU_CL_ROUTE.min = Number(data.eu_cl.min) || 20;
-  const got = await clpPerEur(data.eu_cl.eur_usdt, data.eu_cl.profit_pct);
+  const w = await eurWise();  // automático: Binance P2P con Wise; si no responde, el respaldo manual del panel
+  const got = await clpPerEur(w?.value ?? data.eu_cl.eur_usdt, data.eu_cl.profit_pct);
   data.routes.push({ id: EU_CL_ROUTE.id, status: got ? 'on' : 'ask', rate: got ? got.rate.toFixed(2) : '', active: true });
 }
 async function loadUsCl() {

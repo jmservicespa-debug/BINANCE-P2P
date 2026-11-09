@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=78';
-import { esc, flag, flags } from './ui.js?v=78';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, cyFetch, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=78';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=79';
+import { esc, flag, flags } from './ui.js?v=79';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, cyFetch, eurWise, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=79';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -897,12 +897,14 @@ $('vo-profit').oninput = voCalc; $('vo-src').onchange = voCalc; $('vo-cop').onch
 $('vo-save').onclick = saveVeCo; $('vo-pub').onchange = saveVeCo;
 
 // ------------------------------------------------------------------ Europa → Chile
-let ecClp = null;
+let ecClp = null, ecWise = null;
 function ecCalc() {
   const n = (id) => Number(String($(id).value || '0').replace(',', '.'));
-  const eur = n('ec-eur'), p = n('ec-profit');
-  $('ec-ref').textContent = ecClp ? `Vita Wallet vende el USDT a ${fmt(ecClp, 2)} CLP${eur ? ` · 1 USDT = ${fmt(eur, 4)} EUR (Wise)` : ''}` : '—';
-  if (!ecClp || !(eur >= 0.5 && eur <= 2) || !(p >= 0 && p <= 50)) { $('ec-rate').textContent = !ecClp ? 'No se pudo leer Vita ahora: el cotizador mostrará "Mercado inestable".' : 'Escribe el precio del USDT en euros (ej. 0.93) y tu ganancia (0 a 50 %).'; return; }
+  const manual = n('ec-eur'), p = n('ec-profit');
+  const eur = ecWise?.value || (manual >= 0.5 && manual <= 2 ? manual : 0);
+  const src = ecWise?.value ? `Binance P2P · Wise${ecWise.stale ? ' (último dato)' : ''}` : eur ? 'respaldo manual' : '';
+  $('ec-ref').textContent = ecClp ? `Vita Wallet vende el USDT a ${fmt(ecClp, 2)} CLP${eur ? ` · 1 USDT = ${fmt(eur, 4)} EUR (${src})` : ''}` : '—';
+  if (!ecClp || !eur || !(p >= 0 && p <= 50)) { $('ec-rate').textContent = !ecClp ? 'No se pudo leer Vita ahora: el cotizador mostrará "Mercado inestable".' : !eur ? 'No se pudo leer el precio de Binance P2P con Wise ahora. Si quieres, escribe un respaldo manual.' : 'Revisa tu ganancia (0 a 50 %).'; return; }
   const rate = ecClp * (1 - p / 100) / eur;
   $('ec-rate').innerHTML = `100 EUR − ${fmt(p, 2)} % = ${fmt(100 * (1 - p / 100), 2)} EUR = ${fmt(100 * (1 - p / 100) / eur, 2)} USDT · Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100 EUR = <b class="num">${fmt(100 * rate, 0)} CLP</b>`;
 }
@@ -910,8 +912,10 @@ async function loadEuCl() {
   const { status, body } = await api('/api/eu-cl');
   if (status !== 200) return;
   $('ec-eur').value = body.eur_usdt || ''; $('ec-profit').value = body.profit_pct ?? '0'; $('ec-min').value = fmt(Number(body.min), 0); $('ec-pub').checked = !!body.published;
-  if (body.eur_updated) $('ec-upd').textContent = `Precio Wise anotado el ${new Date(body.eur_updated).toLocaleString('es-CL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} · actualízalo cuando cambie (Binance P2P → Comprar USDT → EUR → Wise).`;
-  try { const r = await cyFetch(USDT_URL, { cache: 'no-store' }); ecClp = r.ok ? parseCriptoYa(await r.text())?.value ?? null : null; } catch { ecClp = null; }
+  const [r, w] = await Promise.all([cyFetch(USDT_URL, { cache: 'no-store' }).catch(() => null), eurWise()]);
+  try { ecClp = r?.ok ? parseCriptoYa(await r.text())?.value ?? null : null; } catch { ecClp = null; }
+  ecWise = w;
+  $('ec-upd').textContent = w ? `Precio con Wise leído de Binance P2P ${w.stale ? 'hace un rato (Binance no respondió ahora)' : 'recién'}: 1 USDT = ${fmt(w.value, 4)} EUR (anuncios para comprar USDT con euros y Wise, 100 €).` : 'No se pudo leer Binance P2P con Wise ahora. Mientras tanto se usa el respaldo manual, si lo escribiste.';
   ecCalc();
 }
 async function saveEuCl() {
@@ -956,7 +960,7 @@ async function drawBrVe(rateTxt) {
   if (!$('estado-BRVE').value.trim()) $('estado-BRVE').value = brVeText();
   try { await document.fonts.load('800 60px Montserrat'); } catch { /* letra de respaldo */ }
   let img;
-  try { img = await loadImg('/assets/flyer-brasil.png?v=78'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
+  try { img = await loadImg('/assets/flyer-brasil.png?v=79'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
   const c = document.createElement('canvas'); c.width = 1080; c.height = 1080;
   const g = c.getContext('2d');
   g.drawImage(img, 0, 0, 1080, 1080);

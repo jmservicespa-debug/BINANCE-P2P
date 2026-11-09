@@ -589,6 +589,35 @@ export async function saveUsClCfg(request, env, now = Date.now()) {
 }
 
 // ------------------------------------------------------------------ Venezuela → Chile (automática)
+// ------------------------------------------------------------------ Precio del USDT en euros pagando con Wise (Binance P2P)
+// Usa la búsqueda pública de anuncios de Binance P2P (la misma que muestra su página, sin cuenta ni claves):
+// anuncios para COMPRAR USDT con EUR y método Wise, para un monto de 100 €. Se toma la mediana de los 5 primeros.
+// Se guarda 2 minutos; si Binance no responde, se usa el último precio (máx. 30 min).
+export function wisePrice(body) {
+  const ps = (body?.data || []).map((a) => Number(a?.adv?.price)).filter((v) => v >= 0.5 && v <= 2).slice(0, 5).sort((a, z) => a - z);
+  return ps.length ? ps[Math.floor(ps.length / 2)] : null;
+}
+export async function eurUsdtWise(env, now = Date.now(), fetchFn = fetch) {
+  let cached = null;
+  try { cached = JSON.parse((await env.TASAS.get('wise_eur')) || 'null'); } catch { cached = null; }
+  if (cached && now - cached.ts < 2 * 60 * 1000) return { value: cached.value, ts: cached.ts, source: 'wise' };
+  for (const payTypes of [['Wise'], ['TransferWise']]) {
+    try {
+      const r = await fetchFn('https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search', { method: 'POST', signal: AbortSignal.timeout(7000),
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ asset: 'USDT', fiat: 'EUR', tradeType: 'BUY', payTypes, page: 1, rows: 10, transAmount: '100', publisherType: null }) });
+      const v = r.ok ? wisePrice(await r.json()) : null;
+      if (v) { await env.TASAS.put('wise_eur', JSON.stringify({ ts: now, value: v })); return { value: v, ts: now, source: 'wise' }; }
+    } catch { /* Binance no respondió */ }
+  }
+  if (cached && now - cached.ts < 30 * 60 * 1000) return { value: cached.value, ts: cached.ts, source: 'wise', stale: true };
+  return null;
+}
+export async function wiseView(env, now = Date.now()) {
+  const got = await eurUsdtWise(env, now);
+  return got ? json(got) : json({ error: 'sin datos' }, 502);
+}
+
 export const EUCL_CFG = { profit_pct: '0', eur_usdt: '', min: '20', published: false };
 export const loadEuClCfg = (env) => loadCfg(env, 'eucl_cfg', EUCL_CFG);
 export async function euClView(request, env, now = Date.now()) {
@@ -600,8 +629,8 @@ export async function saveEuClCfg(request, env, now = Date.now()) {
   if (error) return error;
   const p = pctOk(body?.profit_pct ?? '0');
   if (p === null) return json({ error: 'Tu ganancia debe estar entre 0 y 50 %.' }, 400);
-  const eur = String(body?.eur_usdt ?? '').trim().replace(',', '.');
-  if (!(Number(eur) >= 0.5 && Number(eur) <= 2)) return json({ error: 'Escribe el precio del USDT en euros (ej. 0.93).' }, 400);
+  const eur = String(body?.eur_usdt ?? '').trim().replace(',', '.');  // respaldo manual (opcional): solo se usa si Binance no responde
+  if (eur !== '' && !(Number(eur) >= 0.5 && Number(eur) <= 2)) return json({ error: 'El respaldo manual debe ser el precio del USDT en euros (ej. 0.93) o quedar vacío.' }, 400);
   const min = String(body?.min ?? '').replace(/\D/g, '');
   if (!(Number(min) >= 1 && Number(min) <= 100000)) return json({ error: 'El mínimo no es válido.' }, 400);
   const prev = await loadEuClCfg(env);

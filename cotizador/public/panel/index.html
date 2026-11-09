@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=78">
+<link rel="stylesheet" href="/css/estilo.css?v=79">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -321,18 +321,16 @@
     <section class="card" id="eucl" hidden aria-labelledby="h-eucl">
       <div class="c-head"><span class="c-flags" data-flags="EU,CL"></span><h2 id="h-eucl">Envío Europa → Chile (automático)</h2></div>
       <p class="c-txt"><b>Qué es:</b> el cliente paga euros y recibe pesos chilenos.</p>
-      <p class="c-txt"><b>Cómo se calcula:</b> euros − tu ganancia → USDT comprados en Binance P2P pagando con Wise → vendidos en Chile al precio de venta de Vita Wallet. Tasa = Vita ÷ (euros por USDT) × (1 − ganancia).</p>
+      <p class="c-txt"><b>Cómo se calcula:</b> euros − tu ganancia → USDT comprados en Binance P2P pagando con Wise (precio automático) → vendidos en Chile al precio de venta de Vita Wallet. Tasa = Vita ÷ (euros por USDT) × (1 − ganancia).</p>
       <div class="row2">
-        <label class="f" for="ec-eur">Precio del USDT en euros (Binance P2P · Wise)
-          <span class="amount"><input id="ec-eur" inputmode="decimal" autocomplete="off" placeholder="Ej. 0.93"></span></label>
         <label class="f" for="ec-profit">Tu ganancia (%)
           <span class="amount"><input id="ec-profit" inputmode="decimal" autocomplete="off"></span></label>
-      </div>
-      <span class="muted" id="ec-upd">Míralo en Binance P2P → Comprar USDT → moneda EUR → método de pago Wise, y anota el precio de los primeros anuncios.</span>
-      <div class="row2">
         <label class="f" for="ec-min">Mínimo (EUR)
           <span class="amount"><input id="ec-min" inputmode="numeric" autocomplete="off"></span></label>
       </div>
+      <label class="f" for="ec-eur">Respaldo manual del precio en euros (solo si Binance no responde)
+        <span class="amount"><input id="ec-eur" inputmode="decimal" autocomplete="off" placeholder="Opcional · ej. 0.93"></span></label>
+      <span class="muted" id="ec-upd">El precio con Wise se toma solo de Binance P2P (anuncios para comprar USDT con euros y Wise, para 100 €).</span>
       <div class="usdt-ref"><span class="muted">Precio de referencia</span><b class="num" id="ec-ref">—</b></div>
       <div class="usdt-price" id="ec-rate">—</div>
       <div class="msg" id="ec-msg" hidden></div>
@@ -478,6 +476,6 @@
     </section>
   </div>
 </main>
-<script type="module" src="/js/panel.js?v=78"></script>
+<script type="module" src="/js/panel.js?v=79"></script>
 </body>
 </html>
