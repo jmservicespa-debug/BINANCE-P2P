@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=72">
+<link rel="stylesheet" href="/css/estilo.css?v=73">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -174,13 +174,8 @@
       <div class="usdt-price" id="bv-ex">—</div>
       <div class="msg" id="bv-msg" hidden></div>
       <label class="switch"><input type="checkbox" id="bv-pub"> <b>Activo en el cotizador</b></label>
-      <span class="muted">Marcado: desde Brasil aparece Venezuela como destino. Sin marcar: no aparece (el flyer igual se arma).</span>
+      <span class="muted">Marcado: desde Brasil aparece Venezuela como destino. Sin marcar: no aparece. El flyer con esta tasa está en "Flyers del día".</span>
       <button class="btn" id="bv-save">Guardar</button>
-      <div class="flyer"><h3>Flyer Brasil → Venezuela</h3><img id="fly-BRVE" alt="Flyer con la tasa del día de Brasil a Venezuela"></div>
-      <div class="row2"><button class="btn ghost" data-dl="BRVE">Descargar</button><button class="btn" data-share="BRVE">Compartir</button></div>
-      <label class="f" for="estado-BRVE">Texto para el estado (Brasil → Venezuela)<textarea id="estado-BRVE" class="estado-brve" rows="4"></textarea></label>
-      <div class="row2"><button class="btn ghost" id="bv-reset">Texto automático</button><button class="btn" data-copy="BRVE">Copiar texto</button></div>
-      <span class="muted">Se arma solo con tu diseño de Canva y la tasa guardada: escríbela, toca Guardar y luego Compartir y Copiar texto.</span>
     </section>
     <section class="card" id="brco" hidden aria-labelledby="h-brco">
       <div class="c-head"><span class="c-flags" data-flags="BR,CO"></span><h2 id="h-brco">Envío Brasil → Colombia (automático)</h2></div>
@@ -426,6 +421,11 @@
       <div class="flyer"><h3>Calculadora Colombia → Venezuela</h3><img id="fly-TCOVE" alt="Tabla de montos de pesos colombianos a bolívares con la tasa del día"></div>
       <div class="row2"><button class="btn ghost" data-dl="TCOVE">Descargar</button><button class="btn" data-share="TCOVE">Compartir</button></div>
       <span class="muted">Se arma sola con tu tasa Colombia → Venezuela publicada: pesos ÷ tasa = bolívares.</span>
+      <div class="flyer"><h3>Desde Brasil a Venezuela</h3><img id="fly-BRVE" alt="Guarda la tasa de hoy en la franja Brasil (Envío Brasil → Venezuela) y aquí aparece el flyer."></div>
+      <div class="row2"><button class="btn ghost" data-dl="BRVE">Descargar</button><button class="btn" data-share="BRVE">Compartir</button></div>
+      <label class="f" for="estado-BRVE">Texto para el estado (Brasil → Venezuela)<textarea id="estado-BRVE" class="estado-brve" rows="4"></textarea></label>
+      <div class="row2"><button class="btn ghost" id="bv-reset">Texto automático</button><button class="btn" data-copy="BRVE">Copiar texto</button></div>
+      <span class="muted">Se arma solo con tu diseño de Canva y la tasa que guardas en la franja Brasil.</span>
       <div class="flyer"><h3>Desde Europa</h3><img id="fly-EU" alt="Flyer de tasas desde Europa"></div>
       <div class="row2"><button class="btn ghost" data-dl="EU">Descargar</button><button class="btn" data-share="EU">Compartir</button></div>
       <label class="f" for="estado-EU">Texto para el estado (Europa)<textarea id="estado-EU" class="estado" rows="4"></textarea></label>
@@ -456,6 +456,6 @@
     </section>
   </div>
 </main>
-<script type="module" src="/js/panel.js?v=72"></script>
+<script type="module" src="/js/panel.js?v=73"></script>
 </body>
 </html>
