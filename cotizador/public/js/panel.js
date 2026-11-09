@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=75';
-import { esc, flag, flags } from './ui.js?v=75';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=75';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=76';
+import { esc, flag, flags } from './ui.js?v=76';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=76';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -704,12 +704,13 @@ async function saveUsdtCo() {
 // ------------------------------------------------------------------ Brasil → Colombia
 
 let bcList = [], bcCop = null;
-const EX_NAME = (k) => ({ bitget: 'Bitget', bitgetp2p: 'Bitget P2P', foxbit: 'Foxbit', binancep2p: 'Binance P2P', bybitp2p: 'Bybit P2P', mercadobitcoin: 'Mercado Bitcoin', novadax: 'NovaDAX', bitso: 'Bitso', ripio: 'Ripio' }[k] || k);
+const bkTxt = (src, got) => (got?.backup ? ` · ${EX_NAME(src)} sin precio ahora, se usa ${got.key === 'mediana' ? 'la mediana de exchanges' : EX_NAME(got.key)}` : '');
+const EX_NAME = (k) => ({ mediana: 'mediana', bybit: 'Bybit', bitget: 'Bitget', bitgetp2p: 'Bitget P2P', foxbit: 'Foxbit', binancep2p: 'Binance P2P', bybitp2p: 'Bybit P2P', mercadobitcoin: 'Mercado Bitcoin', novadax: 'NovaDAX', bitso: 'Bitso', ripio: 'Ripio' }[k] || k);
 function bcCalc() {
   const n = (id) => Number(String($(id).value || '0').replace(',', '.'));
   const c = n('bc-margin'), p = n('bc-profit'), m = c + p;
-  const brl = bcList.find((x) => x.key === $('bc-src').value)?.ask;
-  $('bc-ref').textContent = brl && bcCop ? `1 USDT = ${fmt(brl, 4)} BRL (${EX_NAME($('bc-src').value)}) · Binance P2P Colombia cuando te compran: ${fmt(bcCop, 2)} COP` : '—';
+  const got = brlPrice(bcList, $('bc-src').value, 'ask'), brl = got?.value;
+  $('bc-ref').textContent = brl && bcCop ? `1 USDT = ${fmt(brl, 4)} BRL (${EX_NAME(got.key)}) · Binance P2P Colombia cuando te compran: ${fmt(bcCop, 2)} COP${bkTxt($('bc-src').value, got)}` : '—';
   if (!brl || !bcCop || !(c >= 0 && c <= 50 && p >= 0 && p <= 50)) { $('bc-rate').textContent = bcList.length ? 'Revisa el ajuste y la ganancia (0 a 50 % cada uno).' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
   const rate = bcCop / (brl * (1 + m / 100));
   $('bc-rate').innerHTML = `Ajuste total ${fmt(m, 2)} % · Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100 BRL = <b class="num">${fmt(100 * rate, 0)} COP</b>`;
@@ -740,8 +741,8 @@ $('bc-save').onclick = saveBrCo; $('bc-pub').onchange = saveBrCo;
 let cbList = [], cbCop = null;
 function cbCalc() {
   const p = Number(String($('cb-profit').value || '0').replace(',', '.'));
-  const x = cbList.find((e) => e.key === $('cb-src').value), brl = x?.bid;
-  $('cb-ref').textContent = brl && cbCop ? `Binance P2P Colombia: 1 USDT = ${fmt(cbCop, 2)} COP · ${EX_NAME($('cb-src').value)} paga ${fmt(brl, 4)} BRL por USDT` : (x && !brl ? `${EX_NAME($('cb-src').value)} no muestra precio de compra ahora.` : '—');
+  const got = brlPrice(cbList, $('cb-src').value, 'bid'), brl = got?.value;
+  $('cb-ref').textContent = brl && cbCop ? `Binance P2P Colombia: 1 USDT = ${fmt(cbCop, 2)} COP · ${EX_NAME(got.key)} paga ${fmt(brl, 4)} BRL por USDT${bkTxt($('cb-src').value, got)}` : '—';
   if (!brl || !cbCop || !(p >= 0 && p <= 50)) { $('cb-rate').textContent = cbList.length ? 'Revisa la ganancia (0 a 50 %) o elige otro exchange.' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
   const rate = cbCop * (1 + p / 100) / brl;
   $('cb-rate').innerHTML = `USDT con tu ganancia: <b class="num">${fmt(cbCop * (1 + p / 100), 2)} COP</b> · Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100.000 COP = <b class="num">${fmt(100000 / rate, 2)} BRL</b>`;
@@ -772,8 +773,8 @@ $('cb-save').onclick = saveCoBr; $('cb-pub').onchange = saveCoBr;
 let blList = [], blClp = null;
 function blCalc() {
   const p = Number(String($('bl-profit').value || '0').replace(',', '.'));
-  const brl = blList.find((x) => x.key === $('bl-src').value)?.ask;
-  $('bl-ref').textContent = brl && blClp ? `1 USDT = ${fmt(brl, 4)} BRL (${EX_NAME($('bl-src').value)}) · Vita Wallet vende el USDT a ${fmt(blClp, 2)} CLP` : '—';
+  const got = brlPrice(blList, $('bl-src').value, 'ask'), brl = got?.value;
+  $('bl-ref').textContent = brl && blClp ? `1 USDT = ${fmt(brl, 4)} BRL (${EX_NAME(got.key)}) · Vita Wallet vende el USDT a ${fmt(blClp, 2)} CLP${bkTxt($('bl-src').value, got)}` : '—';
   if (!brl || !blClp || !(p >= 0 && p <= 50)) { $('bl-rate').textContent = blList.length ? 'Revisa la ganancia (0 a 50 %) o elige otro exchange.' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
   const rate = blClp / (brl * (1 + p / 100));
   $('bl-rate').innerHTML = `USDT con tu ganancia: <b class="num">${fmt(brl * (1 + p / 100), 4)} BRL</b> · Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100 BRL = <b class="num">${fmt(100 * rate, 0)} CLP</b>`;
@@ -925,7 +926,7 @@ async function drawBrVe(rateTxt) {
   if (!$('estado-BRVE').value.trim()) $('estado-BRVE').value = brVeText();
   try { await document.fonts.load('800 60px Montserrat'); } catch { /* letra de respaldo */ }
   let img;
-  try { img = await loadImg('/assets/flyer-brasil.png?v=75'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
+  try { img = await loadImg('/assets/flyer-brasil.png?v=76'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
   const c = document.createElement('canvas'); c.width = 1080; c.height = 1080;
   const g = c.getContext('2d');
   g.drawImage(img, 0, 0, 1080, 1080);

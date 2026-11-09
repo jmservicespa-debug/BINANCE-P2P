@@ -602,3 +602,14 @@ test('Brasil → Venezuela: tasa manual del panel, se publica solo si está acti
   assert.equal((await putBrVe({ request: req('/api/br-ve', { method: 'PUT', cookie, body: { rate: '68.50', min: '50', published: true } }), env: e })).status, 200);
   assert.deepEqual((await (await getRates({ env: e })).json()).br_ve, { rate: '68.50', min: 50 });
 });
+
+test('Brasil: si el exchange elegido no trae precio, se usa el respaldo (Binance P2P, Bybit, mediana)', async () => {
+  const { copPerBrl, copPerBrlSell, clpPerBrl, brlPrice } = await import('../public/js/criptoya.js');
+  const fake = async (u) => ({ ok: true, text: async () => (String(u).includes('/brl/') ? '{"binancep2p":{"ask":5.65,"bid":5.5},"foxbit":{"ask":5.6}}' : String(u).includes('/cop/') ? '{"binancep2p":{"ask":3900,"bid":3850}}' : '{"vitawallet":{"ask":990,"bid":980}}') });
+  const r = await copPerBrl('bitget', '2', fake);
+  assert.equal(r.brl, 5.65);
+  assert.equal((await copPerBrlSell('foxbit', '3', fake)).brl, 5.5);
+  assert.equal((await clpPerBrl('bitget', '3', fake)).brl, 5.65);
+  assert.deepEqual(brlPrice([{ key: 'foxbit', ask: 5.6, bid: null }, { key: 'novadax', ask: 5.8, bid: null }], 'bitget', 'ask'), { value: 5.8, key: 'mediana', backup: true });
+  assert.equal(brlPrice([], 'bitget', 'ask'), null);
+});

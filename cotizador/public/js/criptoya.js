@@ -146,9 +146,19 @@ export function refFrom(text, range, source) {
 // Busca el exchange elegido aunque CriptoYa lo nombre distinto ("bitget" = "bitgetp2p").
 const exBase = (k) => String(k || '').toLowerCase().replace(/p2p$/, '');
 export const pickExchange = (list, source) => list.find((x) => x.key === source) || list.find((x) => exBase(x.key) === exBase(source));
+// Precio del USDT en reales del exchange elegido; si ese exchange no trae precio, respaldo en orden:
+// Binance P2P, Bybit P2P, Bitget P2P y, al final, la mediana de todos. Devuelve { value, key, backup } o null.
+const BRL_BACKUP = ['binancep2p', 'bybitp2p', 'bybit', 'bitgetp2p', 'bitget'];
+export function brlPrice(list, source, side = 'ask') {
+  const chosen = pickExchange(list, source);
+  if (chosen?.[side]) return { value: chosen[side], key: chosen.key, backup: false };
+  for (const k of BRL_BACKUP) { const x = list.find((e) => e.key === k); if (x?.[side]) return { value: x[side], key: k, backup: true }; }
+  const all = list.map((e) => e[side]).filter((v) => v > 0).sort((a, z) => a - z);
+  return all.length ? { value: all[Math.floor(all.length / 2)], key: 'mediana', backup: true } : null;
+}
 export async function copPerBrl(source, adjPct, fetchFn = fetch) {
   const [b, c] = await Promise.all([USDT_BRL_URL, USDT_COP_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
-  const brl = pickExchange(b ? brlExchanges(b) : [], source)?.ask, cop = c && usdtCopRef(c)?.value;
+  const brl = brlPrice(b ? brlExchanges(b) : [], source, 'ask')?.value, cop = c && usdtCopRef(c)?.value;
   if (!brl || !cop) return null;
   const rate = cop / (brl * (1 + Number(adjPct || 0) / 100));
   return rate > 0 ? { rate, brl, cop } : null;
@@ -157,7 +167,7 @@ export async function copPerBrl(source, adjPct, fetchFn = fetch) {
 // Tasa = pesos por cada real; pesos ÷ tasa = reales.
 export async function copPerBrlSell(source, profitPct, fetchFn = fetch) {
   const [b, c] = await Promise.all([USDT_BRL_URL, USDT_COP_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
-  const brl = pickExchange(b ? brlExchanges(b) : [], source)?.bid, cop = c && usdtCopRef(c)?.value;
+  const brl = brlPrice(b ? brlExchanges(b) : [], source, 'bid')?.value, cop = c && usdtCopRef(c)?.value;
   if (!brl || !cop) return null;
   const rate = (cop * (1 + Number(profitPct || 0) / 100)) / brl;
   return rate > 0 ? { rate, brl, cop } : null;
@@ -166,7 +176,7 @@ export async function copPerBrlSell(source, profitPct, fetchFn = fetch) {
 // Tasa = pesos chilenos por cada real; reales × tasa = pesos.
 export async function clpPerBrl(source, profitPct, fetchFn = fetch) {
   const [b, l] = await Promise.all([USDT_BRL_URL, USDT_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
-  const brl = pickExchange(b ? brlExchanges(b) : [], source)?.ask, clp = l && parseCriptoYa(l)?.value;  // precio de venta de Vita (como USDT Chile)
+  const brl = brlPrice(b ? brlExchanges(b) : [], source, 'ask')?.value, clp = l && parseCriptoYa(l)?.value;  // precio de venta de Vita (como USDT Chile)
   if (!brl || !clp) return null;
   const rate = clp / (brl * (1 + Number(profitPct || 0) / 100));
   return rate > 0 ? { rate, brl, clp } : null;
