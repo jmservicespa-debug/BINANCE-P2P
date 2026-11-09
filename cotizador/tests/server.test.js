@@ -613,3 +613,20 @@ test('Brasil: si el exchange elegido no trae precio, se usa el respaldo (Binance
   assert.deepEqual(brlPrice([{ key: 'foxbit', ask: 5.6, bid: null }, { key: 'novadax', ask: 5.8, bid: null }], 'bitget', 'ask'), { value: 5.8, key: 'mediana', backup: true });
   assert.equal(brlPrice([], 'bitget', 'ask'), null);
 });
+
+test('CriptoYa por el servidor: solo rutas permitidas, guarda 60 s y usa el último dato si falla', async () => {
+  const { cyProxy } = await import('../lib/server.js');
+  const e = await env();
+  const r = (p) => new Request(`https://jmcambios.cl/api/cy?p=${encodeURIComponent(p)}`);
+  assert.equal((await cyProxy(r('../../etc/passwd'), e)).status, 400);
+  assert.equal((await cyProxy(r('btc/clp/1'), e)).status, 400);
+  let calls = 0;
+  const ok = async () => { calls += 1; return { ok: true, text: async () => '{"binancep2p":{"ask":5.6}}' }; };
+  const t0 = 1_000_000;
+  assert.equal(await (await cyProxy(r('usdt/brl/1'), e, t0, ok)).text(), '{"binancep2p":{"ask":5.6}}');
+  await cyProxy(r('usdt/brl/1'), e, t0 + 30_000, ok);
+  assert.equal(calls, 1);
+  const bad = async () => { throw new Error('caído'); };
+  assert.equal((await cyProxy(r('usdt/brl/1'), e, t0 + 5 * 60_000, bad)).status, 200);
+  assert.equal((await cyProxy(r('usdt/brl/1'), e, t0 + 40 * 60_000, bad)).status, 502);
+});

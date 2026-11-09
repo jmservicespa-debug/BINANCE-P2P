@@ -479,6 +479,26 @@ export async function cryptoUsd(env, now = Date.now()) {
   return out;
 }
 
+// ------------------------------------------------------------------ CriptoYa por el servidor (respaldo del navegador)
+// Solo precios de USDT/USDC en monedas conocidas; se guarda 60 s en KV para no repetir consultas.
+const CY_PATH = /^(usdt|usdc)\/(clp|cop|brl|ves|ars|pen|usd|eur)\/\d{1,4}$/;
+export async function cyProxy(request, env, now = Date.now(), fetchFn = fetch) {
+  const p = new URL(request.url).searchParams.get('p') || '';
+  if (!CY_PATH.test(p)) return json({ error: 'consulta no permitida' }, 400);
+  const key = `cy_${p.replace(/\//g, '_')}`;
+  let cached = null;
+  try { cached = JSON.parse((await env.TASAS.get(key)) || 'null'); } catch { cached = null; }
+  const send = (text) => new Response(text, { status: 200, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+  if (cached && now - cached.ts < 60 * 1000) return send(cached.text);
+  try {
+    const r = await fetchFn(`https://criptoya.com/api/${p}`, { signal: AbortSignal.timeout(6000), headers: { accept: 'application/json' } });
+    const text = r.ok ? await r.text() : '';
+    if (/^\s*\{\s*"/.test(text)) { await env.TASAS.put(key, JSON.stringify({ ts: now, text })); return send(text); }
+  } catch { /* CriptoYa no respondió */ }
+  if (cached && now - cached.ts < 30 * 60 * 1000) return send(cached.text);  // último dato (máx. 30 min)
+  return json({ error: 'sin datos' }, 502);
+}
+
 // ------------------------------------------------------------------ Brasil → Colombia (automática)
 export const BRCO_CFG = { margin_pct: '2', profit_pct: '0', min: '50', source: 'bitget', published: false };
 // Ajuste total que usa el cotizador: costo de compra + tu ganancia (se suman).

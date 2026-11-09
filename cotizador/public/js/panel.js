@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=76';
-import { esc, flag, flags } from './ui.js?v=76';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=76';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=77';
+import { esc, flag, flags } from './ui.js?v=77';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, cyFetch, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=77';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -573,7 +573,7 @@ async function loadUsdt(fillInputs) {
   // Si el servidor no pudo leer CriptoYa, este navegador la consulta directamente (como al abrir su página).
   if (!usdt.ref?.value || !usdt.ref.bid || usdt.ref.source === 'manual') {
     try {
-      const res = await fetch(USDT_URL, { cache: 'no-store' });
+      const res = await cyFetch(USDT_URL, { cache: 'no-store' });
       const got = res.ok ? parseCriptoYa(await res.text()) : null;
       if (got) usdt.ref = { ...got, age_s: 0, via: 'navegador' };
       else usdt.ref = { ...usdt.ref, error: `${usdt.ref.error || ''} · navegador: respondió ${res.status}` };
@@ -582,7 +582,7 @@ async function loadUsdt(fillInputs) {
     }
   }
   usdt.autoRef = usdt.ref;
-  try { const res = await fetch(USDT_URL, { cache: 'no-store' }); uList = res.ok ? exchangesIn(await res.text(), CLP_RANGE) : []; } catch { uList = []; }
+  try { const res = await cyFetch(USDT_URL, { cache: 'no-store' }); uList = res.ok ? exchangesIn(await res.text(), CLP_RANGE) : []; } catch { uList = []; }
   if (fillInputs) fillSrc('u-srcsel', uList, body.source || '', 'Automático (Vita Wallet)', 2);
   uApplySrc();
   renderUsdt();
@@ -680,7 +680,7 @@ async function loadUsdtCo() {
   if (status !== 200) return;
   $('uc-margin').value = body.margin_pct; $('uc-min').value = fmt(Number(body.min), 0); $('uc-pub').checked = !!body.published;
   $('uc-buy').value = body.buy_margin_pct ?? '3'; $('uc-buymin').value = fmt(Number(body.buy_min ?? body.min), 0);
-  try { const res = await fetch(USDT_COP_URL, { cache: 'no-store' }); const t = res.ok ? await res.text() : null; ucAuto = { ref: t && usdtCopRef(t), bid: t && usdtCopBid(t) }; ucList = t ? exchangesIn(t, COP_RANGE) : []; } catch { ucAuto = { ref: null, bid: null }; ucList = []; }
+  try { const res = await cyFetch(USDT_COP_URL, { cache: 'no-store' }); const t = res.ok ? await res.text() : null; ucAuto = { ref: t && usdtCopRef(t), bid: t && usdtCopBid(t) }; ucList = t ? exchangesIn(t, COP_RANGE) : []; } catch { ucAuto = { ref: null, bid: null }; ucList = []; }
   fillSrc('uc-srcsel', ucList, body.source || '', 'Automático (Binance P2P)', 2);
   try { const r = await fetch('/api/indicadores', { cache: 'no-store' }); ucTrm = r.ok ? (await r.json())?.co?.trm?.value ?? null : null; } catch { ucTrm = null; }
   ucApply();
@@ -719,7 +719,7 @@ async function loadBrCo() {
   const { status, body } = await api('/api/br-co');
   if (status !== 200) return;
   $('bc-margin').value = body.margin_pct; $('bc-profit').value = body.profit_pct ?? '0'; $('bc-min').value = fmt(Number(body.min), 0); $('bc-pub').checked = !!body.published;
-  const get = (u) => fetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  const get = (u) => cyFetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   const [b, c] = await Promise.all([get(USDT_BRL_URL), get(USDT_COP_URL)]);
   bcList = b ? brlExchanges(b) : []; bcCop = c ? usdtCopRef(c)?.value ?? null : null;
   const src = pickExchange(bcList, body.source)?.key || body.source;
@@ -751,7 +751,7 @@ async function loadCoBr() {
   const { status, body } = await api('/api/co-br');
   if (status !== 200) return;
   $('cb-profit').value = body.profit_pct ?? '0'; $('cb-min').value = fmt(Number(body.min), 0); $('cb-pub').checked = !!body.published;
-  const get = (u) => fetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  const get = (u) => cyFetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   const [b, c] = await Promise.all([get(USDT_BRL_URL), get(USDT_COP_URL)]);
   cbList = b ? brlExchanges(b) : []; cbCop = c ? usdtCopRef(c)?.value ?? null : null;
   const src = pickExchange(cbList, body.source)?.key || body.source;
@@ -783,7 +783,7 @@ async function loadBrCl() {
   const { status, body } = await api('/api/br-cl');
   if (status !== 200) return;
   $('bl-profit').value = body.profit_pct ?? '0'; $('bl-min').value = fmt(Number(body.min), 0); $('bl-pub').checked = !!body.published;
-  const get = (u) => fetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  const get = (u) => cyFetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   const [b, l] = await Promise.all([get(USDT_BRL_URL), get(USDT_URL)]);
   blList = b ? brlExchanges(b) : []; blClp = l ? parseCriptoYa(l)?.value ?? null : null;
   const src = pickExchange(blList, body.source)?.key || body.source;
@@ -816,7 +816,7 @@ async function loadUsCl() {
   const { status, body } = await api('/api/us-cl');
   if (status !== 200) return;
   $('ul-profit').value = body.profit_pct ?? '0'; $('ul-fee').value = body.fee ?? '1'; $('ul-min').value = fmt(Number(body.min), 0); $('ul-pub').checked = !!body.published;
-  try { const r = await fetch(USDT_URL, { cache: 'no-store' }); ulClp = r.ok ? parseCriptoYa(await r.text())?.value ?? null : null; } catch { ulClp = null; }
+  try { const r = await cyFetch(USDT_URL, { cache: 'no-store' }); ulClp = r.ok ? parseCriptoYa(await r.text())?.value ?? null : null; } catch { ulClp = null; }
   ulCalc();
 }
 async function saveUsCl() {
@@ -845,7 +845,7 @@ async function loadVeCl() {
   const { status, body } = await api('/api/ve-cl');
   if (status !== 200) return;
   $('vc-margin').value = body.margin_pct; $('vc-min').value = fmt(Number(body.min), 0); $('vc-pub').checked = !!body.published;
-  const get = (u) => fetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  const get = (u) => cyFetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   const [v, l] = await Promise.all([get(USDT_VES_URL), get(USDT_URL)]);
   vcList = v ? vesExchanges(v) : []; vcClp = l ? parseCriptoYa(l)?.value ?? null : null;
   const keys = [...new Set([body.source, ...vcList.map((x) => x.key)])];
@@ -876,7 +876,7 @@ async function loadVeCo() {
   const { status, body } = await api('/api/ve-co');
   if (status !== 200) return;
   $('vo-profit').value = body.profit_pct ?? '0'; $('vo-min').value = fmt(Number(body.min), 0); $('vo-pub').checked = !!body.published;
-  const get = (u) => fetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  const get = (u) => cyFetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   const [v, c] = await Promise.all([get(USDT_VES_URL), get(USDT_COP_URL)]);
   voVes = v ? vesExchanges(v) : []; voCop = c ? exchangesIn(c, COP_RANGE) : [];
   const opts = (list, saved, dec) => { const src = pickExchange(list, saved)?.key || saved; const keys = [...new Set([src, ...list.map((x) => x.key)])];
@@ -926,7 +926,7 @@ async function drawBrVe(rateTxt) {
   if (!$('estado-BRVE').value.trim()) $('estado-BRVE').value = brVeText();
   try { await document.fonts.load('800 60px Montserrat'); } catch { /* letra de respaldo */ }
   let img;
-  try { img = await loadImg('/assets/flyer-brasil.png?v=76'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
+  try { img = await loadImg('/assets/flyer-brasil.png?v=77'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
   const c = document.createElement('canvas'); c.width = 1080; c.height = 1080;
   const g = c.getContext('2d');
   g.drawImage(img, 0, 0, 1080, 1080);
@@ -953,7 +953,7 @@ async function loadUsdtBr() {
   const { status, body } = await api('/api/usdt-br');
   if (status !== 200) return;
   $('ub-margin').value = body.margin_pct; $('ub-buy').value = body.buy_margin_pct; $('ub-pub').checked = !!body.published;
-  try { const res = await fetch(USDT_BRL_URL, { cache: 'no-store' }); const t = res.ok ? await res.text() : null; ubAuto = t && usdtBrlRef(t); ubList = t ? exchangesIn(t, BRL_RANGE) : []; } catch { ubAuto = null; ubList = []; }
+  try { const res = await cyFetch(USDT_BRL_URL, { cache: 'no-store' }); const t = res.ok ? await res.text() : null; ubAuto = t && usdtBrlRef(t); ubList = t ? exchangesIn(t, BRL_RANGE) : []; } catch { ubAuto = null; ubList = []; }
   $('ub-usdc').checked = !!body.usdc;
   fillSrc('ub-srcsel', ubList, body.source || '', 'Automático (Binance P2P o Bybit P2P)', 4);
   ubApply();

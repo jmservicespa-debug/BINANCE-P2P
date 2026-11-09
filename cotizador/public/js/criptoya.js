@@ -3,6 +3,17 @@
 // si no viene, Binance P2P; y si tampoco, la mediana de los demás.
 
 export const USDT_URL = 'https://criptoya.com/api/usdt/clp/1';
+// Lee CriptoYa directo desde el navegador; si falla (sin respuesta, error o vacío), lo pide a nuestro servidor (/api/cy),
+// que lo lee desde Cloudflare y lo guarda 1 minuto. Así una falla del teléfono no deja la ruta en "Mercado inestable".
+export async function cyFetch(u, opts = {}) {
+  const s = String(u), base = 'https://criptoya.com/api/';
+  if (!s.startsWith(base)) return fetch(u, opts);
+  try {
+    const r = await fetch(u, { ...opts, signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(6000) : undefined });
+    if (r.ok) { const t = await r.text(); if (/^\s*\{\s*"/.test(t)) return new Response(t, { status: 200, headers: { 'content-type': 'application/json' } }); }
+  } catch { /* el directo falló: se usa el servidor */ }
+  return fetch(`/api/cy?p=${encodeURIComponent(s.slice(base.length))}`, { cache: 'no-store' });
+}
 const USDT_RANGE = [300, 3000];  // CLP por USDT fuera de este rango = dato absurdo, se ignora
 
 // Devuelve { value, source } con el precio de venta (ask) y, si viene, bid: lo que paga el mercado por cada USDT
@@ -40,7 +51,7 @@ export function parseBrl(text) {
 }
 
 // Reales por cada peso chileno según el mercado cripto: (BRL por USDT) ÷ (CLP por USDT).
-export async function brlPerClp(fetchFn = fetch) {
+export async function brlPerClp(fetchFn = cyFetch) {
   const [c, b] = await Promise.all([USDT_URL, USDT_BRL_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
   const clp = c && parseCriptoYa(c), brl = b && parseBrl(b);
   return clp && brl ? brl / clp.value : null;
@@ -62,7 +73,7 @@ export const COP_RANGE = [1500, 8000];  // COP por USDT fuera de este rango = da
 export const CLP_RANGE = [300, 3000];
 // CLP por cada COP ("cero adelante", ej. 0,2850) con la ganancia ya incluida (más baja = llegan menos CLP).
 // La ganancia se aplica igual que antes (COP por CLP × (1 + %)), solo que expresada al revés. null si falta algún precio.
-export async function clpPerCop(marginPct, fetchFn = fetch) {
+export async function clpPerCop(marginPct, fetchFn = cyFetch) {
   const [c, l] = await Promise.all([USDT_COP_URL, USDT_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
   const cop = c && vitaPrice(c, 'ask', COP_RANGE), clp = l && vitaPrice(l, 'bid', CLP_RANGE);
   if (!cop || !clp) return null;
@@ -86,14 +97,14 @@ export function vesExchanges(text) {
 }
 // Venezuela → Colombia: USDT en bolívares del P2P elegido (+ tu ganancia) y precio de venta del USDT en Colombia
 // del exchange elegido (Binance P2P, Vita Wallet…): lo que te pagan al VENDER el USDT (bid). Tasa = pesos colombianos por bolívar; Bs × tasa = COP.
-export async function copPerVes(source, copSource, profitPct, fetchFn = fetch) {
+export async function copPerVes(source, copSource, profitPct, fetchFn = cyFetch) {
   const [v, c] = await Promise.all([USDT_VES_URL, USDT_COP_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
   const ves = pickExchange(v ? vesExchanges(v) : [], source)?.ask, cop = c && pickExchange(exchangesIn(c, COP_RANGE), copSource || 'binancep2p')?.bid;
   if (!ves || !cop) return null;
   const rate = cop / (ves * (1 + Number(profitPct || 0) / 100));
   return rate > 0 ? { rate, ves, cop } : null;
 }
-export async function clpPerVes(source, marginPct, fetchFn = fetch) {
+export async function clpPerVes(source, marginPct, fetchFn = cyFetch) {
   const [v, l] = await Promise.all([USDT_VES_URL, USDT_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
   const list = v ? vesExchanges(v) : [];
   const ves = list.find((x) => x.key === source)?.ask, clp = l && parseCriptoYa(l)?.value;  // precio de venta de Vita (como USDT Chile)
@@ -113,7 +124,7 @@ function pick(text, side, prefer, range) {
   }
   return null;
 }
-export async function marketClVe(fetchFn = fetch) {
+export async function marketClVe(fetchFn = cyFetch) {
   const [c, v] = await Promise.all([SUG_CLP_URL, SUG_VES_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
   const clp = c && pick(c, 'ask', [/vita/i, /^binancep2p$/i], [300, 3000]);
   const ves = v && pick(v, 'bid', [/^binancep2p$/i], [10, 1e6]);
@@ -156,7 +167,7 @@ export function brlPrice(list, source, side = 'ask') {
   const all = list.map((e) => e[side]).filter((v) => v > 0).sort((a, z) => a - z);
   return all.length ? { value: all[Math.floor(all.length / 2)], key: 'mediana', backup: true } : null;
 }
-export async function copPerBrl(source, adjPct, fetchFn = fetch) {
+export async function copPerBrl(source, adjPct, fetchFn = cyFetch) {
   const [b, c] = await Promise.all([USDT_BRL_URL, USDT_COP_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
   const brl = brlPrice(b ? brlExchanges(b) : [], source, 'ask')?.value, cop = c && usdtCopRef(c)?.value;
   if (!brl || !cop) return null;
@@ -165,7 +176,7 @@ export async function copPerBrl(source, adjPct, fetchFn = fetch) {
 }
 // Colombia → Brasil: compras USDT en Binance P2P Colombia (precio alto) + tu ganancia, y lo vendes en Brasil al precio de compra del exchange (bid).
 // Tasa = pesos por cada real; pesos ÷ tasa = reales.
-export async function copPerBrlSell(source, profitPct, fetchFn = fetch) {
+export async function copPerBrlSell(source, profitPct, fetchFn = cyFetch) {
   const [b, c] = await Promise.all([USDT_BRL_URL, USDT_COP_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
   const brl = brlPrice(b ? brlExchanges(b) : [], source, 'bid')?.value, cop = c && usdtCopRef(c)?.value;
   if (!brl || !cop) return null;
@@ -174,7 +185,7 @@ export async function copPerBrlSell(source, profitPct, fetchFn = fetch) {
 }
 // Brasil → Chile: USDT en reales del exchange elegido (+ tu ganancia), vendido en Chile a lo que paga Vita (bid).
 // Tasa = pesos chilenos por cada real; reales × tasa = pesos.
-export async function clpPerBrl(source, profitPct, fetchFn = fetch) {
+export async function clpPerBrl(source, profitPct, fetchFn = cyFetch) {
   const [b, l] = await Promise.all([USDT_BRL_URL, USDT_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
   const brl = brlPrice(b ? brlExchanges(b) : [], source, 'ask')?.value, clp = l && parseCriptoYa(l)?.value;  // precio de venta de Vita (como USDT Chile)
   if (!brl || !clp) return null;
@@ -183,7 +194,7 @@ export async function clpPerBrl(source, profitPct, fetchFn = fetch) {
 }
 // Estados Unidos → Chile: precio de venta del USDT en Vita Wallet (el mismo de USDT Chile; si Vita no viene, Binance P2P o la mediana), menos tu comisión.
 // Tasa = pesos chilenos por dólar (el cargo fijo se descuenta aparte, antes de convertir).
-export async function clpPerUsd(profitPct, fetchFn = fetch) {
+export async function clpPerUsd(profitPct, fetchFn = cyFetch) {
   const l = await fetchFn(USDT_URL, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   const clp = l && parseCriptoYa(l)?.value;
   if (!clp) return null;
@@ -286,7 +297,7 @@ export function binanceP2pAsk(text, range) {
   const v = Number(d?.binancep2p?.ask);
   return Number.isFinite(v) && v >= range[0] && v <= range[1] ? v : null;
 }
-export async function marketCoins(fetchFn = fetch) {
+export async function marketCoins(fetchFn = cyFetch) {
   const get = (u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   let usd = null;
   // 1) Nuestro servidor (lee Binance, Kraken o CoinGecko sin bloqueos). 2) Binance directo desde el navegador.
