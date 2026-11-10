@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=83">
+<link rel="stylesheet" href="/css/estilo.css?v=84">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -137,6 +137,27 @@
       <div class="routes" id="routes-CO"></div>
       <div class="msg save-msg" hidden></div>
       <button class="btn save-rates">Guardar y publicar</button>
+    </section>
+    <section class="card" id="cope" hidden aria-labelledby="h-cope">
+      <div class="c-head"><span class="c-flags" data-flags="CO,PE"></span><h2 id="h-cope">Envío Colombia → Perú (automático)</h2></div>
+      <p class="c-txt"><b>Qué es:</b> el cliente paga pesos colombianos y recibe soles.</p>
+      <p class="c-txt"><b>Cómo se calcula:</b> pesos − tu comisión → USDT comprados en Colombia (precio de compra) → vendidos en Perú (lo que te pagan en soles). Tasa = USDT en pesos ÷ ((1 − comisión) × USDT en soles). Pesos ÷ tasa = soles.</p>
+      <label class="f" for="cp-cop">Referencia en Colombia (comprar USDT con pesos, vía CriptoYa)
+        <select id="cp-cop"></select></label>
+      <label class="f" for="cp-pen">Referencia en Perú (lo que te pagan al vender USDT por soles, vía CriptoYa)
+        <select id="cp-pen"></select></label>
+      <div class="usdt-ref"><span class="muted">Precio de referencia</span><b class="num" id="cp-ref">—</b></div>
+      <div class="row2">
+        <label class="f" for="cp-profit">Tu comisión (%)
+          <span class="amount"><input id="cp-profit" inputmode="decimal" autocomplete="off"></span></label>
+        <label class="f" for="cp-min">Mínimo (COP)
+          <span class="amount"><input id="cp-min" inputmode="numeric" autocomplete="off"></span></label>
+      </div>
+      <div class="usdt-price" id="cp-rate">—</div>
+      <div class="msg" id="cp-msg" hidden></div>
+      <label class="switch"><input type="checkbox" id="cp-pub"> <b>Activo en el cotizador</b></label>
+      <span class="muted">Marcado: desde Colombia aparece Perú como destino. Sin marcar: no aparece.</span>
+      <button class="btn ghost" id="cp-save">Guardar</button>
     </section>
     <section class="card" id="cobr" hidden aria-labelledby="h-cobr">
       <div class="c-head"><span class="c-flags" data-flags="CO,BR"></span><h2 id="h-cobr">Envío Colombia → Brasil (automático)</h2></div>
@@ -510,6 +531,6 @@
     </section>
   </div>
 </main>
-<script type="module" src="/js/panel.js?v=83"></script>
+<script type="module" src="/js/panel.js?v=84"></script>
 </body>
 </html>

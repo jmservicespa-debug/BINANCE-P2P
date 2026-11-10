@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=83';
-import { esc, flag, flags } from './ui.js?v=83';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, cyFetch, eurMarket, clpEur, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=83';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=84';
+import { esc, flag, flags } from './ui.js?v=84';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, cyFetch, eurMarket, clpEur, USDT_PEN_URL, PEN_RANGE, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=84';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -29,7 +29,7 @@ async function api(path, opts = {}) {
 
 function showEditor(on) {
   $('login').hidden = on;
-  ['power', 'mkt', 'tasas-CL', 'tasas-CO', 'tasas-EU', 'bcvsec', 'usdt', 'usdtco', 'brco', 'cobr', 'brcl', 'uscl', 'veco', 'brve', 'eucl', 'cleu', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  ['power', 'mkt', 'tasas-CL', 'tasas-CO', 'tasas-EU', 'bcvsec', 'usdt', 'usdtco', 'brco', 'cobr', 'brcl', 'uscl', 'veco', 'brve', 'eucl', 'cleu', 'cope', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
   document.querySelectorAll('.grupo, #gnav').forEach((el) => { el.hidden = !on; });
 }
 
@@ -50,6 +50,7 @@ async function start() {
   loadUsdtBr();
   loadVeCl();
   loadVeCo();
+  loadCoPe();
   loadBrVe();
   loadEuCl();
   loadClEu();
@@ -967,6 +968,39 @@ async function saveClEu() {
 ['ce-fixed', 'ce-profit'].forEach((id) => { $(id).oninput = ceCalc; });
 $('ce-mode').onchange = ceCalc;
 $('ce-save').onclick = saveClEu; $('ce-pub').onchange = saveClEu;
+
+// ------------------------------------------------------------------ Colombia → Perú
+let cpCop = [], cpPen = [];
+function cpCalc() {
+  const p = Number(String($('cp-profit').value || '0').replace(',', '.'));
+  const cop = cpCop.find((x) => x.key === $('cp-cop').value)?.ask, pen = cpPen.find((x) => x.key === $('cp-pen').value)?.bid;
+  $('cp-ref').textContent = cop && pen ? `1 USDT = ${fmt(cop, 2)} COP (${EXN($('cp-cop').value)}) · en Perú te pagan ${fmt(pen, 3)} soles (${EXN($('cp-pen').value)})` : '—';
+  if (!cop || !pen || !(p >= 0 && p < 50)) { $('cp-rate').textContent = cpCop.length && cpPen.length ? 'Revisa la comisión (0 a 50 %) o elige otra referencia.' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
+  const rate = cop / ((1 - p / 100) * pen);
+  $('cp-rate').innerHTML = `100.000 COP − ${fmt(p, 2)} % = ${fmt(100000 * (1 - p / 100) / cop, 2)} USDT · Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100.000 COP = <b class="num">${fmt(100000 / rate, 2)} soles</b>`;
+}
+async function loadCoPe() {
+  const { status, body } = await api('/api/co-pe');
+  if (status !== 200) return;
+  $('cp-profit').value = body.profit_pct ?? '0'; $('cp-min').value = fmt(Number(body.min), 0); $('cp-pub').checked = !!body.published;
+  const get = (u) => cyFetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  const [c, pe] = await Promise.all([get(USDT_COP_URL), get(USDT_PEN_URL)]);
+  cpCop = c ? exchangesIn(c, COP_RANGE) : []; cpPen = pe ? exchangesIn(pe, PEN_RANGE).filter((x) => x.bid) : [];
+  const opts = (list, saved, side, dec) => { const src = pickExchange(list, saved)?.key || saved; const keys = [...new Set([src, ...list.map((x) => x.key)])];
+    return keys.map((k) => { const x = list.find((e) => e.key === k); return `<option value="${esc(k)}"${k === src ? ' selected' : ''}>${esc(EXN(k))}${x ? ` · ${fmt(x[side], dec)}` : ' (sin precio ahora)'}</option>`; }).join(''); };
+  $('cp-cop').innerHTML = opts(cpCop, body.cop_source, 'ask', 2);
+  $('cp-pen').innerHTML = opts(cpPen, body.pen_source, 'bid', 3);
+  cpCalc();
+}
+async function saveCoPe() {
+  const msg = $('cp-msg');
+  const { status, body } = await api('/api/co-pe', { method: 'PUT', body: JSON.stringify({ profit_pct: $('cp-profit').value || '0', min: $('cp-min').value, cop_source: $('cp-cop').value, pen_source: $('cp-pen').value, published: $('cp-pub').checked }) });
+  msg.hidden = false;
+  if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
+  msg.className = 'msg'; msg.textContent = body.published ? 'Guardado: los clientes ya ven envíos desde Colombia a Perú.' : 'Guardado (ruta Colombia → Perú apagada).';
+}
+$('cp-profit').oninput = cpCalc; $('cp-cop').onchange = cpCalc; $('cp-pen').onchange = cpCalc;
+$('cp-save').onclick = saveCoPe; $('cp-pub').onchange = saveCoPe;
 ['ec-eur', 'ec-profit', 'ec-prem'].forEach((id) => { $(id).oninput = ecCalc; });
 $('ec-save').onclick = saveEuCl; $('ec-pub').onchange = saveEuCl;
 
@@ -1001,7 +1035,7 @@ async function drawBrVe(rateTxt) {
   if (!$('estado-BRVE').value.trim()) $('estado-BRVE').value = brVeText();
   try { await document.fonts.load('800 60px Montserrat'); } catch { /* letra de respaldo */ }
   let img;
-  try { img = await loadImg('/assets/flyer-brasil.png?v=83'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
+  try { img = await loadImg('/assets/flyer-brasil.png?v=84'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
   const c = document.createElement('canvas'); c.width = 1080; c.height = 1080;
   const g = c.getContext('2d');
   g.drawImage(img, 0, 0, 1080, 1080);

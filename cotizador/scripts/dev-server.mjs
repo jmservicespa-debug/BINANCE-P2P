@@ -29,6 +29,7 @@ import * as euClFn from '../functions/api/eu-cl.js';
 import * as wiseFn from '../functions/api/usdt-eur-wise.js';
 import * as eurFn from '../functions/api/usdt-eur.js';
 import * as clEuFn from '../functions/api/cl-eu.js';
+import * as coPeFn from '../functions/api/co-pe.js';
 import * as clpEurFn from '../functions/api/clp-eur.js';
 import * as precioCriptoFn from '../functions/api/precio-cripto.js';
 import * as rewardsFn from '../functions/api/rewards.js';
@@ -43,7 +44,7 @@ const env = {
   SESSION_SECRET: 'solo-para-pruebas-locales',
   ADMIN_PASSWORD_HASH: await hashPassword(process.env.DEV_PASSWORD || 'clave-de-prueba', crypto.getRandomValues(new Uint8Array(16))),
 };
-const API = { '/api/tasas': tasas, '/api/login': loginFn, '/api/logout': logoutFn, '/api/sesion': sesion, '/api/usdt': usdtFn, '/api/pausa': pausaFn, '/api/indicadores': indicadoresFn, '/api/evento': eventoFn, '/api/usdt-co': usdtCoFn, '/api/usdt-br': usdtBrFn, '/api/oro': oroFn, '/api/btc': btcFn, '/api/ve-cl': veClFn, '/api/br-co': brCoFn, '/api/co-br': coBrFn, '/api/br-cl': brClFn, '/api/us-cl': usClFn, '/api/ve-co': veCoFn, '/api/br-ve': brVeFn, '/api/cy': cyFn, '/api/eu-cl': euClFn, '/api/usdt-eur-wise': wiseFn, '/api/usdt-eur': eurFn, '/api/cl-eu': clEuFn, '/api/clp-eur': clpEurFn, '/api/precio-cripto': precioCriptoFn, '/api/rewards': rewardsFn, '/api/estadisticas': estadisticasFn };
+const API = { '/api/tasas': tasas, '/api/login': loginFn, '/api/logout': logoutFn, '/api/sesion': sesion, '/api/usdt': usdtFn, '/api/pausa': pausaFn, '/api/indicadores': indicadoresFn, '/api/evento': eventoFn, '/api/usdt-co': usdtCoFn, '/api/usdt-br': usdtBrFn, '/api/oro': oroFn, '/api/btc': btcFn, '/api/ve-cl': veClFn, '/api/br-co': brCoFn, '/api/co-br': coBrFn, '/api/br-cl': brClFn, '/api/us-cl': usClFn, '/api/ve-co': veCoFn, '/api/br-ve': brVeFn, '/api/cy': cyFn, '/api/eu-cl': euClFn, '/api/usdt-eur-wise': wiseFn, '/api/usdt-eur': eurFn, '/api/cl-eu': clEuFn, '/api/co-pe': coPeFn, '/api/clp-eur': clpEurFn, '/api/precio-cripto': precioCriptoFn, '/api/rewards': rewardsFn, '/api/estadisticas': estadisticasFn };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.xml': 'application/xml', '.txt': 'text/plain; charset=utf-8' };
 
 createServer(async (req, res) => {

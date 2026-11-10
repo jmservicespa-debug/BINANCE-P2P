@@ -721,3 +721,21 @@ test('Chile → Europa: cambio de Wise (respaldo er-api), comisión y modo fijo'
   assert.ok(Math.abs((await clEuRate({ mode: 'auto', profit_pct: '3', fixed: '1050' }, down)).rate - 1050 / 0.97) < 1e-9);
   assert.ok(Math.abs((await clEuRate({ mode: 'fijo', profit_pct: '0', fixed: '1050' }, api)).rate - 1050) < 1e-9);
 });
+
+test('Colombia → Perú: tasa = USDT en pesos (compra) ÷ ((1 − comisión) × USDT en soles (venta))', async () => {
+  noBcv();
+  const { onRequestPut: putCoPe } = await import('../functions/api/co-pe.js');
+  const { copPerPen } = await import('../public/js/criptoya.js');
+  const e = await env();
+  const body = { profit_pct: '3', min: '50.000', cop_source: 'binancep2p', pen_source: 'binancep2p', published: true };
+  assert.equal((await putCoPe({ request: req('/api/co-pe', { method: 'PUT', body }), env: e })).status, 401);
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await putCoPe({ request: req('/api/co-pe', { method: 'PUT', cookie, body }), env: e })).status, 200);
+  assert.deepEqual((await (await getRates({ env: e })).json()).co_pe, { profit_pct: '3', min: 50000, cop_source: 'binancep2p', pen_source: 'binancep2p' });
+  const fake = async (u) => ({ ok: true, text: async () => (String(u).includes('/pen/') ? '{"binancep2p":{"ask":3.78,"bid":3.72},"bybitp2p":{"ask":3.8,"bid":3.7}}' : '{"binancep2p":{"ask":3900,"bid":3850}}') });
+  const r = await copPerPen('binancep2p', 'binancep2p', '3', fake);
+  assert.equal(r.cop, 3900); assert.equal(r.pen, 3.72);
+  assert.ok(Math.abs(r.rate - 3900 / (0.97 * 3.72)) < 1e-9);
+  assert.equal((await copPerPen('binancep2p', 'okexp2p', '3', fake)).pen, 3.72);  // sin precio en el elegido: Binance P2P
+});

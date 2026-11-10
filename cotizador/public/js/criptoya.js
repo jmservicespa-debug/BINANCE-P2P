@@ -97,6 +97,18 @@ export function vesExchanges(text) {
 }
 // Venezuela → Colombia: USDT en bolívares del P2P elegido (+ tu ganancia) y precio de venta del USDT en Colombia
 // del exchange elegido (Binance P2P, Vita Wallet…): lo que te pagan al VENDER el USDT (bid). Tasa = pesos colombianos por bolívar; Bs × tasa = COP.
+// Colombia → Perú: compras USDT en Colombia (ask del exchange elegido) con los pesos menos tu comisión,
+// y los vendes en Perú (bid del exchange elegido: lo que te pagan en soles). Tasa = pesos por sol: pesos ÷ tasa = soles.
+export const USDT_PEN_URL = 'https://criptoya.com/api/usdt/pen/1';
+export const PEN_RANGE = [2, 6];
+export async function copPerPen(copSource, penSource, profitPct, fetchFn = cyFetch) {
+  const [c, p] = await Promise.all([USDT_COP_URL, USDT_PEN_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
+  const pick = (list, src, side) => { const x = pickExchange(list, src); if (x?.[side]) return x[side]; const b = list.find((e) => e.key === 'binancep2p'); return b?.[side] ?? null; };
+  const cop = c && pick(exchangesIn(c, COP_RANGE), copSource || 'binancep2p', 'ask'), pen = p && pick(exchangesIn(p, PEN_RANGE), penSource || 'binancep2p', 'bid');
+  const k = 1 - Number(profitPct || 0) / 100;
+  if (!cop || !pen || !(k > 0)) return null;
+  return { rate: cop / (k * pen), cop, pen };
+}
 export async function copPerVes(source, copSource, profitPct, fetchFn = cyFetch) {
   const [v, c] = await Promise.all([USDT_VES_URL, USDT_COP_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
   const ves = pickExchange(v ? vesExchanges(v) : [], source)?.ask, cop = c && pickExchange(exchangesIn(c, COP_RANGE), copSource || 'binancep2p')?.bid;
