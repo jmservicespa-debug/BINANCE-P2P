@@ -130,6 +130,10 @@ export const BR_VE_ROUTE = { id: 'br-ve', from: 'BR', to: ['VE'], name: 'Venezue
 // Europa → Chile: euros − tu ganancia → USDT comprados en Binance P2P con Wise (precio que anotas en el panel) → vendidos en Chile al precio de Vita.
 // Chile → Europa: pesos − tu comisión, pasados a euros al cambio de Wise (pesos ÷ tasa = euros).
 // Colombia → Perú: pesos − tu comisión → USDT comprados en Colombia (Binance P2P) → vendidos en Perú por soles. Pesos ÷ tasa = soles.
+// Colombia → Europa: euros → pesos chilenos (Wise) → USDT vendidos a Vita → USDT comprados en Colombia (Binance P2P) + ganancia.
+// Tasa = pesos colombianos por euro: pesos ÷ tasa = euros.
+export const CO_EU_ROUTE = { id: 'co-eu', from: 'CO', to: ['EU'], name: 'Europa', cur: 'EUR', unit: 'Euros', op: 'div', dec: 2, min: 100000,
+  note: 'Recibe en euros en su cuenta bancaria en Europa' };
 export const CO_PE_ROUTE = { id: 'co-pe', from: 'CO', to: ['PE'], name: 'Perú', cur: 'PEN', unit: 'Soles', op: 'div', dec: 2, min: 50000,
   note: 'Recibe en soles en su cuenta bancaria en Perú' };
 export const CL_EU_ROUTE = { id: 'cl-eu', from: 'CL', to: ['EU'], name: 'Europa', cur: 'EUR', unit: 'Euros', op: 'div', dec: 2, min: 20000,

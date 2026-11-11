@@ -713,6 +713,26 @@ export async function saveEuClCfg(request, env, now = Date.now()) {
   await env.TASAS.put('eucl_cfg', JSON.stringify(cfg));
   return json(cfg);
 }
+export const COEU_CFG = { profit_pct: '0', min: '100000', cop_source: 'binancep2p', clp_eur: '', published: false };
+export const loadCoEuCfg = (env) => loadCfg(env, 'coeu_cfg', COEU_CFG);
+export async function coEuView(request, env, now = Date.now()) {
+  if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
+  return json(await loadCoEuCfg(env));
+}
+export async function saveCoEuCfg(request, env, now = Date.now()) {
+  const { body, error } = await adminBody(request, env, now);
+  if (error) return error;
+  const p = pctOk(body?.profit_pct ?? '0');
+  if (p === null) return json({ error: 'Tu ganancia debe estar entre 0 y 50 %.' }, 400);
+  const min = String(body?.min ?? '').replace(/\D/g, '');
+  if (!(Number(min) >= 1000 && Number(min) <= 100000000)) return json({ error: 'El mínimo no es válido.' }, 400);
+  if (!/^[a-z0-9_]{2,30}$/i.test(String(body?.cop_source ?? '').trim())) return json({ error: 'Elige la referencia en Colombia.' }, 400);
+  const fx = String(body?.clp_eur ?? '').trim().replace(/\./g, '').replace(',', '.');
+  if (fx !== '' && !(Number(fx) >= 300 && Number(fx) <= 3000)) return json({ error: 'El respaldo son los pesos chilenos por 1 euro (ej. 1050).' }, 400);
+  const cfg = { profit_pct: p, min, cop_source: String(body.cop_source).trim(), clp_eur: fx, published: body?.published === true };
+  await env.TASAS.put('coeu_cfg', JSON.stringify(cfg));
+  return json(cfg);
+}
 export const COPE_CFG = { profit_pct: '0', min: '50000', cop_source: 'binancep2p', pen_source: 'binancep2p', published: false };
 export const loadCoPeCfg = (env) => loadCfg(env, 'cope_cfg', COPE_CFG);
 export async function coPeView(request, env, now = Date.now()) {

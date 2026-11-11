@@ -211,6 +211,19 @@ export async function clpEur(fetchFn = fetch) {
   try { const r = await fetchFn('/api/clp-eur', { cache: 'no-store' }); const d = r.ok ? await r.json() : null; return d?.value ? d : null; } catch { return null; }
 }
 // Tasa publicada = pesos por euro ÷ (1 − comisión): pesos ÷ tasa = euros que llegan. Fijo o automático (Wise, con el fijo de respaldo).
+// Colombia → Europa: (pesos chilenos por euro de Wise ÷ precio del USDT en Vita) × USDT en pesos colombianos × (1 + ganancia).
+export async function copPerEur(cfg, fetchFn = cyFetch, wiseFn = fetch) {
+  const [w, l, c] = await Promise.all([clpEur(wiseFn), fetchFn(USDT_URL, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null),
+    fetchFn(USDT_COP_URL, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)]);
+  const fixed = Number(String(cfg?.clp_eur ?? '').replace(/\./g, '').replace(',', '.'));
+  const clpEurV = w?.value || (fixed >= 300 && fixed <= 3000 ? fixed : null);
+  const vita = l && parseCriptoYa(l)?.value;
+  const list = c ? exchangesIn(c, COP_RANGE) : [];
+  const cop = pickExchange(list, cfg?.cop_source || 'binancep2p')?.ask || list.find((e) => e.key === 'binancep2p')?.ask || null;
+  if (!clpEurV || !vita || !cop) return null;
+  const usdtPerEur = clpEurV / vita;
+  return { rate: usdtPerEur * cop * (1 + Number(cfg?.profit_pct || 0) / 100), clpEur: clpEurV, wise: !!w, vita, cop, usdtPerEur };
+}
 export async function clEuRate(cfg, fetchFn = fetch) {
   const fixed = Number(String(cfg?.fixed ?? '').replace(',', '.')), okF = fixed >= 300 && fixed <= 3000;
   const k = 1 - Number(cfg?.profit_pct || 0) / 100;

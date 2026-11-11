@@ -739,3 +739,24 @@ test('Colombia → Perú: tasa = USDT en pesos (compra) ÷ ((1 − comisión) ×
   assert.ok(Math.abs(r.rate - 3900 / (0.97 * 3.72)) < 1e-9);
   assert.equal((await copPerPen('binancep2p', 'okexp2p', '3', fake)).pen, 3.72);  // sin precio en el elegido: Binance P2P
 });
+
+test('Colombia → Europa: (CLP por EUR de Wise ÷ Vita) × USDT en COP × (1 + ganancia)', async () => {
+  noBcv();
+  const { onRequestPut: putCoEu } = await import('../functions/api/co-eu.js');
+  const { copPerEur } = await import('../public/js/criptoya.js');
+  const e = await env();
+  const body = { profit_pct: '3', min: '100.000', cop_source: 'binancep2p', clp_eur: '', published: true };
+  assert.equal((await putCoEu({ request: req('/api/co-eu', { method: 'PUT', body }), env: e })).status, 401);
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await putCoEu({ request: req('/api/co-eu', { method: 'PUT', cookie, body: { ...body, clp_eur: '15' } }), env: e })).status, 400);
+  assert.equal((await putCoEu({ request: req('/api/co-eu', { method: 'PUT', cookie, body }), env: e })).status, 200);
+  assert.deepEqual((await (await getRates({ env: e })).json()).co_eu, { profit_pct: '3', min: 100000, cop_source: 'binancep2p', clp_eur: '' });
+  const cy = async (u) => ({ ok: true, text: async () => (String(u).includes('/cop/') ? '{"binancep2p":{"ask":3900,"bid":3850}}' : '{"vitawallet":{"ask":990,"bid":980}}') });
+  const wise = async () => ({ ok: true, json: async () => ({ value: 1050, source: 'wise' }) });
+  const r = await copPerEur({ profit_pct: '3', cop_source: 'binancep2p' }, cy, wise);
+  assert.ok(Math.abs(r.rate - (1050 / 990) * 3900 * 1.03) < 1e-6);
+  const down = async () => ({ ok: false, json: async () => ({}) });
+  assert.equal(await copPerEur({ profit_pct: '3' }, cy, down), null);
+  assert.ok(Math.abs((await copPerEur({ profit_pct: '0', clp_eur: '1.100' }, cy, down)).rate - (1100 / 990) * 3900) < 1e-6);
+});

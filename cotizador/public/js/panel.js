@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=84';
-import { esc, flag, flags } from './ui.js?v=84';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, cyFetch, eurMarket, clpEur, USDT_PEN_URL, PEN_RANGE, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=84';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=85';
+import { esc, flag, flags } from './ui.js?v=85';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, cyFetch, eurMarket, clpEur, USDT_PEN_URL, PEN_RANGE, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=85';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -29,7 +29,7 @@ async function api(path, opts = {}) {
 
 function showEditor(on) {
   $('login').hidden = on;
-  ['power', 'mkt', 'tasas-CL', 'tasas-CO', 'tasas-EU', 'bcvsec', 'usdt', 'usdtco', 'brco', 'cobr', 'brcl', 'uscl', 'veco', 'brve', 'eucl', 'cleu', 'cope', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  ['power', 'mkt', 'tasas-CL', 'tasas-CO', 'tasas-EU', 'bcvsec', 'usdt', 'usdtco', 'brco', 'cobr', 'brcl', 'uscl', 'veco', 'brve', 'eucl', 'cleu', 'cope', 'coeu', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
   document.querySelectorAll('.grupo, #gnav').forEach((el) => { el.hidden = !on; });
 }
 
@@ -51,6 +51,7 @@ async function start() {
   loadVeCl();
   loadVeCo();
   loadCoPe();
+  loadCoEu();
   loadBrVe();
   loadEuCl();
   loadClEu();
@@ -1001,6 +1002,39 @@ async function saveCoPe() {
 }
 $('cp-profit').oninput = cpCalc; $('cp-cop').onchange = cpCalc; $('cp-pen').onchange = cpCalc;
 $('cp-save').onclick = saveCoPe; $('cp-pub').onchange = saveCoPe;
+
+// ------------------------------------------------------------------ Colombia → Europa
+let cuCop = [], cuWise = null, cuVita = null;
+function cuCalc() {
+  const p = Number(String($('cu-profit').value || '0').replace(',', '.'));
+  const fx = Number(String($('cu-fx').value || '').replace(/\./g, '').replace(',', '.'));
+  const clp = cuWise?.value || (fx >= 300 && fx <= 3000 ? fx : 0);
+  const cop = cuCop.find((x) => x.key === $('cu-cop').value)?.ask;
+  $('cu-ref').textContent = clp && cuVita && cop ? `1 EUR = ${fmt(clp, 2)} CLP (${cuWise ? 'Wise' : 'respaldo'}) · Vita: 1 USDT = ${fmt(cuVita, 2)} CLP · ${EXN($('cu-cop').value)}: 1 USDT = ${fmt(cop, 2)} COP` : '—';
+  if (!clp || !cuVita || !cop || !(p >= 0 && p <= 50)) { $('cu-rate').textContent = !clp ? 'No se pudo leer el cambio de Wise: escribe un respaldo (pesos chilenos por euro).' : !cuVita || !cop ? 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".' : 'Revisa tu ganancia (0 a 50 %).'; return; }
+  const usdt = clp / cuVita, rate = usdt * cop * (1 + p / 100);
+  $('cu-rate').innerHTML = `100 EUR = ${fmt(100 * clp, 0)} CLP = ${fmt(100 * usdt, 2)} USDT · Tasa publicada: <b class="num">${fmt(rate, 2)}</b> COP por euro · Para que lleguen 100 EUR: <b class="num">${fmt(100 * rate, 0)} COP</b>`;
+}
+async function loadCoEu() {
+  const { status, body } = await api('/api/co-eu');
+  if (status !== 200) return;
+  $('cu-profit').value = body.profit_pct ?? '0'; $('cu-min').value = fmt(Number(body.min), 0); $('cu-fx').value = body.clp_eur || ''; $('cu-pub').checked = !!body.published;
+  const get = (u) => cyFetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  const [c, l, w] = await Promise.all([get(USDT_COP_URL), get(USDT_URL), clpEur()]);
+  cuCop = c ? exchangesIn(c, COP_RANGE) : []; cuVita = l ? parseCriptoYa(l)?.value ?? null : null; cuWise = w;
+  const src = pickExchange(cuCop, body.cop_source)?.key || body.cop_source; const keys = [...new Set([src, ...cuCop.map((x) => x.key)])];
+  $('cu-cop').innerHTML = keys.map((k) => { const x = cuCop.find((e) => e.key === k); return `<option value="${esc(k)}"${k === src ? ' selected' : ''}>${esc(EXN(k))}${x ? ` · ${fmt(x.ask, 2)}` : ' (sin precio ahora)'}</option>`; }).join('');
+  cuCalc();
+}
+async function saveCoEu() {
+  const msg = $('cu-msg');
+  const { status, body } = await api('/api/co-eu', { method: 'PUT', body: JSON.stringify({ profit_pct: $('cu-profit').value || '0', min: $('cu-min').value, cop_source: $('cu-cop').value, clp_eur: $('cu-fx').value, published: $('cu-pub').checked }) });
+  msg.hidden = false;
+  if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
+  msg.className = 'msg'; msg.textContent = body.published ? 'Guardado: los clientes ya ven envíos desde Colombia a Europa.' : 'Guardado (ruta Colombia → Europa apagada).';
+}
+['cu-profit', 'cu-fx'].forEach((id) => { $(id).oninput = cuCalc; }); $('cu-cop').onchange = cuCalc;
+$('cu-save').onclick = saveCoEu; $('cu-pub').onchange = saveCoEu;
 ['ec-eur', 'ec-profit', 'ec-prem'].forEach((id) => { $(id).oninput = ecCalc; });
 $('ec-save').onclick = saveEuCl; $('ec-pub').onchange = saveEuCl;
 
@@ -1035,7 +1069,7 @@ async function drawBrVe(rateTxt) {
   if (!$('estado-BRVE').value.trim()) $('estado-BRVE').value = brVeText();
   try { await document.fonts.load('800 60px Montserrat'); } catch { /* letra de respaldo */ }
   let img;
-  try { img = await loadImg('/assets/flyer-brasil.png?v=84'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
+  try { img = await loadImg('/assets/flyer-brasil.png?v=85'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
   const c = document.createElement('canvas'); c.width = 1080; c.height = 1080;
   const g = c.getContext('2d');
   g.drawImage(img, 0, 0, 1080, 1080);
