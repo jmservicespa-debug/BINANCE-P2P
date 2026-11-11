@@ -114,6 +114,17 @@ export function vesExchanges(text) {
 // y los vendes en Perú (bid del exchange elegido: lo que te pagan en soles). Tasa = pesos por sol: pesos ÷ tasa = soles.
 export const USDT_PEN_URL = 'https://criptoya.com/api/usdt/pen/1';
 export const PEN_RANGE = [2, 6];
+// Colombia → Ecuador: igual que a Perú, pero el USDT se vende por dólares (P2P en USD: lo que te pagan, bid).
+export const USDT_USD_URL = 'https://criptoya.com/api/usdt/usd/1';
+export const USD_RANGE = [0.8, 1.2];
+export async function copPerUsdEc(copSource, usdSource, profitPct, fetchFn = cyFetch) {
+  const [c, u] = await Promise.all([USDT_COP_URL, USDT_USD_URL].map((x) => fetchFn(x, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
+  const pick = (list, src, side) => { const x = pickExchange(list, src); if (x?.[side]) return x[side]; const b = list.find((e) => e.key === 'binancep2p'); return b?.[side] ?? null; };
+  const cop = c && pick(exchangesIn(c, COP_RANGE), copSource || 'binancep2p', 'ask'), usd = u && pick(exchangesIn(u, USD_RANGE), usdSource || 'binancep2p', 'bid');
+  const k = 1 - Number(profitPct || 0) / 100;
+  if (!cop || !usd || !(k > 0)) return null;
+  return { rate: cop / (k * usd), cop, usd };
+}
 export async function copPerPen(copSource, penSource, profitPct, fetchFn = cyFetch) {
   const [c, p] = await Promise.all([USDT_COP_URL, USDT_PEN_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
   const pick = (list, src, side) => { const x = pickExchange(list, src); if (x?.[side]) return x[side]; const b = list.find((e) => e.key === 'binancep2p'); return b?.[side] ?? null; };

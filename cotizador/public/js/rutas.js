@@ -134,6 +134,9 @@ export const BR_VE_ROUTE = { id: 'br-ve', from: 'BR', to: ['VE'], name: 'Venezue
 // Tasa = pesos colombianos por euro: pesos ÷ tasa = euros.
 export const CO_EU_ROUTE = { id: 'co-eu', from: 'CO', to: ['EU'], name: 'Europa', cur: 'EUR', unit: 'Euros', op: 'div', dec: 2, min: 100000,
   note: 'Recibe en euros en su cuenta bancaria en Europa' };
+// Colombia → Ecuador: pesos − tu comisión → USDT comprados en Colombia (Binance P2P) → vendidos en Ecuador por dólares. Pesos ÷ tasa = dólares.
+export const CO_EC_ROUTE = { id: 'co-ec', from: 'CO', to: ['EC'], name: 'Ecuador', cur: 'USD', unit: 'Dólares', op: 'div', dec: 2, min: 50000,
+  note: 'Recibe en dólares en su cuenta bancaria en Ecuador' };
 export const CO_PE_ROUTE = { id: 'co-pe', from: 'CO', to: ['PE'], name: 'Perú', cur: 'PEN', unit: 'Soles', op: 'div', dec: 2, min: 50000,
   note: 'Recibe en soles en su cuenta bancaria en Perú' };
 export const CL_EU_ROUTE = { id: 'cl-eu', from: 'CL', to: ['EU'], name: 'Europa', cur: 'EUR', unit: 'Euros', op: 'div', dec: 2, min: 20000,

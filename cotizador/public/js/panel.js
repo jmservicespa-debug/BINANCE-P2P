@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=86';
-import { esc, flag, flags } from './ui.js?v=86';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, cyFetch, eurMarket, clpEur, vitaSellClp, USDT_PEN_URL, PEN_RANGE, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=86';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=87';
+import { esc, flag, flags } from './ui.js?v=87';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, cyFetch, eurMarket, clpEur, vitaSellClp, USDT_PEN_URL, USDT_USD_URL, USD_RANGE, PEN_RANGE, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=87';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -29,7 +29,7 @@ async function api(path, opts = {}) {
 
 function showEditor(on) {
   $('login').hidden = on;
-  ['power', 'mkt', 'tasas-CL', 'tasas-CO', 'tasas-EU', 'bcvsec', 'usdt', 'usdtco', 'brco', 'cobr', 'brcl', 'uscl', 'veco', 'brve', 'eucl', 'cleu', 'cope', 'coeu', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
+  ['power', 'mkt', 'tasas-CL', 'tasas-CO', 'tasas-EU', 'bcvsec', 'usdt', 'usdtco', 'brco', 'cobr', 'brcl', 'uscl', 'veco', 'brve', 'eucl', 'cleu', 'cope', 'coeu', 'coec', 'vecl', 'usdtbr', 'oro', 'btcsec', 'rewards', 'flyers', 'stats', 'links', 'logout'].forEach((id) => { $(id).hidden = !on; });
   document.querySelectorAll('.grupo, #gnav').forEach((el) => { el.hidden = !on; });
 }
 
@@ -51,6 +51,7 @@ async function start() {
   loadVeCl();
   loadVeCo();
   loadCoPe();
+  loadCoEc();
   loadCoEu();
   loadBrVe();
   loadEuCl();
@@ -1003,6 +1004,39 @@ async function saveCoPe() {
 $('cp-profit').oninput = cpCalc; $('cp-cop').onchange = cpCalc; $('cp-pen').onchange = cpCalc;
 $('cp-save').onclick = saveCoPe; $('cp-pub').onchange = saveCoPe;
 
+// ------------------------------------------------------------------ Colombia → Ecuador
+let cqCop = [], cqUsd = [];
+function cqCalc() {
+  const p = Number(String($('cq-profit').value || '0').replace(',', '.'));
+  const cop = cqCop.find((x) => x.key === $('cq-cop').value)?.ask, usd = cqUsd.find((x) => x.key === $('cq-usd').value)?.bid;
+  $('cq-ref').textContent = cop && usd ? `1 USDT = ${fmt(cop, 2)} COP (${EXN($('cq-cop').value)}) · en Ecuador te pagan ${fmt(usd, 3)} USD (${EXN($('cq-usd').value)})` : '—';
+  if (!cop || !usd || !(p >= 0 && p < 50)) { $('cq-rate').textContent = cqCop.length && cqUsd.length ? 'Revisa la comisión (0 a 50 %) o elige otra referencia.' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
+  const rate = cop / ((1 - p / 100) * usd);
+  $('cq-rate').innerHTML = `100.000 COP − ${fmt(p, 2)} % = ${fmt(100000 * (1 - p / 100) / cop, 2)} USDT · Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100.000 COP = <b class="num">${fmt(100000 / rate, 2)} USD</b>`;
+}
+async function loadCoEc() {
+  const { status, body } = await api('/api/co-ec');
+  if (status !== 200) return;
+  $('cq-profit').value = body.profit_pct ?? '0'; $('cq-min').value = fmt(Number(body.min), 0); $('cq-pub').checked = !!body.published;
+  const get = (u) => cyFetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+  const [c, u] = await Promise.all([get(USDT_COP_URL), get(USDT_USD_URL)]);
+  cqCop = c ? exchangesIn(c, COP_RANGE) : []; cqUsd = u ? exchangesIn(u, USD_RANGE).filter((x) => x.bid) : [];
+  const opts = (list, saved, side, dec) => { const src = pickExchange(list, saved)?.key || saved; const keys = [...new Set([src, ...list.map((x) => x.key)])];
+    return keys.map((k) => { const x = list.find((e) => e.key === k); return `<option value="${esc(k)}"${k === src ? ' selected' : ''}>${esc(EXN(k))}${x ? ` · ${fmt(x[side], dec)}` : ' (sin precio ahora)'}</option>`; }).join(''); };
+  $('cq-cop').innerHTML = opts(cqCop, body.cop_source, 'ask', 2);
+  $('cq-usd').innerHTML = opts(cqUsd, body.usd_source, 'bid', 3);
+  cqCalc();
+}
+async function saveCoEc() {
+  const msg = $('cq-msg');
+  const { status, body } = await api('/api/co-ec', { method: 'PUT', body: JSON.stringify({ profit_pct: $('cq-profit').value || '0', min: $('cq-min').value, cop_source: $('cq-cop').value, usd_source: $('cq-usd').value, published: $('cq-pub').checked }) });
+  msg.hidden = false;
+  if (status !== 200) { msg.className = 'msg bad'; msg.textContent = body.error || 'No se pudo guardar.'; return; }
+  msg.className = 'msg'; msg.textContent = body.published ? 'Guardado: los clientes ya ven envíos desde Colombia a Ecuador.' : 'Guardado (ruta Colombia → Ecuador apagada).';
+}
+$('cq-profit').oninput = cqCalc; $('cq-cop').onchange = cqCalc; $('cq-usd').onchange = cqCalc;
+$('cq-save').onclick = saveCoEc; $('cq-pub').onchange = saveCoEc;
+
 // ------------------------------------------------------------------ Colombia → Europa
 let cuCop = [], cuWise = null, cuVita = null;
 function cuCalc() {
@@ -1069,7 +1103,7 @@ async function drawBrVe(rateTxt) {
   if (!$('estado-BRVE').value.trim()) $('estado-BRVE').value = brVeText();
   try { await document.fonts.load('800 60px Montserrat'); } catch { /* letra de respaldo */ }
   let img;
-  try { img = await loadImg('/assets/flyer-brasil.png?v=86'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
+  try { img = await loadImg('/assets/flyer-brasil.png?v=87'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
   const c = document.createElement('canvas'); c.width = 1080; c.height = 1080;
   const g = c.getContext('2d');
   g.drawImage(img, 0, 0, 1080, 1080);

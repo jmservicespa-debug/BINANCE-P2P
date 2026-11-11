@@ -733,6 +733,25 @@ export async function saveCoEuCfg(request, env, now = Date.now()) {
   await env.TASAS.put('coeu_cfg', JSON.stringify(cfg));
   return json(cfg);
 }
+export const COEC_CFG = { profit_pct: '0', min: '50000', cop_source: 'binancep2p', usd_source: 'binancep2p', published: false };
+export const loadCoEcCfg = (env) => loadCfg(env, 'coec_cfg', COEC_CFG);
+export async function coEcView(request, env, now = Date.now()) {
+  if (!(await isAdmin(request, env, now))) return json({ error: 'sin sesión' }, 401);
+  return json(await loadCoEcCfg(env));
+}
+export async function saveCoEcCfg(request, env, now = Date.now()) {
+  const { body, error } = await adminBody(request, env, now);
+  if (error) return error;
+  const p = pctOk(body?.profit_pct ?? '0');
+  if (p === null) return json({ error: 'Tu comisión debe estar entre 0 y 50 %.' }, 400);
+  const min = String(body?.min ?? '').replace(/\D/g, '');
+  if (!(Number(min) >= 1000 && Number(min) <= 100000000)) return json({ error: 'El mínimo no es válido.' }, 400);
+  const ok = (v) => /^[a-z0-9_]{2,30}$/i.test(String(v ?? '').trim());
+  if (!ok(body?.cop_source) || !ok(body?.usd_source)) return json({ error: 'Elige las referencias de Colombia y Ecuador.' }, 400);
+  const cfg = { profit_pct: p, min, cop_source: String(body.cop_source).trim(), usd_source: String(body.usd_source).trim(), published: body?.published === true };
+  await env.TASAS.put('coec_cfg', JSON.stringify(cfg));
+  return json(cfg);
+}
 export const COPE_CFG = { profit_pct: '0', min: '50000', cop_source: 'binancep2p', pen_source: 'binancep2p', published: false };
 export const loadCoPeCfg = (env) => loadCfg(env, 'cope_cfg', COPE_CFG);
 export async function coPeView(request, env, now = Date.now()) {

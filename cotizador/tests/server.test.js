@@ -760,3 +760,18 @@ test('Colombia → Europa: (CLP por EUR de Wise ÷ Vita) × USDT en COP × (1 + 
   assert.equal(await copPerEur({ profit_pct: '3' }, cy, down), null);
   assert.ok(Math.abs((await copPerEur({ profit_pct: '0', clp_eur: '1.100' }, cy, down)).rate - (1100 / 980) * 3900) < 1e-6);
 });
+
+test('Colombia → Ecuador: tasa = USDT en pesos (compra) ÷ ((1 − comisión) × lo que pagan en dólares (P2P USD))', async () => {
+  noBcv();
+  const { onRequestPut: putCoEc } = await import('../functions/api/co-ec.js');
+  const { copPerUsdEc } = await import('../public/js/criptoya.js');
+  const e = await env();
+  const ok = await postLogin({ request: req('/api/login', { method: 'POST', body: { password: 'clave-larga-123' } }), env: e });
+  const cookie = ok.headers.get('set-cookie').split(';')[0];
+  assert.equal((await putCoEc({ request: req('/api/co-ec', { method: 'PUT', cookie, body: { profit_pct: '3', min: '50.000', cop_source: 'binancep2p', usd_source: 'binancep2p', published: true } }), env: e })).status, 200);
+  assert.deepEqual((await (await getRates({ env: e })).json()).co_ec, { profit_pct: '3', min: 50000, cop_source: 'binancep2p', usd_source: 'binancep2p' });
+  const fake = async (u) => ({ ok: true, text: async () => (String(u).includes('/usd/') ? '{"binancep2p":{"ask":1.01,"bid":0.995}}' : '{"binancep2p":{"ask":3900,"bid":3850}}') });
+  const r = await copPerUsdEc('binancep2p', 'binancep2p', '3', fake);
+  assert.equal(r.cop, 3900); assert.equal(r.usd, 0.995);
+  assert.ok(Math.abs(r.rate - 3900 / (0.97 * 0.995)) < 1e-9);
+});
