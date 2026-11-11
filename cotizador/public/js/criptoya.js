@@ -62,6 +62,19 @@ export const BRL_BRAKE = 0.02;  // si el mercado se movió más de 2 % desde la 
 // Colombia → Chile automático: con los pesos colombianos se compran USDT al precio de compra de Vita Wallet en Colombia (ask)
 // y esos USDT se venden al precio que paga Vita Wallet en Chile (bid). Tasa = COP por cada CLP (COP ÷ tasa = CLP).
 export const USDT_COP_URL = 'https://criptoya.com/api/usdt/cop/1';
+// Referente de Vita en Chile: lo que Vita TE PAGA al venderle USDT por pesos (bid). Respaldo: Binance P2P Chile (bid)
+// y, al final, la mediana de lo que pagan los exchanges. Nunca el precio de compra (ask).
+export function vitaSellClp(text) {
+  let d;
+  try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }
+  if (!d || typeof d !== 'object') return null;
+  const ok = (v) => Number.isFinite(v) && v >= CLP_RANGE[0] && v <= CLP_RANGE[1];
+  const vk = Object.keys(d).find((k) => /vita/i.test(k));
+  const v = Number(vk && d[vk]?.bid); if (ok(v)) return v;
+  const b = Number(d.binancep2p?.bid); if (ok(b)) return b;
+  const all = Object.values(d).map((x) => Number(x?.bid)).filter(ok).sort((a, z) => a - z);
+  return all.length ? all[Math.floor(all.length / 2)] : null;
+}
 export function vitaPrice(text, side, range) {
   let d;
   try { d = typeof text === 'string' ? JSON.parse(text) : text; } catch { return null; }
@@ -119,7 +132,7 @@ export async function copPerVes(source, copSource, profitPct, fetchFn = cyFetch)
 export async function clpPerVes(source, marginPct, fetchFn = cyFetch) {
   const [v, l] = await Promise.all([USDT_VES_URL, USDT_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
   const list = v ? vesExchanges(v) : [];
-  const ves = list.find((x) => x.key === source)?.ask, clp = l && parseCriptoYa(l)?.value;  // precio de venta de Vita (como USDT Chile)
+  const ves = list.find((x) => x.key === source)?.ask, clp = l && vitaSellClp(l);  // lo que Vita te paga al venderle USDT
   if (!ves || !clp) return null;
   const rate = clp / (ves * (1 + Number(marginPct || 0) / 100));
   return rate > 0 ? { rate, ves, clp } : null;
@@ -199,7 +212,7 @@ export async function copPerBrlSell(source, profitPct, fetchFn = cyFetch) {
 // Tasa = pesos chilenos por cada real; reales × tasa = pesos.
 export async function clpPerBrl(source, profitPct, fetchFn = cyFetch) {
   const [b, l] = await Promise.all([USDT_BRL_URL, USDT_URL].map((u) => fetchFn(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)));
-  const brl = brlPrice(b ? brlExchanges(b) : [], source, 'ask')?.value, clp = l && parseCriptoYa(l)?.value;  // precio de venta de Vita (como USDT Chile)
+  const brl = brlPrice(b ? brlExchanges(b) : [], source, 'ask')?.value, clp = l && vitaSellClp(l);  // lo que Vita te paga al venderle USDT
   if (!brl || !clp) return null;
   const rate = clp / (brl * (1 + Number(profitPct || 0) / 100));
   return rate > 0 ? { rate, brl, clp } : null;
@@ -217,7 +230,7 @@ export async function copPerEur(cfg, fetchFn = cyFetch, wiseFn = fetch) {
     fetchFn(USDT_COP_URL, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null)]);
   const fixed = Number(String(cfg?.clp_eur ?? '').replace(/\./g, '').replace(',', '.'));
   const clpEurV = w?.value || (fixed >= 300 && fixed <= 3000 ? fixed : null);
-  const vita = l && parseCriptoYa(l)?.value;
+  const vita = l && vitaSellClp(l);  // lo que Vita te paga al venderle USDT
   const list = c ? exchangesIn(c, COP_RANGE) : [];
   const cop = pickExchange(list, cfg?.cop_source || 'binancep2p')?.ask || list.find((e) => e.key === 'binancep2p')?.ask || null;
   if (!clpEurV || !vita || !cop) return null;
@@ -254,14 +267,14 @@ export async function clpPerEur(eurPerUsdt, profitPct, fetchFn = cyFetch) {
   const eur = Number(String(eurPerUsdt ?? '').replace(',', '.'));
   if (!(eur >= 0.5 && eur <= 2)) return null;
   const l = await fetchFn(USDT_URL, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
-  const clp = l && parseCriptoYa(l)?.value;
+  const clp = l && vitaSellClp(l);  // lo que Vita te paga al venderle USDT
   if (!clp) return null;
   const rate = clp * (1 - Number(profitPct || 0) / 100) / eur;
   return rate > 0 ? { rate, clp, eur } : null;
 }
 export async function clpPerUsd(profitPct, fetchFn = cyFetch) {
   const l = await fetchFn(USDT_URL, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
-  const clp = l && parseCriptoYa(l)?.value;
+  const clp = l && vitaSellClp(l);  // lo que Vita te paga al venderle USDT
   if (!clp) return null;
   const rate = clp * (1 - Number(profitPct || 0) / 100);
   return rate > 0 ? { rate, clp } : null;

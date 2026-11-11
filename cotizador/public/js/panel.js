@@ -1,6 +1,6 @@
-import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=85';
-import { esc, flag, flags } from './ui.js?v=85';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, cyFetch, eurMarket, clpEur, USDT_PEN_URL, PEN_RANGE, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=85';
+import { ADVISORS, FLYERS, ORIGINS, ROUTES, amountNum, convert, fmt, rateNum, usdtNum } from './rutas.js?v=86';
+import { esc, flag, flags } from './ui.js?v=86';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, marketClVe, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, USDT_VES_URL, vesExchanges, vitaPrice, brlExchanges, pickExchange, brlPrice, cyFetch, eurMarket, clpEur, vitaSellClp, USDT_PEN_URL, PEN_RANGE, exchangesIn, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=86';
 
 const $ = (id) => document.getElementById(id);
 // Nombres bonitos de los exchanges de CriptoYa.
@@ -779,7 +779,7 @@ let blList = [], blClp = null;
 function blCalc() {
   const p = Number(String($('bl-profit').value || '0').replace(',', '.'));
   const got = brlPrice(blList, $('bl-src').value, 'ask'), brl = got?.value;
-  $('bl-ref').textContent = brl && blClp ? `1 USDT = ${fmt(brl, 4)} BRL (${EX_NAME(got.key)}) · Vita Wallet vende el USDT a ${fmt(blClp, 2)} CLP${bkTxt($('bl-src').value, got)}` : '—';
+  $('bl-ref').textContent = brl && blClp ? `1 USDT = ${fmt(brl, 4)} BRL (${EX_NAME(got.key)}) · Vita Wallet te paga ${fmt(blClp, 2)} CLP${bkTxt($('bl-src').value, got)}` : '—';
   if (!brl || !blClp || !(p >= 0 && p <= 50)) { $('bl-rate').textContent = blList.length ? 'Revisa la ganancia (0 a 50 %) o elige otro exchange.' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
   const rate = blClp / (brl * (1 + p / 100));
   $('bl-rate').innerHTML = `USDT con tu ganancia: <b class="num">${fmt(brl * (1 + p / 100), 4)} BRL</b> · Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100 BRL = <b class="num">${fmt(100 * rate, 0)} CLP</b>`;
@@ -790,7 +790,7 @@ async function loadBrCl() {
   $('bl-profit').value = body.profit_pct ?? '0'; $('bl-min').value = fmt(Number(body.min), 0); $('bl-pub').checked = !!body.published;
   const get = (u) => cyFetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   const [b, l] = await Promise.all([get(USDT_BRL_URL), get(USDT_URL)]);
-  blList = b ? brlExchanges(b) : []; blClp = l ? parseCriptoYa(l)?.value ?? null : null;
+  blList = b ? brlExchanges(b) : []; blClp = l ? vitaSellClp(l) : null;
   const src = pickExchange(blList, body.source)?.key || body.source;
   const keys = [...new Set([src, ...blList.map((x) => x.key)])];
   $('bl-src').innerHTML = keys.map((k) => `<option value="${esc(k)}"${k === src ? ' selected' : ''}>${esc(EX_NAME(k))}${blList.some((x) => x.key === k) ? '' : ' (sin precio ahora)'}</option>`).join('');
@@ -811,7 +811,7 @@ let ulClp = null;
 function ulCalc() {
   const n = (id) => Number(String($(id).value || '0').replace(',', '.'));
   const p = n('ul-profit'), fee = n('ul-fee');
-  $('ul-ref').textContent = ulClp ? `Vita Wallet vende el USDT a ${fmt(ulClp, 2)} CLP` : '—';
+  $('ul-ref').textContent = ulClp ? `Vita Wallet te paga ${fmt(ulClp, 2)} CLP` : '—';
   if (!ulClp || !(p >= 0 && p <= 50) || !(fee >= 0 && fee <= 50)) { $('ul-rate').textContent = ulClp ? 'Revisa la comisión (0 a 50 %) y el cargo fijo.' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
   const rate = Number((ulClp * (1 - p / 100)).toFixed(2));
   const t100 = Number((rate * Math.max(0, 100 - fee) / 100).toFixed(2));
@@ -821,7 +821,7 @@ async function loadUsCl() {
   const { status, body } = await api('/api/us-cl');
   if (status !== 200) return;
   $('ul-profit').value = body.profit_pct ?? '0'; $('ul-fee').value = body.fee ?? '1'; $('ul-min').value = fmt(Number(body.min), 0); $('ul-pub').checked = !!body.published;
-  try { const r = await cyFetch(USDT_URL, { cache: 'no-store' }); ulClp = r.ok ? parseCriptoYa(await r.text())?.value ?? null : null; } catch { ulClp = null; }
+  try { const r = await cyFetch(USDT_URL, { cache: 'no-store' }); ulClp = r.ok ? vitaSellClp(await r.text()) : null; } catch { ulClp = null; }
   ulCalc();
 }
 async function saveUsCl() {
@@ -841,7 +841,7 @@ const P2P_NAME = (k) => ({ binancep2p: 'Binance P2P', bybitp2p: 'Bybit P2P', bit
 function vcCalc() {
   const m = Number(String($('vc-margin').value).replace(',', '.'));
   const ves = vcList.find((x) => x.key === $('vc-src').value)?.ask;
-  $('vc-ref').textContent = ves && vcClp ? `1 USDT = ${fmt(ves, 2)} Bs (${P2P_NAME($('vc-src').value)}) · Vita Wallet vende el USDT a ${fmt(vcClp, 2)} CLP` : '—';
+  $('vc-ref').textContent = ves && vcClp ? `1 USDT = ${fmt(ves, 2)} Bs (${P2P_NAME($('vc-src').value)}) · Vita Wallet te paga ${fmt(vcClp, 2)} CLP` : '—';
   if (!ves || !vcClp || !(m >= 0 && m <= 50)) { $('vc-rate').textContent = vcList.length ? 'Revisa la ganancia (0 a 50 %).' : 'No se pudo leer CriptoYa ahora: el cotizador mostrará "Mercado inestable".'; return; }
   const rate = vcClp / (ves * (1 + m / 100));
   $('vc-rate').innerHTML = `Tasa publicada: <b class="num">${rate.toFixed(4)}</b> · 10.000 Bs = <b class="num">${fmt(10000 * rate, 0)} CLP</b>`;
@@ -852,7 +852,7 @@ async function loadVeCl() {
   $('vc-margin').value = body.margin_pct; $('vc-min').value = fmt(Number(body.min), 0); $('vc-pub').checked = !!body.published;
   const get = (u) => cyFetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   const [v, l] = await Promise.all([get(USDT_VES_URL), get(USDT_URL)]);
-  vcList = v ? vesExchanges(v) : []; vcClp = l ? parseCriptoYa(l)?.value ?? null : null;
+  vcList = v ? vesExchanges(v) : []; vcClp = l ? vitaSellClp(l) : null;
   const keys = [...new Set([body.source, ...vcList.map((x) => x.key)])];
   $('vc-src').innerHTML = keys.map((k) => `<option value="${esc(k)}"${k === body.source ? ' selected' : ''}>${esc(P2P_NAME(k))}${vcList.some((x) => x.key === k) ? '' : ' (sin precio ahora)'}</option>`).join('');
   vcCalc();
@@ -913,7 +913,7 @@ function ecCalc() {
   const p = Number(String($('ec-profit').value || '0').replace(',', '.'));
   $('ec-prem').closest('label').style.opacity = $('ec-mode').value === 'fijo' ? .45 : 1;
   const e = ecEur();
-  $('ec-ref').textContent = ecClp ? `Vita Wallet vende el USDT a ${fmt(ecClp, 2)} CLP${e ? ` · 1 USDT = ${fmt(e.value, 4)} EUR (${e.src})` : ''}` : '—';
+  $('ec-ref').textContent = ecClp ? `Vita Wallet te paga ${fmt(ecClp, 2)} CLP${e ? ` · 1 USDT = ${fmt(e.value, 4)} EUR (${e.src})` : ''}` : '—';
   if (!ecClp || !e || !(p >= 0 && p <= 50)) { $('ec-rate').textContent = !ecClp ? 'No se pudo leer Vita ahora: el cotizador mostrará "Mercado inestable".' : !e ? ($('ec-mode').value === 'fijo' ? 'Escribe el precio fijo del USDT en euros (ej. 0.93).' : 'No se pudo leer el precio de mercado ahora: escribe un precio fijo como respaldo.') : 'Revisa tu ganancia (0 a 50 %).'; return; }
   const rate = ecClp * (1 - p / 100) / e.value;
   $('ec-rate').innerHTML = `100 EUR − ${fmt(p, 2)} % = ${fmt(100 * (1 - p / 100), 2)} EUR = ${fmt(100 * (1 - p / 100) / e.value, 2)} USDT · Tasa publicada: <b class="num">${fmt(rate, 2)}</b> · 100 EUR = <b class="num">${fmt(100 * rate, 0)} CLP</b>`;
@@ -924,7 +924,7 @@ async function loadEuCl() {
   $('ec-eur').value = body.eur_usdt || ''; $('ec-profit').value = body.profit_pct ?? '0'; $('ec-min').value = fmt(Number(body.min), 0); $('ec-pub').checked = !!body.published;
   $('ec-mode').value = body.mode === 'fijo' ? 'fijo' : 'auto'; $('ec-prem').value = body.premium_pct ?? '1.5';
   const [r, m] = await Promise.all([cyFetch(USDT_URL, { cache: 'no-store' }).catch(() => null), eurMarket()]);
-  try { ecClp = r?.ok ? parseCriptoYa(await r.text())?.value ?? null : null; } catch { ecClp = null; }
+  try { ecClp = r?.ok ? vitaSellClp(await r.text()) : null; } catch { ecClp = null; }
   ecMkt = m;
   ecCalc();
 }
@@ -1021,7 +1021,7 @@ async function loadCoEu() {
   $('cu-profit').value = body.profit_pct ?? '0'; $('cu-min').value = fmt(Number(body.min), 0); $('cu-fx').value = body.clp_eur || ''; $('cu-pub').checked = !!body.published;
   const get = (u) => cyFetch(u, { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
   const [c, l, w] = await Promise.all([get(USDT_COP_URL), get(USDT_URL), clpEur()]);
-  cuCop = c ? exchangesIn(c, COP_RANGE) : []; cuVita = l ? parseCriptoYa(l)?.value ?? null : null; cuWise = w;
+  cuCop = c ? exchangesIn(c, COP_RANGE) : []; cuVita = l ? vitaSellClp(l) : null; cuWise = w;
   const src = pickExchange(cuCop, body.cop_source)?.key || body.cop_source; const keys = [...new Set([src, ...cuCop.map((x) => x.key)])];
   $('cu-cop').innerHTML = keys.map((k) => { const x = cuCop.find((e) => e.key === k); return `<option value="${esc(k)}"${k === src ? ' selected' : ''}>${esc(EXN(k))}${x ? ` · ${fmt(x.ask, 2)}` : ' (sin precio ahora)'}</option>`; }).join('');
   cuCalc();
@@ -1069,7 +1069,7 @@ async function drawBrVe(rateTxt) {
   if (!$('estado-BRVE').value.trim()) $('estado-BRVE').value = brVeText();
   try { await document.fonts.load('800 60px Montserrat'); } catch { /* letra de respaldo */ }
   let img;
-  try { img = await loadImg('/assets/flyer-brasil.png?v=85'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
+  try { img = await loadImg('/assets/flyer-brasil.png?v=86'); } catch { $('fly-BRVE').alt = 'No se pudo cargar la plantilla'; return; }
   const c = document.createElement('canvas'); c.width = 1080; c.height = 1080;
   const g = c.getContext('2d');
   g.drawImage(img, 0, 0, 1080, 1080);

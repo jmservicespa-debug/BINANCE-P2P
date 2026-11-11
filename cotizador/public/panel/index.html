@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/icono-192.png">
 <link rel="apple-touch-icon" href="/assets/icono-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Michroma&family=Source+Sans+3:wght@400;600&family=Inter:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="/css/estilo.css?v=85">
+<link rel="stylesheet" href="/css/estilo.css?v=86">
 </head>
 <body class="tema-flyer tema-fintech panel">
 <div class="ondas" aria-hidden="true"><i class="o-arriba"></i><i class="o-abajo"></i></div>
@@ -273,7 +273,7 @@
     <section class="card" id="brcl" hidden aria-labelledby="h-brcl">
       <div class="c-head"><span class="c-flags" data-flags="BR,CL"></span><h2 id="h-brcl">Envío Brasil → Chile (automático)</h2></div>
       <p class="c-txt"><b>Qué es:</b> el cliente paga reales y recibe pesos chilenos.</p>
-      <p class="c-txt"><b>Cómo se calcula:</b> (precio de venta del USDT en Vita Wallet) ÷ (USDT en reales del exchange + tu ganancia). Reales × tasa = pesos chilenos.</p>
+      <p class="c-txt"><b>Cómo se calcula:</b> (lo que Vita te paga por el USDT) ÷ (USDT en reales del exchange + tu ganancia). Reales × tasa = pesos chilenos.</p>
       <label class="f" for="bl-src">Referencia (exchange de Brasil donde compras, vía CriptoYa)
         <select id="bl-src"></select></label>
       <div class="usdt-ref"><span class="muted">Precio de referencia</span><b class="num" id="bl-ref">—</b></div>
@@ -318,7 +318,7 @@
     <section class="card" id="vecl" hidden aria-labelledby="h-vecl">
       <div class="c-head"><span class="c-flags" data-flags="VE,CL"></span><h2 id="h-vecl">Envío Venezuela → Chile (automático)</h2></div>
       <p class="c-txt"><b>Qué es:</b> el cliente paga bolívares y recibe pesos chilenos.</p>
-      <p class="c-txt"><b>Cómo se calcula:</b> (precio de venta del USDT en Vita Wallet) ÷ (USDT en bolívares del P2P + tu ganancia). Bolívares × tasa = pesos.</p>
+      <p class="c-txt"><b>Cómo se calcula:</b> (lo que Vita te paga por el USDT) ÷ (USDT en bolívares del P2P + tu ganancia). Bolívares × tasa = pesos.</p>
       <label class="f" for="vc-src">Referencia (P2P de USDT en bolívares, vía CriptoYa)
         <select id="vc-src"></select></label>
       <div class="usdt-ref"><span class="muted">Precio de referencia</span><b class="num" id="vc-ref">—</b></div>
@@ -391,7 +391,7 @@
     <section class="card" id="eucl" hidden aria-labelledby="h-eucl">
       <div class="c-head"><span class="c-flags" data-flags="EU,CL"></span><h2 id="h-eucl">Envío Europa → Chile (automático)</h2></div>
       <p class="c-txt"><b>Qué es:</b> el cliente paga euros y recibe pesos chilenos.</p>
-      <p class="c-txt"><b>Cómo se calcula:</b> euros − tu ganancia → USDT comprados en Binance P2P pagando con Wise (precio fijo o automático) → vendidos en Chile al precio de venta de Vita Wallet. Tasa = Vita ÷ (euros por USDT) × (1 − ganancia).</p>
+      <p class="c-txt"><b>Cómo se calcula:</b> euros − tu ganancia → USDT comprados en Binance P2P pagando con Wise (precio fijo o automático) → vendidos en Chile a lo que Vita te paga por el USDT. Tasa = Vita ÷ (euros por USDT) × (1 − ganancia).</p>
       <div class="row2">
         <label class="f" for="ec-profit">Tu ganancia (%)
           <span class="amount"><input id="ec-profit" inputmode="decimal" autocomplete="off"></span></label>
@@ -421,7 +421,7 @@
     <section class="card" id="uscl" hidden aria-labelledby="h-uscl">
       <div class="c-head"><span class="c-flags" data-flags="US,CL"></span><h2 id="h-uscl">Envío Estados Unidos → Chile (automático)</h2></div>
       <p class="c-txt"><b>Qué es:</b> el cliente paga dólares con un link de pago de Cash App y recibe pesos chilenos.</p>
-      <p class="c-txt"><b>Cómo se calcula:</b> (dólares − cargo fijo) × (precio de venta del USDT en Vita Wallet − tu comisión). El cargo fijo y tu comisión van dentro de la tasa: el cliente no los ve aparte.</p>
+      <p class="c-txt"><b>Cómo se calcula:</b> (dólares − cargo fijo) × (lo que Vita te paga por el USDT − tu comisión). El cargo fijo y tu comisión van dentro de la tasa: el cliente no los ve aparte.</p>
       <div class="usdt-ref"><span class="muted">Precio de referencia</span><b class="num" id="ul-ref">—</b></div>
       <div class="row2">
         <label class="f" for="ul-profit">Tu comisión (%)
@@ -552,6 +552,6 @@
     </section>
   </div>
 </main>
-<script type="module" src="/js/panel.js?v=85"></script>
+<script type="module" src="/js/panel.js?v=86"></script>
 </body>
 </html>

@@ -455,8 +455,8 @@ test('Venezuela → Chile: se activa desde el panel y la tasa es Vita CLP ÷ (US
   assert.deepEqual((await (await getRates({ env: e })).json()).ve_cl, { margin_pct: '4', min: 3000, source: 'bybitp2p' });
   const fake = async (u) => ({ ok: true, text: async () => (String(u).includes('/ves/') ? '{"bybitp2p":{"ask":400,"bid":395},"binancep2p":{"ask":410}}' : '{"vitawallet":{"ask":990,"bid":980}}') });
   const r = await clpPerVes('bybitp2p', '4', fake);
-  assert.equal(r.ves, 400); assert.equal(r.clp, 990);
-  assert.ok(Math.abs(r.rate - 990 / (400 * 1.04)) < 1e-9);
+  assert.equal(r.ves, 400); assert.equal(r.clp, 980);
+  assert.ok(Math.abs(r.rate - 980 / (400 * 1.04)) < 1e-9);
 });
 
 test('Brasil → Colombia: tasa = Binance P2P COP (ask, precio alto) ÷ (USDT BRL del exchange × (1 + ajuste))', async () => {
@@ -501,7 +501,7 @@ test('Brasil: el exchange elegido se encuentra aunque CriptoYa lo llame con "p2p
   assert.equal((await copPerBrl('bitgetp2p', '2', fake)).brl, 5.6);
 });
 
-test('Brasil → Chile: tasa = Vita CLP (venta) ÷ (USDT BRL de Bitget × (1 + ganancia))', async () => {
+test('Brasil → Chile: tasa = lo que paga Vita (bid) ÷ (USDT BRL de Bitget × (1 + ganancia))', async () => {
   noBcv();
   const { onRequestPut: putBrCl } = await import('../functions/api/br-cl.js');
   const { clpPerBrl } = await import('../public/js/criptoya.js');
@@ -514,8 +514,8 @@ test('Brasil → Chile: tasa = Vita CLP (venta) ÷ (USDT BRL de Bitget × (1 + g
   assert.deepEqual((await (await getRates({ env: e })).json()).br_cl, { profit_pct: '3', min: 50, source: 'bitget' });
   const fake = async (u) => ({ ok: true, text: async () => (String(u).includes('/brl/') ? '{"bitgetp2p":{"ask":5.6,"bid":5.45}}' : '{"vitawallet":{"ask":990,"bid":980}}') });
   const r = await clpPerBrl('bitget', '3', fake);
-  assert.equal(r.brl, 5.6); assert.equal(r.clp, 990);
-  assert.ok(Math.abs(r.rate - 990 / (5.6 * 1.03)) < 1e-9);
+  assert.equal(r.brl, 5.6); assert.equal(r.clp, 980);
+  assert.ok(Math.abs(r.rate - 980 / (5.6 * 1.03)) < 1e-9);
 });
 
 test('USDT Chile, Colombia y Brasil: se puede elegir el exchange de referencia (vacío = automático)', async () => {
@@ -550,9 +550,9 @@ test('Estados Unidos → Chile: (dólares − cargo fijo) × Vita CLP × (1 − 
   assert.deepEqual((await (await getRates({ env: e })).json()).us_cl, { profit_pct: '3', fee: 1, min: 20 });
   const fake = async () => ({ ok: true, text: async () => '{"vitawallet":{"ask":990,"bid":980}}' });
   const r = await clpPerUsd('3', fake);
-  assert.ok(Math.abs(r.rate - 990 * 0.97) < 1e-9);
-  const sinBid = await clpPerUsd('3', async () => ({ ok: true, text: async () => '{"vitawallet":{"ask":990}}' }));
-  assert.ok(Math.abs(sinBid.rate - 990 * 0.97) < 1e-9);
+  assert.ok(Math.abs(r.rate - 980 * 0.97) < 1e-9);
+  const sinBid = await clpPerUsd('3', async () => ({ ok: true, text: async () => '{"vitawallet":{"ask":990},"binancep2p":{"ask":995,"bid":975}}' }));
+  assert.ok(Math.abs(sinBid.rate - 975 * 0.97) < 1e-9);  // sin bid de Vita: lo que paga Binance P2P, nunca el ask
   const route = { ...US_CL_ROUTE, fee: 1 };
   assert.ok(Math.abs(convert(route, '950.60', 100) - 99 * 950.6) < 1e-6);
   assert.ok(Math.abs(invert(route, '950.60', 99 * 950.6) - 100) < 1e-6);
@@ -646,7 +646,7 @@ test('Europa → Chile: (1 − ganancia) ÷ euros por USDT (Wise) × Vita CLP', 
   assert.equal((await putEuCl({ request: req('/api/eu-cl', { method: 'PUT', cookie, body: { ...body, mode: 'fijo', eur_usdt: '' } }), env: e })).status, 400);
   const fake = async () => ({ ok: true, text: async () => '{"vitawallet":{"ask":990,"bid":980}}' });
   const r = await clpPerEur('0.93', '3', fake);
-  assert.ok(Math.abs(r.rate - 990 * 0.97 / 0.93) < 1e-9);
+  assert.ok(Math.abs(r.rate - 980 * 0.97 / 0.93) < 1e-9);
   assert.equal(await clpPerEur('', '3', fake), null);
 });
 
@@ -755,8 +755,8 @@ test('Colombia → Europa: (CLP por EUR de Wise ÷ Vita) × USDT en COP × (1 + 
   const cy = async (u) => ({ ok: true, text: async () => (String(u).includes('/cop/') ? '{"binancep2p":{"ask":3900,"bid":3850}}' : '{"vitawallet":{"ask":990,"bid":980}}') });
   const wise = async () => ({ ok: true, json: async () => ({ value: 1050, source: 'wise' }) });
   const r = await copPerEur({ profit_pct: '3', cop_source: 'binancep2p' }, cy, wise);
-  assert.ok(Math.abs(r.rate - (1050 / 990) * 3900 * 1.03) < 1e-6);
+  assert.ok(Math.abs(r.rate - (1050 / 980) * 3900 * 1.03) < 1e-6);
   const down = async () => ({ ok: false, json: async () => ({}) });
   assert.equal(await copPerEur({ profit_pct: '3' }, cy, down), null);
-  assert.ok(Math.abs((await copPerEur({ profit_pct: '0', clp_eur: '1.100' }, cy, down)).rate - (1100 / 990) * 3900) < 1e-6);
+  assert.ok(Math.abs((await copPerEur({ profit_pct: '0', clp_eur: '1.100' }, cy, down)).rate - (1100 / 980) * 3900) < 1e-6);
 });
