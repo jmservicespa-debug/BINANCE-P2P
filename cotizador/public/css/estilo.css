@@ -668,3 +668,23 @@ body.panel .grupo[data-c="EU"] { --g-color: #003399; --g-stripe: linear-gradient
 body.panel .grupo[data-c="EU"] .g-head { background: linear-gradient(120deg, #002A80, #003399) }
 body.panel .grupo[data-c="US"] { --g-color: #B22234; --g-stripe: linear-gradient(90deg, #3C3B6E 0 40%, #fff 40% 70%, #B22234 70%) }
 body.panel .grupo[data-c="US"] .g-head { background: linear-gradient(120deg, #3C3B6E, #B22234) }
+
+/* Sin desplazamiento lateral en el celular (las franjas de ancho completo no deben ensanchar la página) */
+html { overflow-x: clip }
+@supports not (overflow: clip) { body { overflow-x: hidden } }
+
+/* Destinos: mapa de puntos con una bandera en cada país */
+.mapa-dest { position: relative; width: 100%; max-width: 760px; margin: 6px auto 18px; aspect-ratio: 1137 / 952; border-radius: 22px; overflow: hidden;
+  background: radial-gradient(ellipse 80% 70% at 45% 60%, #FFFFFF 0%, #F3ECFB 70%, #EDE3F8 100%); border: 1px solid #E6DAF3 }
+.md-dots { position: absolute; inset: 0; background: url(/assets/mapa-puntos.svg) 0 0 / 100% 100% no-repeat }
+.md-lines { position: absolute; inset: 0; width: 100%; height: 100% }
+.md-lines path { fill: none; stroke: #8E62C9; stroke-width: 2.6; stroke-dasharray: 3 9; stroke-linecap: round; vector-effect: non-scaling-stroke; opacity: .75 }
+.pin { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; pointer-events: none }
+.pin .flag { width: clamp(22px, 5.2vw, 34px); height: clamp(22px, 5.2vw, 34px); border-radius: 50%; border: 2.5px solid #fff; box-shadow: 0 4px 10px rgba(58,15,72,.28); background: #fff }
+.pin::after { content: ""; width: 0; height: 0; border: 6px solid transparent; border-top: 8px solid #fff; margin-top: -2px; filter: drop-shadow(0 2px 2px rgba(58,15,72,.18)) }
+.pin b { position: absolute; top: calc(100% + 2px); white-space: nowrap; font-size: clamp(9px, 2.3vw, 12px); font-weight: 700; color: #3D1A5E; background: rgba(255,255,255,.85); border-radius: 6px; padding: 1px 5px; display: none }
+.pin.origen .flag { width: clamp(30px, 7vw, 44px); height: clamp(30px, 7vw, 44px); border-color: #FFC23D; box-shadow: 0 0 0 5px rgba(255,194,61,.25), 0 6px 14px rgba(58,15,72,.3) }
+.pin.origen::after { border-top-color: #FFC23D }
+.pin.origen b { display: block; background: #4A1259; color: #fff }
+@media (min-width: 640px) { .pin b { display: block } }
+.pin.lb-r b { top: 18%; left: calc(100% + 4px) } .pin.lb-l b { top: 18%; right: calc(100% + 4px) }
