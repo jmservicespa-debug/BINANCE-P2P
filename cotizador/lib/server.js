@@ -12,6 +12,23 @@ const LOGIN_MAX = 5; // intentos fallidos por IP cada 15 min
 const BCV_URL = 'https://www.bcv.org.ve/';
 const BCV_TTL_S = 3600;
 
+// ------------------------------------------------------------------ Ahorro de KV (límite diario del plan gratuito)
+// Caché del borde de Cloudflare (gratis e ilimitada): lo que se lee muy seguido se guarda aquí y KV solo se usa de respaldo.
+const EDGE = 'https://edge-cache.jmcambios.cl/';
+export async function edgeGet(k) {
+  try { if (typeof caches === 'undefined' || !caches.default) return null; const r = await caches.default.match(EDGE + encodeURIComponent(k)); return r ? await r.json() : null; } catch { return null; }
+}
+export async function edgePut(k, v, ttlS) {
+  try { if (typeof caches === 'undefined' || !caches.default) return;
+    await caches.default.put(EDGE + encodeURIComponent(k), new Response(JSON.stringify(v), { headers: { 'content-type': 'application/json', 'cache-control': `public, max-age=${Math.max(1, Math.round(ttlS))}` } })); } catch { /* sin caché */ }
+}
+export async function edgeDel(k) { try { if (typeof caches !== 'undefined' && caches.default) await caches.default.delete(EDGE + encodeURIComponent(k)); } catch { /* nada */ } }
+// Respaldo en KV: se escribe como máximo cada `everyMs` (no en cada consulta).
+export async function kvBackup(env, key, val, prev, now, everyMs = 20 * 60 * 1000) {
+  if (!prev || !(prev.ts > 0) || now - prev.ts >= everyMs) await env.TASAS.put(key, JSON.stringify(val));
+}
+export const TASAS_VIEW_KEY = 'tasas_view';
+
 export function json(data, status = 200, headers = {}) {
   return new Response(JSON.stringify(data), {
     status,
@@ -141,6 +158,7 @@ export function validate(body) {
 }
 
 export async function saveRates(request, env, now = Date.now()) {
+  await edgeDel(TASAS_VIEW_KEY);
   if (!sameOrigin(request)) return json({ error: 'origen no permitido' }, 403);
   if (!(await isAdmin(request, env, now))) return json({ error: 'Inicia sesión de nuevo.' }, 401);
   let body;
@@ -264,6 +282,7 @@ export async function publicView(env, saved, now = Date.now()) {
 export const isPaused = async (env) => (await env.TASAS.get('paused')) === '1';
 
 export async function setPaused(request, env, now = Date.now()) {
+  await edgeDel(TASAS_VIEW_KEY);
   if (!sameOrigin(request)) return json({ error: 'origen no permitido' }, 403);
   if (!(await isAdmin(request, env, now))) return json({ error: 'Inicia sesión de nuevo.' }, 401);
   let body;
@@ -315,6 +334,7 @@ export async function usdtView(request, env, now = Date.now()) {
 }
 
 export async function saveUsdtCfg(request, env, now = Date.now()) {
+  await edgeDel(TASAS_VIEW_KEY);
   if (!sameOrigin(request)) return json({ error: 'origen no permitido' }, 403);
   if (!(await isAdmin(request, env, now))) return json({ error: 'Inicia sesión de nuevo.' }, 401);
   let body;
@@ -347,6 +367,7 @@ export async function usdtCoView(request, env, now = Date.now()) {
   return json(await loadUsdtCoCfg(env));
 }
 export async function saveUsdtCoCfg(request, env, now = Date.now()) {
+  await edgeDel(TASAS_VIEW_KEY);
   if (!sameOrigin(request)) return json({ error: 'origen no permitido' }, 403);
   if (!(await isAdmin(request, env, now))) return json({ error: 'Inicia sesión de nuevo.' }, 401);
   let body;
@@ -377,6 +398,7 @@ async function loadCfg(env, key, defaults) {
 async function adminBody(request, env, now) {
   if (!sameOrigin(request)) return { error: json({ error: 'origen no permitido' }, 403) };
   if (!(await isAdmin(request, env, now))) return { error: json({ error: 'Inicia sesión de nuevo.' }, 401) };
+  await edgeDel(TASAS_VIEW_KEY);  // el cotizador ve el cambio al tiro
   try { return { body: await request.json() }; } catch { return { error: json({ error: 'datos inválidos' }, 400) }; }
 }
 
@@ -452,9 +474,11 @@ export const CRYPTO_SOURCES = [
   ['coingecko', 'https://api.coingecko.com/api/v3/simple/price?ids=pax-gold,bitcoin&vs_currencies=usd', (d) => ({ PAXG: Number(d?.['pax-gold']?.usd), BTC: Number(d?.bitcoin?.usd) })],
 ];
 export async function cryptoUsd(env, now = Date.now()) {
+  const hit = await edgeGet('crypto_usd2');
+  if (hit && now - hit.ts < CRYPTO_TTL_S * 1000) return hit;
   let cached = null;
   try { cached = JSON.parse((await env.TASAS.get('crypto_usd2')) || 'null'); } catch { cached = null; }
-  if (cached && now - cached.ts < CRYPTO_TTL_S * 1000) return cached;
+  if (cached && now - cached.ts < CRYPTO_TTL_S * 1000) { await edgePut('crypto_usd2', cached, CRYPTO_TTL_S); return cached; }
   const out = { ts: now, tries: [] };
   for (const [name, url, read] of CRYPTO_SOURCES) {
     if (out.PAXG && out.BTC) break;
@@ -475,7 +499,7 @@ export async function cryptoUsd(env, now = Date.now()) {
     if (clp) out.USDT_CLP = clp;
     if (cop) out.USDT_COP = cop;
   }
-  if (out.PAXG || out.BTC) await env.TASAS.put('crypto_usd2', JSON.stringify(out));
+  if (out.PAXG || out.BTC) { await edgePut('crypto_usd2', out, CRYPTO_TTL_S); await kvBackup(env, 'crypto_usd2', out, cached, now); }
   else if (cached && now - cached.ts < 30 * 60 * 1000) return { ...cached, stale: true, tries: out.tries };  // respaldo: último precio (máx. 30 min)
   return out;
 }
@@ -487,14 +511,16 @@ export async function cyProxy(request, env, now = Date.now(), fetchFn = fetch) {
   const p = new URL(request.url).searchParams.get('p') || '';
   if (!CY_PATH.test(p)) return json({ error: 'consulta no permitida' }, 400);
   const key = `cy_${p.replace(/\//g, '_')}`;
+  const hit = await edgeGet(key);
+  const send = (text) => new Response(text, { status: 200, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+  if (hit && now - hit.ts < 60 * 1000) return send(hit.text);
   let cached = null;
   try { cached = JSON.parse((await env.TASAS.get(key)) || 'null'); } catch { cached = null; }
-  const send = (text) => new Response(text, { status: 200, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
   if (cached && now - cached.ts < 60 * 1000) return send(cached.text);
   try {
     const r = await fetchFn(`https://criptoya.com/api/${p}`, { signal: AbortSignal.timeout(6000), headers: { accept: 'application/json' } });
     const text = r.ok ? await r.text() : '';
-    if (/^\s*\{\s*"/.test(text)) { await env.TASAS.put(key, JSON.stringify({ ts: now, text })); return send(text); }
+    if (/^\s*\{\s*"/.test(text)) { const v = { ts: now, text }; await edgePut(key, v, 60); await kvBackup(env, key, v, cached, now); return send(text); }
   } catch { /* CriptoYa no respondió */ }
   if (cached && now - cached.ts < 30 * 60 * 1000) return send(cached.text);  // último dato (máx. 30 min)
   return json({ error: 'sin datos' }, 502);
@@ -599,6 +625,8 @@ export function wisePrice(body) {
   return ps.length ? ps[Math.floor(ps.length / 2)] : null;
 }
 export async function eurUsdtWise(env, now = Date.now(), fetchFn = fetch) {
+  const hit = await edgeGet('wise_eur');
+  if (hit && now - hit.ts < 2 * 60 * 1000) return { value: hit.value, ts: hit.ts, source: 'wise' };
   let cached = null;
   try { cached = JSON.parse((await env.TASAS.get('wise_eur')) || 'null'); } catch { cached = null; }
   if (cached && now - cached.ts < 2 * 60 * 1000) return { value: cached.value, ts: cached.ts, source: 'wise' };
@@ -608,7 +636,7 @@ export async function eurUsdtWise(env, now = Date.now(), fetchFn = fetch) {
         headers: { 'content-type': 'application/json', accept: 'application/json' },
         body: JSON.stringify({ asset: 'USDT', fiat: 'EUR', tradeType: 'BUY', payTypes, page: 1, rows: 10, transAmount: '100', publisherType: null }) });
       const v = r.ok ? wisePrice(await r.json()) : null;
-      if (v) { await env.TASAS.put('wise_eur', JSON.stringify({ ts: now, value: v })); return { value: v, ts: now, source: 'wise' }; }
+      if (v) { const o = { ts: now, value: v }; await edgePut('wise_eur', o, 120); await kvBackup(env, 'wise_eur', o, cached, now); return { value: v, ts: now, source: 'wise' }; }
     } catch { /* Binance no respondió */ }
   }
   if (cached && now - cached.ts < 30 * 60 * 1000) return { value: cached.value, ts: cached.ts, source: 'wise', stale: true };
@@ -626,14 +654,16 @@ const EUR_SOURCES = [
   ['frankfurter', 'https://api.frankfurter.app/latest?from=USD&to=EUR', (d) => Number(d?.rates?.EUR)],
 ];
 export async function eurUsdtMarket(env, now = Date.now(), fetchFn = fetch) {
+  const hit = await edgeGet('eur_usdt_mkt');
+  if (hit && now - hit.ts < 5 * 60 * 1000) return hit;
   let cached = null;
   try { cached = JSON.parse((await env.TASAS.get('eur_usdt_mkt')) || 'null'); } catch { cached = null; }
-  if (cached && now - cached.ts < 5 * 60 * 1000) return cached;
+  if (cached && now - cached.ts < 5 * 60 * 1000) { await edgePut('eur_usdt_mkt', cached, 300); return cached; }
   for (const [source, url, pick] of EUR_SOURCES) {
     try {
       const r = await fetchFn(url, { signal: AbortSignal.timeout(6000), headers: { accept: 'application/json' } });
       const v = r.ok ? pick(await r.json()) : NaN;
-      if (v >= 0.5 && v <= 2) { const out = { value: v, source, ts: now }; await env.TASAS.put('eur_usdt_mkt', JSON.stringify(out)); return out; }
+      if (v >= 0.5 && v <= 2) { const out = { value: v, source, ts: now }; await edgePut('eur_usdt_mkt', out, 300); await kvBackup(env, 'eur_usdt_mkt', out, cached, now); return out; }
     } catch { /* se prueba la siguiente fuente */ }
   }
   return cached && now - cached.ts < 60 * 60 * 1000 ? { ...cached, stale: true } : null;
@@ -650,14 +680,16 @@ const CLPEUR_SOURCES = [
   ['er-api', 'https://open.er-api.com/v6/latest/EUR', (d) => Number(d?.rates?.CLP)],
 ];
 export async function clpPerEurRate(env, now = Date.now(), fetchFn = fetch) {
+  const hit = await edgeGet('clp_eur');
+  if (hit && now - hit.ts < 10 * 60 * 1000) return hit;
   let cached = null;
   try { cached = JSON.parse((await env.TASAS.get('clp_eur')) || 'null'); } catch { cached = null; }
-  if (cached && now - cached.ts < 10 * 60 * 1000) return cached;
+  if (cached && now - cached.ts < 10 * 60 * 1000) { await edgePut('clp_eur', cached, 600); return cached; }
   for (const [source, url, pick] of CLPEUR_SOURCES) {
     try {
       const r = await fetchFn(url, { signal: AbortSignal.timeout(6000), headers: { accept: 'application/json' } });
       const v = r.ok ? pick(await r.json()) : NaN;
-      if (v >= 300 && v <= 3000) { const out = { value: v, source, ts: now }; await env.TASAS.put('clp_eur', JSON.stringify(out)); return out; }
+      if (v >= 300 && v <= 3000) { const out = { value: v, source, ts: now }; await edgePut('clp_eur', out, 600); await kvBackup(env, 'clp_eur', out, cached, now, 60 * 60 * 1000); return out; }
     } catch { /* se prueba la siguiente fuente */ }
   }
   return cached && now - cached.ts < 6 * 60 * 60 * 1000 ? { ...cached, stale: true } : null;

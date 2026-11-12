@@ -1,3 +1,4 @@
+import { edgeGet, edgePut } from './server.js';
 // Indicadores para la franja que va pasando en el cotizador (solo informativos, no cambian ninguna tasa).
 // Se leen en el servidor, se guardan 1 hora en KV y, si una fuente falla, ese dato simplemente no se muestra.
 //   Colombia: TRM (datos abiertos, Superfinanciera), euro en pesos (TRM × euro/dólar del BCE), BTC en pesos (CoinGecko).
@@ -69,13 +70,16 @@ export async function readIndicators() {
 const empty = (o) => !Object.keys(o.co).length && !Object.keys(o.br).length && !Object.keys(o.ve).length;
 
 export async function indicators(env, now = Date.now()) {
+  const hit = await edgeGet('indicadores');
+  if (hit && now - hit.ts < (empty(hit.data) ? RETRY_S : TTL_S) * 1000) return hit.data;
   let cached = null;
   try { cached = JSON.parse((await env.TASAS.get('indicadores')) || 'null'); } catch { cached = null; }
   const ttl = cached && empty(cached.data) ? RETRY_S : TTL_S;
-  if (cached && now - cached.ts < ttl * 1000) return cached.data;
+  if (cached && now - cached.ts < ttl * 1000) { await edgePut('indicadores', cached, ttl - (now - cached.ts) / 1000); return cached.data; }
   const data = await readIndicators();
   // Si ahora todo falló pero había datos de antes, se siguen mostrando los anteriores.
   const keep = empty(data) && cached && !empty(cached.data) ? cached.data : data;
+  await edgePut('indicadores', { ts: now, data: keep }, empty(keep) ? RETRY_S : TTL_S);
   await env.TASAS.put('indicadores', JSON.stringify({ ts: now, data: keep }));
   return keep;
 }

@@ -1,10 +1,18 @@
-import { isPaused, json, loadBtcCfg, loadBrCoCfg, brCoTotalPct, loadCoBrCfg, loadBrClCfg, loadUsClCfg, loadGoldCfg, loadVeClCfg, loadVeCoCfg, loadBrVeCfg, loadEuClCfg, loadClEuCfg, loadCoPeCfg, loadCoEcCfg, loadCoEuCfg, loadRewardsCfg, loadUsdtBrCfg, loadUsdtCfg, loadUsdtCoCfg, publicView, REWARDS_URL, saveRates } from '../../lib/server.js';
+import { edgeGet, edgePut, TASAS_VIEW_KEY, isPaused, json, loadBtcCfg, loadBrCoCfg, brCoTotalPct, loadCoBrCfg, loadBrClCfg, loadUsClCfg, loadGoldCfg, loadVeClCfg, loadVeCoCfg, loadBrVeCfg, loadEuClCfg, loadClEuCfg, loadCoPeCfg, loadCoEcCfg, loadCoEuCfg, loadRewardsCfg, loadUsdtBrCfg, loadUsdtCfg, loadUsdtCoCfg, publicView, REWARDS_URL, saveRates } from '../../lib/server.js';
 
 // Público: tasas activas y dólar y euro BCV para el cotizador.
 // USDT desde Chile: aparece solo si está activado en el panel (para todos por igual).
 export const onRequestGet = async ({ env }) => {
+  // Se guarda 30 s en la caché del borde: así cada visita no lee KV (límite diario). Al guardar en el panel se borra.
+  const now = Date.now(), hit = await edgeGet(TASAS_VIEW_KEY);
+  if (hit && now - hit.ts < 30 * 1000) return json(hit.view);
+  const view = await buildView(env);
+  await edgePut(TASAS_VIEW_KEY, { ts: now, view }, 30);
+  return json(view);
+};
+async function buildView(env) {
   // Todo apagado desde el panel: el cotizador muestra "Actualizando tasas" y no se publica ninguna tasa.
-  if (await isPaused(env)) return json({ paused: true, routes: [], bcv: null, bcv_eur: null });
+  if (await isPaused(env)) return { paused: true, routes: [], bcv: null, bcv_eur: null };
   const view = await publicView(env);
   delete view.bcv.errors;  // los motivos de falla solo se ven en el panel
   delete view.bcv_eur.errors;
@@ -45,8 +53,8 @@ export const onRequestGet = async ({ env }) => {
   const vecl = await loadVeClCfg(env);
   if (vecl.published) view.ve_cl = { margin_pct: vecl.margin_pct, min: Number(vecl.min), source: vecl.source };
   if ((await loadRewardsCfg(env)).published) view.rewards = { url: REWARDS_URL };
-  return json(view);
-};
+  return view;
+}
 
 // Solo el panel (sesión iniciada): guarda las tasas del día.
 export const onRequestPut = async ({ request, env }) => saveRates(request, env);
