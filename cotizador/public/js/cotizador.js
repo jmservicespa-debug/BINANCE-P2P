@@ -1,7 +1,7 @@
-import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, VE_CL_ROUTE, VE_CO_ROUTE, BR_VE_ROUTE, EU_CL_ROUTE, CL_EU_ROUTE, CO_PE_ROUTE, CO_EC_ROUTE, CO_EU_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDC_BR_ROUTE, USDC_CL_ROUTE, USDC_CO_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum, rateNum } from './rutas.js?v=88';
-import { setRewardsNav } from './rewards-nav.js?v=88';
-import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, clpPerUsd, clpPerEur, eurForRoute, clEuRate, copPerPen, copPerUsdEc, copPerEur, copPerVes, refFrom, cyFetch, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=88';
-import { esc, flag, flags } from './ui.js?v=88';
+import { ADVISORS, BTC_ROUTES, BR_CO_ROUTE, CO_BR_ROUTE, BR_CL_ROUTE, US_CL_ROUTE, VE_CL_ROUTE, VE_CO_ROUTE, BR_VE_ROUTE, EU_CL_ROUTE, CL_EU_ROUTE, CO_PE_ROUTE, CO_EC_ROUTE, CO_EU_ROUTE, GOLD_ROUTES, ORIGINS, ROUTES, USDT_BR_ROUTE, USDC_BR_ROUTE, USDC_CL_ROUTE, USDC_CO_ROUTE, USDT_CO_ROUTE, USDT_ROUTE, amountNum, belowMin, convert, fmt, invert, usdtNum, rateNum } from './rutas.js?v=89';
+import { setRewardsNav } from './rewards-nav.js?v=89';
+import { BRL_BRAKE, GOLD_URL, USDT_BRL_URL, USDT_COP_URL, USDT_URL, brlPerClp, clpPerCop, parseCriptoYa, parseGold, usdtBrlRef, usdtCopRef, usdtCopBid, marketCoins, clpPerVes, copPerBrl, copPerBrlSell, clpPerBrl, clpPerUsd, clpPerEur, eurForRoute, clEuRate, copPerPen, copPerUsdEc, copPerEur, copPerVes, refFrom, cyFetch, CLP_RANGE, COP_RANGE, BRL_RANGE } from './criptoya.js?v=89';
+import { esc, flag, flags } from './ui.js?v=89';
 
 const $ = (id) => document.getElementById(id);
 const MAIN_LINE = 'jamer';
@@ -845,7 +845,12 @@ async function load() {
   } catch {
     if (!data) { $('error').hidden = false; $('error').textContent = 'No pudimos cargar las tasas. Revisa tu conexión o escríbenos por WhatsApp.'; data = { routes: [], bcv: null, bcv_eur: null }; }
   }
+  if (!firstShown) { firstShown = true; finish(); }  // las tasas del panel se ven al tiro; las automáticas llegan después
   await Promise.all([loadUsdt(), loadUsdtCo(), loadUsdtBr(), loadGold(), loadBtc(), loadVeCl(), loadVeCo(), loadBrVe(), loadBrCo(), loadCoBr(), loadBrCl(), loadUsCl(), loadEuCl(), loadClEu(), loadCoPe(), loadCoEc(), loadCoEu(), loadBrl(), loadCoCl()]);
+  finish();
+}
+let firstShown = false;
+function finish() {
   // Botón de JM Rewards: solo aparece si se activó en el panel.
   $('jmr').hidden = !data.rewards?.url;
   if (data.rewards?.url) $('jmr').href = data.rewards.url;

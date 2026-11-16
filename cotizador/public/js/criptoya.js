@@ -5,14 +5,24 @@
 export const USDT_URL = 'https://criptoya.com/api/usdt/clp/1';
 // Lee CriptoYa directo desde el navegador; si falla (sin respuesta, error o vacío), lo pide a nuestro servidor (/api/cy),
 // que lo lee desde Cloudflare y lo guarda 1 minuto. Así una falla del teléfono no deja la ruta en "Mercado inestable".
+// Precios de CriptoYa: primero por nuestro servidor (misma página, guardado 1 minuto en Cloudflare: responde rápido);
+// si falla, directo a CriptoYa. Las consultas iguales se comparten 30 s (antes se pedía la misma 6 u 8 veces al cargar).
+const cyMemo = new Map();
+const cyOk = (t) => /^\s*\{\s*"/.test(t || '');
+const timeout = (ms) => (typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(ms) : undefined);
+async function cyText(s, base) {
+  try { const r = await fetch(`/api/cy?p=${encodeURIComponent(s.slice(base.length))}`, { cache: 'no-store', signal: timeout(5000) }); if (r.ok) { const t = await r.text(); if (cyOk(t)) return t; } } catch { /* servidor sin dato */ }
+  try { const r = await fetch(s, { cache: 'no-store', signal: timeout(6000) }); if (r.ok) { const t = await r.text(); if (cyOk(t)) return t; } } catch { /* CriptoYa no respondió */ }
+  return null;
+}
 export async function cyFetch(u, opts = {}) {
   const s = String(u), base = 'https://criptoya.com/api/';
-  if (!s.startsWith(base)) return fetch(u, opts);
-  try {
-    const r = await fetch(u, { ...opts, signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(6000) : undefined });
-    if (r.ok) { const t = await r.text(); if (/^\s*\{\s*"/.test(t)) return new Response(t, { status: 200, headers: { 'content-type': 'application/json' } }); }
-  } catch { /* el directo falló: se usa el servidor */ }
-  return fetch(`/api/cy?p=${encodeURIComponent(s.slice(base.length))}`, { cache: 'no-store' });
+  if (!s.startsWith(base) || typeof location === 'undefined') return fetch(u, opts);  // fuera del navegador (pruebas): directo
+  const now = Date.now(), hit = cyMemo.get(s);
+  let p = hit && now - hit.t < 30000 ? hit.p : null;
+  if (!p) { p = cyText(s, base); cyMemo.set(s, { t: now, p }); p.then((t) => { if (!t) cyMemo.delete(s); }); }
+  const t = await p;
+  return t ? new Response(t, { status: 200, headers: { 'content-type': 'application/json' } }) : new Response('', { status: 502 });
 }
 const USDT_RANGE = [300, 3000];  // CLP por USDT fuera de este rango = dato absurdo, se ignora
 
