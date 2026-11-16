@@ -222,11 +222,19 @@ async function tryBcvSources(cur) {
   return { got: null, errors };
 }
 
-export async function bcv(env, manual, now = Date.now(), cur = 'usd') {
+export async function bcv(env, manual, now = Date.now(), cur = 'usd', bg = null) {
   const [key, errKey] = BCV_KEYS[cur];
   let cached = null, fail = null;
   try { cached = JSON.parse((await env.TASAS.get(key)) || 'null'); } catch { cached = null; }
   if (cached && now - cached.ts < BCV_TTL_S * 1000) return { value: cached.value, date: cached.date, source: cached.source || 'bcv' };
+  // Vencido: se entrega el último (o el manual) al tiro y el BCV, que suele ser lento, se consulta en segundo plano.
+  if (bg && (cached || (manual && rateNum(manual)))) {
+    let f = null; try { f = JSON.parse((await env.TASAS.get(errKey)) || 'null'); } catch { f = null; }
+    if (!f || now - f.ts >= BCV_RETRY_S * 1000) bg(bcv(env, manual, now, cur).catch(() => null));  // reintento sin hacer esperar a nadie
+    if (cached && now - cached.ts < 24 * 3600 * 1000) return { value: cached.value, date: cached.date, source: cached.source || 'bcv' };
+    if (manual && rateNum(manual)) return { value: rateNum(manual), date: null, source: 'manual', errors: f?.errors || [] };
+    return { value: cached.value, date: cached.date, source: 'bcv-anterior', errors: f?.errors || [] };
+  }
   try { fail = JSON.parse((await env.TASAS.get(errKey)) || 'null'); } catch { fail = null; }
   if (!fail || now - fail.ts >= BCV_RETRY_S * 1000) {
     const { got, errors } = await tryBcvSources(cur);
@@ -255,8 +263,9 @@ export function brlAuto(b) {
   return { k: Number((gap / (1 + m / 100)).toFixed(6)), cal: b.cal_cross };
 }
 
-export async function publicView(env, saved, now = Date.now()) {
+export async function publicView(env, saved, now = Date.now(), bg = null) {
   const s = saved || (await loadRates(env));
+  const [bUsd, bEur] = await Promise.all([bcv(env, s.bcv_manual, now, 'usd', bg), bcv(env, s.bcv_manual_eur, now, 'eur', bg)]);
   return {
     updated: s.updated,
     // Con mercado inestable no se publica la tasa guardada: el cliente la pide por WhatsApp.
@@ -271,8 +280,8 @@ export async function publicView(env, saved, now = Date.now()) {
       if (r.id === 'cl-br' && status === 'on') { const a = brlAuto(s.brl); if (a) out.auto = a; }
       return out;
     }),
-    bcv: await bcv(env, s.bcv_manual, now),
-    bcv_eur: await bcv(env, s.bcv_manual_eur, now, 'eur'),
+    bcv: bUsd,
+    bcv_eur: bEur,
   };
 }
 
@@ -507,16 +516,18 @@ export async function cryptoUsd(env, now = Date.now()) {
 // ------------------------------------------------------------------ CriptoYa por el servidor (respaldo del navegador)
 // Solo precios de USDT/USDC en monedas conocidas; se guarda 60 s en KV para no repetir consultas.
 const CY_PATH = /^(usdt|usdc)\/(clp|cop|brl|ves|ars|pen|usd|eur)\/\d{1,4}$/;
-export async function cyProxy(request, env, now = Date.now(), fetchFn = fetch) {
+export async function cyProxy(request, env, now = Date.now(), fetchFn = fetch, bg = null, force = false) {
   const p = new URL(request.url).searchParams.get('p') || '';
   if (!CY_PATH.test(p)) return json({ error: 'consulta no permitida' }, 400);
   const key = `cy_${p.replace(/\//g, '_')}`;
   const hit = await edgeGet(key);
   const send = (text) => new Response(text, { status: 200, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
-  if (hit && now - hit.ts < 60 * 1000) return send(hit.text);
+  if (!force && hit && now - hit.ts < 60 * 1000) return send(hit.text);
+  // Vencido hace poco (menos de 10 min): se entrega al tiro y CriptoYa se consulta en segundo plano.
+  if (hit && bg && now - hit.ts < 10 * 60 * 1000) { bg(cyProxy(request, env, now, fetchFn, null, true).catch(() => null)); return send(hit.text); }
   let cached = null;
   try { cached = JSON.parse((await env.TASAS.get(key)) || 'null'); } catch { cached = null; }
-  if (cached && now - cached.ts < 60 * 1000) return send(cached.text);
+  if (!force && cached && now - cached.ts < 60 * 1000) return send(cached.text);
   try {
     const r = await fetchFn(`https://criptoya.com/api/${p}`, { signal: AbortSignal.timeout(6000), headers: { accept: 'application/json' } });
     const text = r.ok ? await r.text() : '';
